@@ -13,6 +13,7 @@ import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSu
 import { startMessagesApiSeat } from './adapters/messagesApi.js';
 import { startRelayChainSeat } from './adapters/relayChainSubprocess.js';
 import { isAllowedProvider } from './providers.js';
+import { writeCompareSnapshot } from './compareSnapshot.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -94,6 +95,17 @@ export function startMany(wss, seatIds, task, confirmed) {
   if (unique.length > 1 && confirmed !== true) {
     console.error('start_many rejected: dispatching to more than one seat requires confirmed:true');
     return;
+  }
+  // Build order item 2 (PLAN_PARALLEL_BUILD.md §4): a dispatch-time snapshot manifest per
+  // participating workdir, taken before any seat spawns - only meaningful (and only taken) for a
+  // real multi-seat comparison run; an ordinary single-builder dispatch (unique.length === 1)
+  // never goes through startMany at all (the frontend sends a plain {cmd:'start'} for that case),
+  // but this guard also covers a single-seat startMany call directly, which needs no snapshot.
+  if (unique.length > 1) {
+    for (const seatId of unique) {
+      const workdir = seats[seatId]?.workdir;
+      if (workdir) writeCompareSnapshot(join(root, workdir));
+    }
   }
   for (const seatId of unique) startSeat(wss, seatId, task);
 }

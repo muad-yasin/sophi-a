@@ -18,6 +18,12 @@ dist-ssr
 dist-orchestrator
 dist-node
 
+# build-1..3's per-seat working directories (PLAN.md "Seat invocation mechanism") - real, runtime-
+# generated file edits from real Claude Code sessions, never source. Was never actually committed
+# (checked: `git log --all -- .workdirs` is empty) but was untracked-and-unignored until now, a
+# real gap - a stray `git add -A` could have swept a builder's real edits into a commit.
+.workdirs
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -405,3 +405,26 @@
   but worth knowing: running two orchestrator instances against the same checkout is not safe if
   both use the same builder seat at the same time. Pre-existing architectural fact, not introduced
   by this session's changes, and out of scope to fix as part of this feature.
+- 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 2 (PLAN_PARALLEL_BUILD.md §4): the
+  dispatch-time snapshot manifest. New `src/orchestrator/compareSnapshot.js`:
+  `writeCompareSnapshot(workdir)` walks the workdir recursively and writes
+  `<workdir>/.compare-snapshot.json` (`{takenAt, files: {relativePath: {mtimeMs, sha256}}}`);
+  `readCompareSnapshot(workdir)` reads it back (unused until item 3's UI, added now since it's
+  the natural pair). Wired into `startMany()`: only taken when `unique.length > 1` (a real
+  comparison run) - an ordinary single-builder dispatch never writes one, matching the
+  single-builder-path-untouched theme running through this whole feature. Handles a builder
+  that has never run before (its workdir doesn't exist yet): `writeCompareSnapshot` creates the
+  directory itself rather than assuming `claudeCodeSubprocess.js`'s own lazy `workdirFor()` has
+  already run first - order-of-operations matters here since the snapshot is taken *before* the
+  seat spawns.
+  **Tested for real** against a standalone orchestrator: a 2-builder dispatch where `build-1` had
+  a real pre-existing file and `build-3` had never been used before (no workdir on disk at all) -
+  confirmed `build-1`'s manifest correctly captured that file's real mtime/sha256, `build-3`'s
+  workdir was created and got a manifest with an empty `files: {}`, and a subsequent single-seat
+  `start_many` call (the gate-bypass path) correctly wrote **no** manifest at all.
+  **Found and fixed a real gap along the way, incidental to this feature but a genuine repo-
+  hygiene issue**: `.workdirs/` (real Claude Code session output, `build-1..3`'s working
+  directories) was untracked *and unignored* - `git status` showed it as a plain untracked
+  directory, meaning a future `git add -A` could sweep a builder's real file edits into a commit.
+  Confirmed via `git log --all -- .workdirs` that nothing from it was ever actually committed
+  historically, then added it to `.gitignore` so it can't happen going forward.

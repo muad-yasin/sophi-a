@@ -173,3 +173,9 @@
   paths (unconfirmed multi-seat, non-builder seat) and the real dispatch path (two genuine
   `claude` CLI subprocesses spawned) all confirmed. Single-builder behavior confirmed unchanged.
   Next: item 2 (dispatch-time snapshot manifest).
+- 2026-09-09 - Item 2 (snapshot manifest) done: `src/orchestrator/compareSnapshot.js` writes
+  `.compare-snapshot.json` (path/mtime/sha256) into each participating workdir before a real
+  multi-builder run starts, handling a builder that's never run before (no workdir on disk yet).
+  Tested for real, including that empty-workdir case. Incidental find: `.workdirs/` was
+  untracked-and-unignored in git - fixed (`.gitignore`), confirmed nothing from it was ever
+  actually committed historically. Next: item 3 (comparison UI - file tree + diff viewer).

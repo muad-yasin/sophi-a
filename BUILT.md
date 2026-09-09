@@ -109,3 +109,9 @@
   the full trace, including a logged deviation from the plan's literal "Tauri command" wording
   (implemented as a WS command instead, matching how every other seat command already works) and
   an incidental finding about `.workdirs/build-N` being shared across orchestrator instances.
+- 2026-09-09 - Parallel-build-and-compare item 2 (PLAN_PARALLEL_BUILD.md §4; scope ledger
+  DEEPSEEK-3/QWEN-2). New `src/orchestrator/compareSnapshot.js`
+  (`writeCompareSnapshot`/`readCompareSnapshot`), wired into `startMany()` for real multi-seat
+  runs only. Tested for real (pre-existing file, never-run-before workdir, single-seat-writes-
+  nothing) - see DECISIONS.md. Also fixed a real gap found along the way: `.workdirs/` was
+  untracked-and-unignored in git; added to `.gitignore`.
