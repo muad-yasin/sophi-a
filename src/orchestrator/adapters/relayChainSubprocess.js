@@ -133,6 +133,20 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
         fail(`relay-chain-subprocess seat ${seatId}: report.json in run ${runId} could not be parsed`);
         return;
       }
+      // "Surface the debate, don't hide it" (docs/market-positioning.md's headline feature
+      // idea): report.json already has exactly the structured data a real "who objected, what
+      // got overruled" UI needs (relay/src/cli.js's own report-writing code) - signoff per lab,
+      // the proposal scoreboard, and the specific objections behind a non-pass. Previously this
+      // only ever reached the UI as a flattened string (summarizeFailures, below) buried in a
+      // seat.problem's detail; emitted here as its own structured event so a real panel can be
+      // built from it instead of parsed back out of prose.
+      emit('debate.report', {
+        runId,
+        passed: report.passed,
+        signoff: report.signoff || null,
+        scoreboard: report.scoreboard || null,
+        failures: report.lastCritique?.failures || null,
+      });
       if (report.passed === true) {
         const deliverablePath = join(runDir, 'deliverable.md');
         const deliverable = existsSync(deliverablePath)

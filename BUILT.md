@@ -140,3 +140,10 @@
   per-file summary that made advisor correctly decline to guess (fixed with a content preview +
   the original task text). Verified with a task that has a real correct answer - advisor picked
   correctly, twice. All 5 build-order items for parallel-build-and-compare are now complete.
+- 2026-09-09 - "Surface the debate" (docs/market-positioning.md's headline feature idea).
+  `relayChainSubprocess.js` emits a new `debate.report` event (signoff/scoreboard/failures,
+  straight from relay's own `report.json`) the moment a plan-N run finishes, win or lose.
+  `index.html`/`src/main.ts`/`src/styles.css`: a "Debate" toggle per `plan-N` tile, a per-seat
+  cache so the panel renders correctly even if it was closed when the event arrived. Tested for
+  real against relay's free mock chains (no API cost) - confirmed the real report.json signoff
+  shape renders correctly.

@@ -60,6 +60,22 @@ interface CompareHistoryEvent {
   runs: CompareRunRecord[];
 }
 
+// "Surface the debate" (docs/market-positioning.md) - relay's own report.json, structured,
+// broadcast whenever a plan-N seat's relay run finishes (relayChainSubprocess.js), win or lose.
+interface DebateReportDetail {
+  runId: string;
+  passed: boolean;
+  signoff: { provider: string; model: string; signedOff: boolean | null }[] | null;
+  scoreboard: { labs: { lab: string; accepted: number; proposed: number }[] } | null;
+  failures: { lab?: string; problem?: string; criterion?: string }[] | null;
+}
+interface DebateReportEvent {
+  type: "debate.report";
+  seatId: string;
+  timestamp: number;
+  detail: DebateReportDetail;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -262,11 +278,13 @@ async function connect() {
         | CompareChangesEvent
         | CompareDiffEvent
         | ComparePickEvent
-        | CompareHistoryEvent;
+        | CompareHistoryEvent
+        | DebateReportEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
       else if (evt.type === "compare.history") handleCompareHistory(evt);
+      else if (evt.type === "debate.report") handleDebateReport(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -608,6 +626,77 @@ function setupHistoryPanel() {
   close?.addEventListener("click", closePanel);
 }
 
+// --- "Surface the debate" (docs/market-positioning.md's headline feature idea) ---
+// A `debate.report` event arrives whenever a plan-N seat's relay run finishes, whether or not
+// the panel signed off - cached per seat here so the toggle can render immediately even if it
+// was closed when the event actually arrived (a real chain run takes minutes; the operator is
+// very likely not staring at a closed panel the whole time).
+
+const PLANNER_SEAT_IDS = ["plan-1", "plan-2", "plan-3"] as const;
+const debateCache = new Map<string, DebateReportDetail>();
+
+function renderDebatePanel(seatId: string) {
+  const tile = tileEl(seatId);
+  const empty = tile?.querySelector<HTMLElement>('[data-role="debate-empty"]');
+  const signoffList = tile?.querySelector<HTMLUListElement>('[data-role="debate-signoff-list"]');
+  const failureList = tile?.querySelector<HTMLUListElement>('[data-role="debate-failure-list"]');
+  if (!tile || !empty || !signoffList || !failureList) return;
+
+  const report = debateCache.get(seatId);
+  signoffList.innerHTML = "";
+  failureList.innerHTML = "";
+
+  if (!report) {
+    empty.hidden = false;
+    return;
+  }
+  empty.hidden = true;
+
+  for (const s of report.signoff ?? []) {
+    const li = document.createElement("li");
+    li.className = "debate-signoff-row";
+    const mark = s.signedOff === true ? "✓" : s.signedOff === false ? "✗" : "?";
+    const state = s.signedOff === true ? "signed-off" : s.signedOff === false ? "objected" : "abstained";
+    const markEl = document.createElement("span");
+    markEl.className = `debate-signoff-mark debate-signoff-${state}`;
+    markEl.textContent = mark;
+    const labelEl = document.createElement("span");
+    labelEl.textContent = `${s.provider} (${s.model})`;
+    li.append(markEl, labelEl);
+    signoffList.appendChild(li);
+  }
+
+  for (const f of report.failures ?? []) {
+    const li = document.createElement("li");
+    li.className = "debate-failure-row";
+    li.textContent = `${f.lab ? `${f.lab}: ` : ""}${f.problem ?? f.criterion ?? "(no reason recorded)"}`;
+    failureList.appendChild(li);
+  }
+}
+
+function handleDebateReport(evt: DebateReportEvent) {
+  debateCache.set(evt.seatId, evt.detail);
+  const tile = tileEl(evt.seatId);
+  const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
+  if (panel && !panel.hidden) renderDebatePanel(evt.seatId); // live-update if already open
+}
+
+function setupDebatePanels() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const toggle = tile?.querySelector<HTMLButtonElement>('[data-role="debate-toggle"]');
+    const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
+    if (!tile || !toggle || !panel) continue;
+
+    toggle.addEventListener("click", () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      if (opening) renderDebatePanel(seatId);
+    });
+  }
+}
+
 // `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
 // id field. Provider changes send {cmd:'configure', seatId, provider} immediately; the model
 // field sends {cmd:'configure', seatId, model} on blur/Enter rather than per keystroke. `cnc`
@@ -775,6 +864,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupCostConfirmModal();
   setupInspectPanels();
   setupHistoryPanel();
+  setupDebatePanels();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

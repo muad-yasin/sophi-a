@@ -578,3 +578,24 @@
   through the existing `seat.output`/advisor-tile path, no new rendering code needed - §6 is
   explicit this is commentary only, so it deliberately does not gate or pre-select the Pick
   button in any way.
+- 2026-09-09 - Built "surface the debate" - `docs/market-positioning.md`'s headline feature idea,
+  the first thing built from that analysis rather than the parallel-build-and-compare backlog.
+  Relay's own `report.json` (written by `relay/src/cli.js`) already carries exactly the
+  structured data a real "who objected, what got overruled" view needs - `signoff` (per-lab
+  provider/model/signedOff), `scoreboard` (proposed/accepted per lab, proposal-based chains
+  only), and `lastCritique.failures` (the specific objections behind a non-pass). Previously none
+  of this reached the UI structured - only a flattened string, buried in a `seat.problem`'s
+  `detail` (`summarizeFailures`). `relayChainSubprocess.js` now also emits a `debate.report`
+  event (`{runId, passed, signoff, scoreboard, failures}`) the moment `report.json` appears,
+  win or lose - a new event type alongside `seat.*`, following the same "distinct event
+  namespace for data every client needs, not a per-client query" reasoning `compare.*` already
+  established. Frontend: a "Debate" toggle on each `plan-N` tile (an in-memory cache per seat,
+  since a real chain run takes minutes and the panel is very likely closed when the event
+  actually arrives) rendering a signoff list (✓/✗/? per lab) and any recorded objections.
+  **Tested for real against relay's own free `mock`/`mock-unanimous` chains** (no API cost) by
+  calling `startRelayChainSeat` directly: confirmed a real `report.json` produces a correctly-
+  shaped `debate.report` event end to end, including the exact `signoff` array shape
+  (`{provider, model, signedOff: true}` per lab) `mock-unanimous`'s real unanimous-signoff branch
+  produces - the same shape a real paid chain (`plan-cheap`, `plan-debate`) would produce, per
+  `relay/src/cli.js`'s own report-writing code, not re-spent real money to re-confirm what the
+  source already shows plainly.

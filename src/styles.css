@@ -923,3 +923,61 @@ body {
   color: var(--text-placeholder);
   font-style: italic;
 }
+
+/* --- "surface the debate" (docs/market-positioning.md) - plan-N tiles' debate panel --- */
+
+.debate-panel {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-2);
+  margin-top: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.debate-signoff-list,
+.debate-failure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.debate-signoff-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.debate-signoff-mark {
+  font-family: var(--font-chrome);
+  font-weight: 700;
+  width: 1.2em;
+  text-align: center;
+}
+
+.debate-signoff-signed-off {
+  color: var(--status-idle);
+}
+
+.debate-signoff-objected {
+  color: var(--status-problem);
+}
+
+.debate-signoff-abstained {
+  color: var(--text-placeholder);
+}
+
+.debate-failure-row {
+  font-size: 12px;
+  color: var(--status-working);
+  background: color-mix(in srgb, var(--status-working) 10%, transparent);
+  border-radius: 4px;
+  padding: var(--sp-1) var(--sp-2);
+}

@@ -206,3 +206,9 @@
   ("identical summaries... coin flip") before the fix, which added a short content preview per
   file and the original task text to the prompt. Verified with a task that has a genuinely
   correct answer: advisor correctly picked the matching builder, twice in a row.
+- 2026-09-09 - Built "surface the debate" - the market-positioning analysis's headline feature,
+  built first (ahead of cost transparency). `plan-N` tiles get a "Debate" toggle showing relay's
+  real per-lab signoff (✓/✗/?) and any recorded objections, sourced from `report.json`'s own
+  structured data (previously flattened into a plain string, now a real `debate.report` event).
+  Tested for real against relay's free `mock`/`mock-unanimous` chains - no API cost, confirmed
+  the exact signoff shape a real paid chain produces. Next: cost transparency on the seat tile.
