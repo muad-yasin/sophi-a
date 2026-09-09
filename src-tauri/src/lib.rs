@@ -17,6 +17,7 @@
 // CARGO_MANIFEST_DIR-relative path keeps `npm run tauri dev` working exactly as before; it is
 // compiled out of release builds entirely (`cfg!(debug_assertions)`), so it can never be the
 // silent culprit PLAN_PACKAGING.md's AT-1 checks for. Every attempt is logged with its outcome.
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -31,6 +32,24 @@ struct OrchestratorState {
     port: Arc<Mutex<Option<u16>>>,
     child: Mutex<Option<Child>>,
 }
+
+// Mirrors src/orchestrator/providers.js's ALLOWED_PROVIDERS envVar field - kept in sync manually,
+// same discipline as that file's own "no shared-module setup" note. Used only to know which env
+// var a saved key becomes when the orchestrator is spawned; the allow/deny policy itself (no
+// xai/Grok) lives in the one place, providers.js - this list intentionally omits xai so a key for
+// it can never be saved or passed through from this side either.
+const PROVIDER_ENV_VARS: &[(&str, &str)] = &[
+    ("anthropic", "ANTHROPIC_API_KEY"),
+    ("openai", "OPENAI_API_KEY"),
+    ("google", "GOOGLE_API_KEY"),
+    ("mistral", "MISTRAL_API_KEY"),
+    ("deepseek", "DEEPSEEK_API_KEY"),
+    ("groq", "GROQ_API_KEY"),
+    ("cohere", "COHERE_API_KEY"),
+    ("openrouter", "OPENROUTER_API_KEY"),
+    ("together", "TOGETHER_API_KEY"),
+    ("zai", "ZAI_API_KEY"),
+];
 
 #[derive(Serialize, Deserialize, Default)]
 struct PersistedPaths {
@@ -174,6 +193,72 @@ fn resolve_relay_path(app: &tauri::AppHandle, persisted: &mut PersistedPaths) ->
     }
 }
 
+// Onboarding (fills the gap monetization research named: no first-run setup exists - a stranger
+// has no way to enter provider keys or confirm the `claude` CLI without hand-editing files).
+// Keys live in their own file, separate from resolved-paths.json (that one holds filesystem
+// paths only, by design - PLAN_PACKAGING.md §2.1 is explicit that no secret belongs in it).
+fn api_keys_file(app: &tauri::AppHandle) -> Option<PathBuf> {
+    app.path().app_config_dir().ok().map(|d| d.join("api-keys.json"))
+}
+
+fn load_api_keys(app: &tauri::AppHandle) -> HashMap<String, String> {
+    api_keys_file(app)
+        .and_then(|p| fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_api_keys(app: &tauri::AppHandle, keys: &HashMap<String, String>) {
+    let Some(path) = api_keys_file(app) else { return };
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(keys) {
+        let _ = fs::write(path, json);
+    }
+}
+
+/// Providers with a saved, non-empty key - never the key values themselves. The frontend only
+/// ever needs to know "is this one set", not read a secret back out of storage.
+#[tauri::command]
+fn list_api_key_providers(app: tauri::AppHandle) -> Vec<String> {
+    load_api_keys(&app).into_iter().filter(|(_, v)| !v.is_empty()).map(|(k, _)| k).collect()
+}
+
+#[tauri::command]
+fn set_api_key(app: tauri::AppHandle, provider: String, key: String) -> Result<(), String> {
+    if !PROVIDER_ENV_VARS.iter().any(|(id, _)| *id == provider) {
+        return Err(format!("\"{provider}\" is not a provider Sophi-A accepts a key for"));
+    }
+    let mut keys = load_api_keys(&app);
+    if key.trim().is_empty() {
+        keys.remove(&provider);
+    } else {
+        keys.insert(provider, key.trim().to_string());
+    }
+    save_api_keys(&app, &keys);
+    Ok(())
+}
+
+/// A plain existence + version check, not a real auth probe (that would mean spending a real
+/// Claude Code turn just to say hello) - `claude --version` succeeding means the CLI is
+/// installed and executable; actual authentication is only really confirmed the first time a
+/// seat runs for real, same as it always has been.
+#[tauri::command]
+fn check_claude_cli() -> Result<String, String> {
+    match Command::new("claude").arg("--version").output() {
+        Ok(out) if out.status.success() => {
+            Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+        }
+        Ok(out) => Err(format!(
+            "claude --version exited with {}: {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        )),
+        Err(e) => Err(format!("could not run \"claude\" - is it installed and on PATH? ({e})")),
+    }
+}
+
 fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
     let mut persisted = load_persisted(app);
 
@@ -210,6 +295,18 @@ fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
         // "What 'reuses relay's backend' means, precisely") with the path this chain resolved,
         // rather than leaving the Node side to guess relative to itself.
         command.env("RELAY_PATH", relay);
+    }
+    // Keys saved via the onboarding UI (`set_api_key`) become env vars on the orchestrator child
+    // exactly like RELAY_PATH above - messagesApi.js's `loadRelayEnv()` only fills a var if it
+    // isn't already set, so a key entered here always wins over whatever's in a sibling relay
+    // checkout's own .env.
+    for (provider, key) in load_api_keys(app) {
+        if key.is_empty() {
+            continue;
+        }
+        if let Some((_, env_var)) = PROVIDER_ENV_VARS.iter().find(|(id, _)| *id == provider) {
+            command.env(env_var, key);
+        }
     }
 
     let mut child = match command.spawn() {
@@ -276,6 +373,20 @@ fn get_orchestrator_port(state: tauri::State<OrchestratorState>) -> Result<u16, 
         .ok_or_else(|| "orchestrator not ready yet".to_string())
 }
 
+/// Lets a saved API key take effect without quitting the whole app - kills the current
+/// orchestrator child and spawns a fresh one, which re-reads api-keys.json from scratch. The
+/// frontend's own WebSocket client already retries with backoff on a closed connection
+/// (src/main.ts's `scheduleReconnect`), so this doesn't need its own reconnect signal.
+#[tauri::command]
+fn restart_orchestrator(app: tauri::AppHandle, state: tauri::State<OrchestratorState>) {
+    *state.port.lock().unwrap() = None;
+    let taken = state.child.lock().unwrap().take();
+    if let Some(mut child) = taken {
+        let _ = child.kill();
+    }
+    spawn_orchestrator(&app, &state);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let state = OrchestratorState {
@@ -293,7 +404,14 @@ pub fn run() {
             spawn_orchestrator(&handle, &state);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_orchestrator_port, debug_log])
+        .invoke_handler(tauri::generate_handler![
+            get_orchestrator_port,
+            debug_log,
+            list_api_key_providers,
+            set_api_key,
+            check_claude_cli,
+            restart_orchestrator
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {

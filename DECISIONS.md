@@ -268,3 +268,45 @@
   or cross-compilation toolchain in this sandbox; the CI workflow is the first place it will
   actually run, and that hasn't happened yet either (no tag has been pushed). Named as unverified,
   not claimed working.
+- 2026-09-09 - Pushed for real: created `github.com/muad-yasin/sophi-a` (private, per Muad's
+  explicit correction from an initial public suggestion), pushed two commits, tagged `v0.1.0`.
+  CI ran for real: both `build-windows` and `build-linux` **succeeded** on GitHub's actual
+  runners - the first time either installer has ever built anywhere. `publish-release` then
+  failed with a 403 (default `GITHUB_TOKEN` only grants `contents: read`) - fixed by adding an
+  explicit `permissions: contents: write` to that job and pushed; the v0.1.0 release itself was
+  created by hand from the two real artifacts already produced (downloaded via `gh run download`,
+  attached via `gh release create`), not re-built. Real Windows NSIS installer and Linux
+  AppImage now exist as actual files, for the first time.
+- 2026-09-09 - Built the onboarding/first-run setup panel (the monetization research's original
+  "no onboarding exists" gap, still open until now). New Rust commands: `list_api_key_providers`
+  (returns which providers have a saved key - never the key value itself, by design),
+  `set_api_key` (validates against the same provider allow-list `providers.js` defines, persists
+  to a new `<app_config_dir>/api-keys.json` - deliberately separate from `resolved-paths.json`,
+  which PLAN_PACKAGING.md §2.1 is explicit holds filesystem paths only, never secrets),
+  `check_claude_cli` (`claude --version`, an existence/version check, not a real auth probe - an
+  actual auth check would mean spending a real Claude Code turn just to say hello), and
+  `restart_orchestrator` (kills and respawns the orchestrator child so a newly-saved key takes
+  effect without quitting the whole app - the frontend's existing WebSocket reconnect-with-backoff
+  handles the resulting disconnect automatically, no new signal needed). `spawn_orchestrator` now
+  passes every saved key through as the exact env var name relay's own `providers.js` expects
+  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) - `messagesApi.js`'s existing `loadRelayEnv()`
+  only fills a var if unset, so a key entered here always wins over a sibling relay checkout's
+  own `.env`. Frontend: an always-visible "Setup" button (independent of WebSocket connection
+  state, since key entry is a plain Tauri invoke, not a seat command) opens a panel listing all
+  10 providers with a masked input, a per-provider "set/not set" badge, and the CLI check button.
+  Included `anthropic` in the key list, not just the 9 alternates - a real thing this pass
+  clarified: `advisor` always calls relay's `messages-api` path regardless of provider choice,
+  which means it needs `ANTHROPIC_API_KEY` even in the fully-default configuration (`cnc`'s
+  default Claude-Code-subprocess path uses the `claude` CLI's own login instead, no key needed
+  there).
+  **Verified vs. not**: `npx tsc --noEmit` clean; `cargo check` clean (run against an isolated
+  `CARGO_TARGET_DIR` specifically to avoid touching the shared `target/debug` directory a
+  concurrent session's own running orchestrator instance had open - hit a real `Text file busy`
+  there earlier this session, see the "noticed mid-session" entry above). `claude --version`
+  confirmed working standalone on this machine. The full live setup panel (open panel, save a
+  key, see the badge flip, restart) was **not** exercised end-to-end in the real app - Vite's dev
+  port (1420, `strictPort: true`) was already held by that same concurrent session's dev server,
+  and forcing a competing instance or editing shared config to dodge it risked disrupting live
+  work happening in parallel. The JSON persistence code is the same read/serde/write shape already
+  proven live earlier this session for `resolved-paths.json`, which is why this was judged an
+  acceptable, named gap rather than a blocking one - but it is a real gap, not a checked box.

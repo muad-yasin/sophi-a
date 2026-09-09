@@ -334,12 +334,124 @@ function setupSeatConfig() {
   }
 }
 
+// --- Setup panel: onboarding (Rust commands list_api_key_providers/set_api_key/
+// check_claude_cli/restart_orchestrator) - not gating the rest of the UI, since a returning user
+// with everything already configured has no reason to see it first. Opened on demand via the
+// always-visible "Setup" button, independent of WebSocket connection state (key entry is a plain
+// Tauri invoke, not a seat command).
+
+async function refreshSetProviders(): Promise<Set<string>> {
+  try {
+    const set = await invoke<string[]>("list_api_key_providers");
+    return new Set(set);
+  } catch (err) {
+    debugLog(`list_api_key_providers failed: ${String(err)}`);
+    return new Set();
+  }
+}
+
+async function buildSetupProviderList() {
+  const list = document.getElementById("setup-provider-list");
+  if (!list) return;
+  const alreadySet = await refreshSetProviders();
+  list.innerHTML = "";
+
+  for (const p of ALLOWED_PROVIDERS) {
+    const item = document.createElement("li");
+    item.className = "setup-provider-row";
+
+    const label = document.createElement("span");
+    label.className = "setup-provider-label";
+    label.textContent = p.id === "anthropic" ? `${p.label} (powers Advisor)` : p.label;
+
+    const badge = document.createElement("span");
+    badge.className = "setup-provider-badge";
+    badge.textContent = alreadySet.has(p.id) ? "set" : "not set";
+    badge.dataset.set = String(alreadySet.has(p.id));
+
+    const input = document.createElement("input");
+    input.type = "password";
+    input.placeholder = alreadySet.has(p.id) ? "•••••••• (change)" : "paste key";
+    input.setAttribute("aria-label", `${p.label} API key`);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn";
+    saveBtn.textContent = "Save";
+    saveBtn.addEventListener("click", async () => {
+      try {
+        await invoke("set_api_key", { provider: p.id, key: input.value });
+        input.value = "";
+        const stillSet = await refreshSetProviders();
+        badge.textContent = stillSet.has(p.id) ? "set" : "not set";
+        badge.dataset.set = String(stillSet.has(p.id));
+        input.placeholder = stillSet.has(p.id) ? "•••••••• (change)" : "paste key";
+      } catch (err) {
+        debugLog(`set_api_key(${p.id}) failed: ${String(err)}`);
+      }
+    });
+
+    item.append(label, input, saveBtn, badge);
+    list.appendChild(item);
+  }
+}
+
+function setupSetupPanel() {
+  const toggle = document.getElementById("setup-toggle");
+  const panel = document.getElementById("setup-panel");
+  const closeBtn = document.getElementById("setup-close");
+  const checkCliBtn = document.getElementById("setup-check-cli");
+  const cliStatus = document.getElementById("setup-cli-status");
+  const restartBtn = document.getElementById("setup-restart");
+  const restartStatus = document.getElementById("setup-restart-status");
+  if (!toggle || !panel) return;
+
+  const open = () => {
+    panel.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    void buildSetupProviderList();
+  };
+  const close = () => {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+
+  toggle.addEventListener("click", () => (panel.hidden ? open() : close()));
+  closeBtn?.addEventListener("click", close);
+
+  checkCliBtn?.addEventListener("click", async () => {
+    if (!cliStatus) return;
+    cliStatus.textContent = "Checking…";
+    cliStatus.dataset.state = "unknown";
+    try {
+      const version = await invoke<string>("check_claude_cli");
+      cliStatus.textContent = `Found: ${version}`;
+      cliStatus.dataset.state = "ok";
+    } catch (err) {
+      cliStatus.textContent = String(err);
+      cliStatus.dataset.state = "problem";
+    }
+  });
+
+  restartBtn?.addEventListener("click", async () => {
+    if (!restartStatus) return;
+    restartStatus.textContent = "Restarting…";
+    try {
+      await invoke("restart_orchestrator");
+      restartStatus.textContent = "Restarted - reconnecting…";
+    } catch (err) {
+      restartStatus.textContent = `Failed: ${String(err)}`;
+    }
+  });
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   showConnecting();
   setupAdvisorToggle();
   setupAdvisorActions();
   setupTaskForms();
   setupSeatConfig();
+  setupSetupPanel();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

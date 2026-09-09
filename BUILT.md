@@ -81,3 +81,11 @@
   before hitting a sandbox-only missing-`libfuse.so.2` blocker (not reproducible on GitHub's
   runners, which the CI workflow now guards against anyway); Windows NSIS untested locally (no
   Windows machine here). Full verified-vs-not detail in DECISIONS.md.
+- 2026-09-09 - Onboarding/setup panel. `src-tauri/src/lib.rs`: `PROVIDER_ENV_VARS` const (mirrors
+  `providers.js`'s envVar field), `list_api_key_providers`/`set_api_key`/`check_claude_cli`/
+  `restart_orchestrator` Tauri commands, keys persisted to `<app_config_dir>/api-keys.json` and
+  passed to the orchestrator child as env vars on spawn. `index.html`/`src/main.ts`/
+  `src/styles.css`: an always-visible "Setup" button + panel (CLI check row, a provider-keyed list
+  with masked inputs and set/not-set badges, a restart-orchestrator control). `cargo check`
+  (isolated target dir) and `npx tsc --noEmit` both clean; live panel interaction not exercised
+  (port contention with a concurrent session's dev server) - see DECISIONS.md.

@@ -9,6 +9,38 @@
   </head>
 
   <body>
+    <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
+      Setup
+    </button>
+
+    <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>
+      <div class="setup-panel-header">
+        <h2 id="setup-panel-title">Setup</h2>
+        <button type="button" id="setup-close" class="setup-close" aria-label="Close setup">&times;</button>
+      </div>
+
+      <section class="setup-section">
+        <h3>Claude Code CLI</h3>
+        <p class="setup-hint">Needed for <code>cnc</code>/<code>build-1..3</code> on Anthropic - Sophi-A runs your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
+        <div class="setup-cli-row">
+          <button type="button" id="setup-check-cli" class="btn">Check</button>
+          <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">Not checked yet</span>
+        </div>
+      </section>
+
+      <section class="setup-section">
+        <h3>Provider API keys</h3>
+        <p class="setup-hint">Only needed for providers you pick for <code>cnc</code>/<code>advisor</code> in their tile's own picker. Keys are stored locally on this machine and never leave it except to that provider's own API.</p>
+        <ul id="setup-provider-list" class="setup-provider-list"></ul>
+      </section>
+
+      <section class="setup-section">
+        <p class="setup-hint">Changed a key? The orchestrator needs a restart to pick it up.</p>
+        <button type="button" id="setup-restart" class="btn btn-send">Restart orchestrator</button>
+        <span id="setup-restart-status" class="setup-hint" aria-live="polite"></span>
+      </section>
+    </div>
+
     <div id="connecting" class="connecting" role="status">
       <img class="brand-mark" src="/favicon.svg" alt="" aria-hidden="true" />
       <p>Connecting to orchestrator&hellip;</p>

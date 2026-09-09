@@ -516,3 +516,152 @@ body {
   border: 1px solid var(--status-working);
   white-space: nowrap;
 }
+
+/* --- setup panel: onboarding (API keys, claude CLI check) --- */
+
+.setup-toggle {
+  position: fixed;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  z-index: 30;
+  font-family: var(--font-chrome);
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--surface-raised);
+  color: var(--accent-bright);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.setup-panel {
+  position: fixed;
+  top: var(--sp-8);
+  right: var(--sp-3);
+  z-index: 40;
+  width: min(420px, calc(100vw - 2 * var(--sp-3)));
+  max-height: calc(100vh - 2 * var(--sp-8));
+  overflow-y: auto;
+  background: var(--surface-modal);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--sp-4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.setup-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.setup-panel-header h2 {
+  font-family: var(--font-chrome);
+  font-size: 16px;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.setup-close {
+  font-size: 20px;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--sp-1);
+}
+
+.setup-section h3 {
+  font-family: var(--font-chrome);
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  margin: 0 0 var(--sp-2);
+  color: var(--text-primary);
+}
+
+.setup-hint {
+  margin: 0 0 var(--sp-2);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.setup-hint code {
+  font-family: var(--font-chrome);
+  color: var(--text-primary);
+}
+
+.setup-cli-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.setup-cli-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.setup-cli-status[data-state="ok"] {
+  color: var(--status-idle);
+}
+
+.setup-cli-status[data-state="problem"] {
+  color: var(--status-problem);
+}
+
+.setup-provider-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.setup-provider-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.setup-provider-label {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.setup-provider-row input {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--sp-1) var(--sp-2);
+  min-width: 0;
+}
+
+.setup-provider-row .btn {
+  min-height: 32px;
+  padding: var(--sp-1) var(--sp-3);
+}
+
+.setup-provider-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.setup-provider-badge[data-set="true"] {
+  color: var(--status-idle);
+}

@@ -116,3 +116,20 @@
   been pushed yet. Full detail and what's verified vs. not in DECISIONS.md. Remaining before
   PLAN_PACKAGING.md's acceptance tests can actually be run: push a tag, watch the CI build succeed
   on real GitHub-hosted runners, then work through AT-1 through AT-8 on real clean VMs.
+- 2026-09-09 - Fixed a real, live bug in relay (not just found this time - actually fixed, commit
+  90f5e3a there): six chains' Cohere `command-r7b-12-2024` critic seats requested 20000 max
+  tokens against a real 4096 cap, crashing mid-chain. A recent relay-side blanket "raise all
+  critic maxTokens" commit had swept this seat up too without checking its real ceiling.
+- 2026-09-09 - Pushed for real: `github.com/muad-yasin/sophi-a` (private), tagged `v0.1.0`. CI
+  built both installers for real on GitHub's runners - first time either has ever existed as an
+  actual file. Fixed a release-permissions bug (403, missing `contents: write`) and published the
+  release by hand from the already-built artifacts. `v0.1.0`'s release page now has a real
+  `Sophi-A_0.1.0_x64-setup.exe` and a real `Sophi-A_0.1.0_amd64.AppImage`.
+- 2026-09-09 - Built the onboarding/first-run setup panel: a "Setup" button opens a panel with a
+  `claude` CLI check and per-provider API key entry (10 providers, including `anthropic` - needed
+  for `advisor`'s calls even in the fully-default config, not just the 9 alternates). Keys persist
+  to their own local file and get passed to the orchestrator as env vars on (re)start; a Restart
+  button applies a changed key without quitting the app. `tsc`/`cargo check` both clean; the full
+  panel wasn't exercised live in the real running app (Vite's dev port was already held by a
+  concurrent session using this same repo, and forcing past that risked disrupting it) - named as
+  a real, undischarged gap in DECISIONS.md, not glossed over.

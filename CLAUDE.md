@@ -35,9 +35,12 @@ Open source (Apache-2.0), monetized via a packaged build sold on Stripe (`SHOP.m
 parent project. `plan-1..3` spawn real relay chains via its CLI (`src/cli.js`) and poll the run
 folder - this is genuine reuse of working code, not a description of it. Two things worth knowing
 about relay itself, found while building this: its own `chains/plan-cheap.json` (and
-`seven-cheap.json`) will crash at round 3 if a run reaches Cohere's `command-r7b-12-2024` critic
-seat (chain requests 20000 max tokens, that model caps at 4096) - a real bug in relay, not fixed
-here, worth a session over there fixing it.
+`seven-cheap.json`) would crash at round 3 if a run reached Cohere's `command-r7b-12-2024` critic
+seat (chain requested 20000 max tokens, that model caps at 4096). **Fixed 2026-09-09** in relay
+directly (commit 90f5e3a there) - a later relay-side blanket "raise all critic maxTokens to
+20000" commit (4ca3ae8, fixing unrelated Gemini/DeepSeek issues) had swept this seat's cap up
+too without re-checking it; six chains needed the same fix, not just the two named here
+originally.
 
 ## The spirit, carried over from `~/Projects/FOCUS.md`
 
