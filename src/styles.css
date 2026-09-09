@@ -40,6 +40,14 @@
   box-sizing: border-box;
 }
 
+/* The native [hidden] attribute only wins over an author display rule if nothing else sets
+   display on the same element - .connecting/.conn-error/.grid below all set their own display
+   (flex/grid) unconditionally, which otherwise silently defeats `el.hidden = true/false` in JS.
+   This makes [hidden] always win regardless of what else targets the element. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;

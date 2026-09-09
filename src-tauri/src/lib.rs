@@ -80,6 +80,23 @@ fn spawn_orchestrator(state: &OrchestratorState) {
     *state.child.lock().unwrap() = Some(child);
 }
 
+// Debug aid, kept deliberately: lets the frontend write its own diagnostic/lifecycle state to a
+// plain file (`cat /tmp/cnc-harness-frontend-debug.log`) since a native window has no attached
+// console. This is what found the real bug (a CSS specificity issue silently defeating the
+// `hidden` attribute, not the WebSocket connection itself) - genuinely useful going forward, not
+// a one-off hack to remove.
+#[tauri::command]
+fn debug_log(text: String) {
+    use std::io::Write;
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/cnc-harness-frontend-debug.log")
+    {
+        let _ = writeln!(f, "{text}");
+    }
+}
+
 #[tauri::command]
 fn get_orchestrator_port(state: tauri::State<OrchestratorState>) -> Result<u16, String> {
     state
@@ -104,7 +121,7 @@ pub fn run() {
             spawn_orchestrator(&state);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_orchestrator_port])
+        .invoke_handler(tauri::generate_handler![get_orchestrator_port, debug_log])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {

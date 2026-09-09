@@ -31,6 +31,21 @@ const connectingEl = document.getElementById("connecting")!;
 const connErrorEl = document.getElementById("conn-error")!;
 const gridEl = document.getElementById("grid")!;
 
+// Every seat.* event, plus WebSocket/invoke lifecycle transitions, are also written to
+// /tmp/cnc-harness-frontend-debug.log via the debug_log command - a native window has no
+// attached console the operator can casually check, so this is the durable diagnostic trail.
+function debugLog(text: string) {
+  console.log("[cnc-harness]", text);
+  invoke("debug_log", { text: `${new Date().toISOString()} ${text}` }).catch(() => {});
+}
+
+window.addEventListener("error", (e) => {
+  debugLog(`uncaught error: ${e.message}`);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  debugLog(`unhandled rejection: ${String(e.reason)}`);
+});
+
 function tileEl(seatId: string): HTMLElement | null {
   return document.getElementById(`tile-${seatId}`);
 }
@@ -102,14 +117,22 @@ async function connect() {
   let port: number;
   try {
     port = await invoke<number>("get_orchestrator_port");
-  } catch {
+  } catch (err) {
+    debugLog(`invoke(get_orchestrator_port) failed: ${String(err)}`);
     scheduleReconnect();
     return;
   }
 
   const ws = new WebSocket(`ws://127.0.0.1:${port}`);
 
+  // A watchdog: if none of open/close/error ever fire within a reasonable window, log the raw
+  // readyState so a silent hang is still diagnosable after the fact.
+  const watchdog = setTimeout(() => {
+    debugLog(`watchdog: 5s after construction, readyState still ${ws.readyState} - no open/close/error fired`);
+  }, 5000);
+
   ws.addEventListener("open", () => {
+    clearTimeout(watchdog);
     attempt = 0;
     everConnected = true;
     showConnected();
@@ -124,7 +147,9 @@ async function connect() {
     }
   });
 
-  ws.addEventListener("close", () => {
+  ws.addEventListener("close", (e) => {
+    clearTimeout(watchdog);
+    debugLog(`WebSocket closed: code=${e.code} reason=${e.reason}`);
     if (everConnected) showConnectionError();
     else showConnecting();
     scheduleReconnect();

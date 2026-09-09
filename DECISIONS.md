@@ -43,3 +43,14 @@
 - 2026-09-09 - Frontend UI built directly (not by a subagent) after the same refusal pattern hit a
   third time; design decisions came from the `sower-frontend:ux-design` and
   `sower-frontend:visual-craft` skills, invoked by the orchestrating session itself.
+- 2026-09-09 - Real bug found only once the app was actually run (`npm run tauri dev`), not by any
+  static check: the connecting/error/grid screens all set their own `display` (flex/grid) in CSS,
+  which silently defeats the native `hidden` attribute's `display: none` (author styles beat the
+  UA stylesheet at equal specificity) - toggling `.hidden` in JS had zero visual effect. Looked
+  like a WebSocket connectivity bug for a long stretch (the WebSocket itself was fine throughout)
+  because the symptom was "stuck on the connecting screen." Fixed with a global
+  `[hidden] { display: none !important; }` rule. Two real dead ends chased first and correctly
+  abandoned: `WEBKIT_DISABLE_SANDBOX=1` (no effect) and `WEBKIT_INSPECTOR_SERVER` (actively broke
+  Tauri's IPC custom protocol, forcing a postMessage fallback - removed). Added a `debug_log`
+  Tauri command + `/tmp/cnc-harness-frontend-debug.log` along the way specifically because a
+  native window has no console either side can casually read - kept deliberately, not a one-off.
