@@ -14,10 +14,26 @@ five of six labs signed off.
 
 ## Status
 
-Authorized 2026-09-08 by Muad as a one-night exception to FOCUS.md's stated order (this idea sits
-in "everything else - parked"; relay's own rule is normally "no new stages"). This plan does not
-reorder FOCUS.md's priority for any future session; the override is one night only. **Re-authorized
-2026-09-09 to move to the build phase** - a second, explicit override, same terms.
+Originally authorized 2026-09-08 by Muad as a one-night exception to FOCUS.md's then-stated order.
+
+**Superseded 2026-09-09** - do not treat this as a bare claim; check it against
+`/home/user/Projects/FOCUS.md` directly, which now reads (verbatim, "Why" section):
+
+> "We build cool shit first. Revenue comes when we have built a few cool things on our website. We
+> need 'scope creep' for a while... We need to utilize AI automation with cheap mass-thinking done
+> by the harness, and heavily utilize Claude Code to code on 2-3 repos at the same time, and we
+> want to run one repo as the C&C for having many videogames with the same intellectual property."
+
+and its "Rules for any session or agent" section:
+
+> "Before proposing work, check it is in the order above. If it is not, say so."
+
+(no longer "say so and stop" - that wording was removed 2026-09-09, along with the prior "No new
+projects. No new repos." line). FOCUS.md's own "Exception - 2026-09-08, one night only (closed)"
+section states plainly that this broader direction "is now the standing direction, not a one-night
+exception." cnc-harness is not named as a line item in FOCUS.md's numbered order, and a session
+should still say so - but FOCUS.md itself, not this document, is the authority for that; read it
+fresh rather than trusting this paragraph's summary of it.
 
 ## Assumptions (the eight defaulted answers this run took, one revised 2026-09-09)
 
