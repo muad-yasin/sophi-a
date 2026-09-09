@@ -18,3 +18,6 @@
   `index.html`, `src/styles.css`, `src/main.ts`.
 - 2026-09-09 - Bridge/IPC (PLAN.md "Bridge/IPC"; scope ledger A-5/C-5/F-2). `src-tauri/src/lib.rs`
   spawns the orchestrator, exposes `get_orchestrator_port`.
+- 2026-09-09 - Integration test (PLAN.md "the bar the whole must meet"). `npm run tauri dev`
+  verified end-to-end: real compile, real process spawn chain, real WebSocket replay of all eight
+  seats as idle on connect.

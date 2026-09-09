@@ -32,6 +32,9 @@
   plain child process (not Tauri's externalBin/sidecar mechanism - see DECISIONS.md), captures its
   `PORT:<n>` stdout line, exposes it via the `get_orchestrator_port` command, kills the child on
   app exit. `cargo check` clean.
-- 2026-09-09 - Step 7 (integration test) in progress: `npm run tauri dev` launched for real,
-  compiling ~491 crates on first build; verifying the window actually opens with all eight seat
-  tiles idle/green.
+- 2026-09-09 - Step 7 (integration test) complete: `npm run tauri dev` compiled clean (491 crates,
+  5m20s first build) and is running for real. Verified: the Rust bridge spawned the orchestrator
+  child process, which bound its ephemeral WebSocket port and was captured via `get_orchestrator_
+  port`; connecting a client directly confirms the on-connect replay sends `seat.idle` for all
+  eight seats in order (cnc, advisor, plan-1..3, build-1..3) - matching the frontend's green-tile
+  rendering path exactly. This is the acceptance bar HANDOFF.md names for slice 1. Left running.
