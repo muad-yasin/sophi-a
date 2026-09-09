@@ -4,40 +4,91 @@
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/src/main.ts" defer></script>
+    <title>Command &amp; Control Harness</title>
   </head>
 
   <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+    <div id="connecting" class="connecting" role="status">
+      <p>Connecting to orchestrator&hellip;</p>
+    </div>
 
-      <div class="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/src/assets/vite.svg" class="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img
-            src="/src/assets/tauri.svg"
-            class="logo tauri"
-            alt="Tauri logo"
-          />
-        </a>
-        <a href="https://www.typescriptlang.org/docs" target="_blank">
-          <img
-            src="/src/assets/typescript.svg"
-            class="logo typescript"
-            alt="typescript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+    <div id="conn-error" class="conn-error" role="alert" hidden>
+      <span>Lost connection to the orchestrator. Retrying&hellip;</span>
+    </div>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
+    <main id="grid" class="grid" hidden>
+      <section class="tile advisor" id="tile-advisor" data-seat="advisor">
+        <button class="advisor-toggle" id="advisor-toggle" aria-expanded="false" aria-controls="advisor-body">
+          <span class="tile-name">Advisor</span>
+          <span class="status-badge" data-role="badge">idle</span>
+          <span class="chevron" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="advisor-body" id="advisor-body" hidden>
+          <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+          <div class="advisor-actions">
+            <button class="btn btn-accept" data-action="accept" type="button">Accept</button>
+            <button class="btn btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tile planner" id="tile-plan-1" data-seat="plan-1">
+        <header class="tile-header">
+          <span class="tile-name">Planner 1</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile planner" id="tile-plan-2" data-seat="plan-2">
+        <header class="tile-header">
+          <span class="tile-name">Planner 2</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile planner" id="tile-plan-3" data-seat="plan-3">
+        <header class="tile-header">
+          <span class="tile-name">Planner 3</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile cnc" id="tile-cnc" data-seat="cnc">
+        <header class="tile-header">
+          <span class="tile-name">Command &amp; Control</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile builder" id="tile-build-1" data-seat="build-1">
+        <header class="tile-header">
+          <span class="tile-name">Builder 1</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile builder" id="tile-build-2" data-seat="build-2">
+        <header class="tile-header">
+          <span class="tile-name">Builder 2</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
+
+      <section class="tile builder" id="tile-build-3" data-seat="build-3">
+        <header class="tile-header">
+          <span class="tile-name">Builder 3</span>
+          <span class="status-badge" data-role="badge">idle</span>
+        </header>
+        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      </section>
     </main>
+
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

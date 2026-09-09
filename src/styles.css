@@ -1,116 +1,312 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
+/* cnc-harness control room - dark neutral surface ladder, restrained glow-status system.
+   Palette fixed by PLAN.md: #22c55e idle green, #eab308 working orange, #ef4444 problem red.
+   Everything else here builds a coherent dark ground for those three to sit on. */
 
-.logo.typescript:hover {
-  filter: drop-shadow(0 0 2em #2d79c7);
-}
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+  /* surface ladder, darkest to lightest */
+  --bg: #0b0d10;
+  --surface: #15181d;
+  --surface-raised: #1b1f26;
+  --border: #2a2f37;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+  /* text */
+  --text-primary: #e6e8eb;
+  --text-secondary: #9aa0a8;
+  --text-placeholder: #5b6169;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+  /* status - fixed by PLAN.md, do not adjust without a stated reason */
+  --status-idle: #22c55e;
+  --status-working: #eab308;
+  --status-problem: #ef4444;
+
+  /* spacing scale, multiples of 4 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* type scale - at most two sizes/weights per screen */
+  --font-chrome-size: 13px;
+  --font-chrome-weight: 600;
+  --font-body-size: 14px;
+  --font-body-weight: 400;
+
+  color-scheme: dark;
 }
 
-.container {
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
-  padding-top: 10vh;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: var(--font-body-size);
+  font-weight: var(--font-body-weight);
+}
+
+#root,
+body {
+  height: 100%;
+}
+
+/* --- whole-screen states: connecting / connection-error --- */
+
+.connecting {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: var(--font-chrome-size);
+  z-index: 10;
+}
+
+.conn-error {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--sp-2) var(--sp-4);
+  background: color-mix(in srgb, var(--status-problem) 20%, var(--surface));
+  border-bottom: 1px solid var(--status-problem);
+  color: var(--text-primary);
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  text-align: center;
+  z-index: 20;
+}
+
+/* --- the 3x3 control grid --- */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: var(--sp-4);
+  height: 100vh;
+  padding: var(--sp-4);
+}
+
+.tile.advisor {
+  grid-column: 1 / span 3;
+  grid-row: 1;
+}
+
+.tile.cnc {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.tile.planner {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.tile.builder {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* three planners/builders stack in their column via CSS subgrid-free flexbox wrapper would need
+   a nesting change; simplest correct approach for a static 3-row stack without subgrid support
+   is to let each planner/builder tile occupy one third of its column's height via nth-of-type. */
+.tile.planner,
+.tile.builder {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
+#grid.grid {
+  grid-template-areas:
+    "advisor advisor advisor"
+    "plan-1  cnc     build-1"
+    "plan-2  cnc     build-2"
+    "plan-3  cnc     build-3";
+  grid-template-rows: auto 1fr 1fr 1fr;
 }
 
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
+#tile-advisor { grid-area: advisor; }
+#tile-plan-1 { grid-area: plan-1; }
+#tile-plan-2 { grid-area: plan-2; }
+#tile-plan-3 { grid-area: plan-3; }
+#tile-cnc { grid-area: cnc; }
+#tile-build-1 { grid-area: build-1; }
+#tile-build-2 { grid-area: build-2; }
+#tile-build-3 { grid-area: build-3; }
 
-.row {
-  display: flex;
-  justify-content: center;
-}
+/* --- tile chrome --- */
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  overflow: hidden;
+  /* the glow ring itself: an inset ring so it reads as a status frame, not a decorative glow -
+     informative, not inviting, per ux-design's signal-job distinction */
+  box-shadow: inset 0 0 0 2px var(--status-idle);
+  transition: box-shadow 200ms ease;
 }
 
-button {
+.tile[data-status="working"] {
+  box-shadow: inset 0 0 0 2px var(--status-working);
+}
+
+.tile[data-status="problem"] {
+  box-shadow: inset 0 0 0 2px var(--status-problem);
+  animation: problem-pulse 900ms ease-out 2;
+}
+
+/* a finite pulse (2 iterations, then settles) on entering the problem state only - enough to
+   be noticeable without becoming a nagging, infinitely-looping animation */
+@keyframes problem-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--status-problem); }
+  50% { box-shadow: inset 0 0 0 4px var(--status-problem); }
+}
+
+.tile.cnc {
+  background: var(--surface-raised);
+}
+
+.tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.tile-name {
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  color: var(--text-primary);
+}
+
+/* color is never the sole carrier of status - a text badge always accompanies the glow ring */
+.status-badge {
+  font-size: 11px;
+  font-weight: var(--font-chrome-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px var(--sp-2);
+  border-radius: 4px;
+  color: var(--bg);
+  background: var(--status-idle);
+}
+
+[data-status="working"] .status-badge {
+  background: var(--status-working);
+}
+
+[data-status="problem"] .status-badge {
+  background: var(--status-problem);
+}
+
+.tile-output {
+  margin: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  color: var(--text-secondary);
+  font-size: var(--font-body-size);
+  line-height: 1.4;
+}
+
+.tile-output.placeholder {
+  color: var(--text-placeholder);
+  font-style: italic;
+}
+
+.tile.cnc .tile-output {
+  color: var(--text-primary);
+  -webkit-line-clamp: 20;
+}
+
+/* --- advisor: collapsible top strip --- */
+
+.tile.advisor {
+  padding: 0;
+}
+
+.advisor-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
+  text-align: left;
 }
 
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+.advisor-toggle .tile-name {
+  flex: 0 0 auto;
 }
 
-input,
-button {
-  outline: none;
+.advisor-toggle .status-badge {
+  flex: 0 0 auto;
 }
 
-#greet-input {
-  margin-right: 5px;
+.advisor-toggle .chevron {
+  margin-left: auto;
+  color: var(--text-secondary);
+  transition: transform 150ms ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
+.advisor-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
 
-  a:hover {
-    color: #24c8db;
-  }
+.advisor-body {
+  padding: 0 var(--sp-4) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+.advisor-body .tile-output {
+  -webkit-line-clamp: 4;
+}
+
+.advisor-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.btn {
+  font: inherit;
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.btn-accept {
+  border-color: var(--status-idle);
+}
+
+.btn-dismiss {
+  border-color: var(--text-secondary);
 }

@@ -22,3 +22,16 @@
     relay's own `chains/plan-cheap.json`/`seven-cheap.json` (Cohere's `command-r7b-12-2024` caps
     output at 4096 tokens, chain requests 20000 - crashes round 3) - not fixed here, relay was not
     modified, see `notes-relay-chain-adapter.md`.
+- 2026-09-09 - Step 5 (Tauri shell) complete: `index.html`/`src/styles.css`/`src/main.ts` rewritten
+  per PLAN.md's "Desktop shell and UI" - CSS grid 3x3, collapsible advisor strip, glow-ring tiles
+  with a text status badge (color is never the sole carrier of status), connecting/connection-lost
+  states, WebSocket client with retry/backoff. Design passes via `sower-frontend:ux-design` and
+  `sower-frontend:visual-craft` skills (full states list, dark neutral surface ladder, restrained
+  finite-pulse on the problem state only). `npx tsc --noEmit` clean.
+- 2026-09-09 - Step 6 (bridge wiring) complete: `src-tauri/src/lib.rs` spawns the orchestrator as a
+  plain child process (not Tauri's externalBin/sidecar mechanism - see DECISIONS.md), captures its
+  `PORT:<n>` stdout line, exposes it via the `get_orchestrator_port` command, kills the child on
+  app exit. `cargo check` clean.
+- 2026-09-09 - Step 7 (integration test) in progress: `npm run tauri dev` launched for real,
+  compiling ~491 crates on first build; verifying the window actually opens with all eight seat
+  tiles idle/green.

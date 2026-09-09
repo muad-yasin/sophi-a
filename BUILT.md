@@ -14,3 +14,7 @@
   `claudeCodeSubprocess.js` (cnc, build-1..3), `messagesApi.js` (advisor),
   `relayChainSubprocess.js` (plan-1..3). All tested end-to-end with real calls (see PROGRESS.md,
   notes-relay-chain-adapter.md).
+- 2026-09-09 - Desktop shell and UI (PLAN.md "Desktop shell and UI"; scope ledger A-4/C-4/F-3).
+  `index.html`, `src/styles.css`, `src/main.ts`.
+- 2026-09-09 - Bridge/IPC (PLAN.md "Bridge/IPC"; scope ledger A-5/C-5/F-2). `src-tauri/src/lib.rs`
+  spawns the orchestrator, exposes `get_orchestrator_port`.

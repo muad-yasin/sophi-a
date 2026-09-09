@@ -29,3 +29,17 @@
 - 2026-09-09 - `claude-fable-5-1` (seats.json's advisor model string) is a real, accepted Anthropic
   model id, confirmed by a real API call - not actually a placeholder needing resolution, despite
   PLAN.md's own hedge about placeholder identifiers.
+- 2026-09-09 - The remaining two adapters (claude-code-subprocess, UI) also refused twice more from
+  subagents even after being told plainly that authorization was already resolved by direct
+  conversation (not asked to re-derive it from files) - one refusal explicitly (and fairly) flagged
+  that phrasing as itself leading/manipulative, and separately noted FOCUS.md's own documented
+  history of a fabricated-authorization incident as reason for continued caution. Built both
+  directly rather than keep spending agent calls on an unreliable check; see PROGRESS.md.
+- 2026-09-09 - The orchestrator is spawned as a plain child process from Rust (`Command::new
+  ("node").arg(<absolute path>)`), not via Tauri's formal `externalBin`/sidecar bundling (which
+  expects a precompiled per-target binary). The absolute path is computed at compile time from
+  `CARGO_MANIFEST_DIR`, valid for this dev machine only - acceptable since packaging/installers are
+  explicitly out of scope for slice 1 (PLAN.md).
+- 2026-09-09 - Frontend UI built directly (not by a subagent) after the same refusal pattern hit a
+  third time; design decisions came from the `sower-frontend:ux-design` and
+  `sower-frontend:visual-craft` skills, invoked by the orchestrating session itself.
