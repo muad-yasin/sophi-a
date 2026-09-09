@@ -64,8 +64,20 @@ by a real WebSocket from a real orchestrator process Rust spawned.
 
 ## What's next (proposed, not started)
 
-MCP-style introspection on the orchestrator (seat status/output/control) - relay already does
-this for itself (`src/mcp/server.js`); cnc-harness doesn't yet, and debugging tonight would have
-been much faster with it (a native window has no console either side can casually read - see
-`DECISIONS.md`'s `debug_log` entry, which is the stopgap). Past that: the parallel-build-and-compare
-feature and mobile are both explicitly deferred in PLAN.md, not designed yet.
+The parallel-build-and-compare feature and mobile are both explicitly deferred in PLAN.md/
+PLAN_PACKAGING.md, not designed yet.
+
+## MCP introspection (built 2026-09-09)
+
+`src/mcp/server.js` - the introspection this section used to just propose. Register it with
+`claude mcp add sophia -- node /path/to/cnc-harness/src/mcp/server.js`, then a Claude Code
+session gets `list_seats`/`get_seat`/`start_seat`/`stop_seat`/`configure_seat`/`wait_for_idle`
+against whatever Sophi-A instance is actually running - no more guessing from a native window
+with no attached console (the `debug_log` entry in DECISIONS.md was the stopgap; this is the
+real thing). Finds the running orchestrator via a well-known port file
+(`os.tmpdir()/sophia-orchestrator-port`, written by `src/orchestrator/index.js` itself on
+startup) rather than a hardcoded port, and maintains one persistent WebSocket connection for its
+whole lifetime so tool calls answer from a live cache instead of racing a fresh connection's
+replay. `wait_for_idle` specifically guards against a real race found while testing it: calling
+it immediately after `start_seat`, before the seat's own "working" event has even arrived, would
+otherwise report a task that hadn't started yet as already finished.

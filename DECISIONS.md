@@ -339,3 +339,34 @@
   since the installer was never actually reached. Killed and cleaned up (`~/.wine` removed)
   rather than let it run indefinitely. AT-1/AT-2/AT-3 remain genuinely untested; a real Windows
   VM is still the only way to check them.
+- 2026-09-09 - Built `src/mcp/server.js`, the MCP introspection CLAUDE.md's "what's next" named
+  since the first build session. Mirrors relay's own `src/mcp/server.js` pattern (`McpServer` +
+  `StdioServerTransport`, tools mirroring the underlying protocol) but drives a *running*
+  orchestrator over its existing WebSocket rather than shelling out to a CLI - the orchestrator
+  has none of its own. Discovers the orchestrator's ephemeral port via a new well-known file
+  (`os.tmpdir()/sophia-orchestrator-port`) that `src/orchestrator/index.js` now writes alongside
+  its existing `PORT:<n>` stdout line, watched with `fs.watchFile` so a freshly-(re)started
+  orchestrator gets picked up without restarting the MCP server itself. Maintains one persistent
+  WS connection and an in-memory per-seat cache (status + last output), updated as events arrive,
+  so tool calls answer instantly from cache rather than opening a fresh connection and racing the
+  on-connect status replay. Six tools: `list_seats`, `get_seat`, `start_seat`, `stop_seat`,
+  `configure_seat`, `wait_for_idle`. Added `@modelcontextprotocol/sdk` and `zod` as dependencies,
+  matching relay's own versions.
+  **Tested for real, found and fixed a genuine bug in the process**: spun up a standalone
+  orchestrator, then drove `src/mcp/server.js` through an actual MCP client
+  (`@modelcontextprotocol/sdk`'s own `Client`/`StdioClientTransport`, not a hand-rolled
+  approximation) - confirmed `list_seats`/`get_seat` answer correctly from the port-file-discovery
+  connection. Calling `start_seat` then immediately `wait_for_idle` for a real `advisor` call
+  (real Anthropic API round trip) surfaced a real race: the first version of `wait_for_idle`
+  checked "is this seat currently not-working" without first confirming it had actually started -
+  called right after `start_seat`, before the seat's own `seat.working` event had arrived, it
+  would see the seat's pre-existing idle state and report the just-requested task as already
+  finished (with stale/null output). Fixed by requiring `wait_for_idle` to observe either a
+  working transition first, or an event timestamped after the tool call began, before trusting a
+  "not working" reading. Re-tested after the fix: three consecutive real runs (a raw-WS check, a
+  polling-`get_seat` check, and the original `start_seat`+`wait_for_idle` sequence that surfaced
+  the bug) all correctly captured the real reply text (`"mcp-advisor-ok"`/`"mcp-advisor-ok-2"`).
+  All test artifacts (throwaway client scripts, the standalone orchestrator process, its port
+  file) cleaned up after - confirmed the concurrent session's own orchestrator/vite instances
+  were untouched throughout (different process, matched by absolute vs. relative path in `ps`,
+  checked explicitly before and after).

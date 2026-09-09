@@ -89,3 +89,14 @@
   with masked inputs and set/not-set badges, a restart-orchestrator control). `cargo check`
   (isolated target dir) and `npx tsc --noEmit` both clean; live panel interaction not exercised
   (port contention with a concurrent session's dev server) - see DECISIONS.md.
+- 2026-09-09 - Fulfillment mails/runbook (`docs/fulfillment-mails.md`,
+  `docs/manual-fulfillment-runbook.md`), trademark-safe Stripe product copy
+  (`docs/stripe-product-copy.md`), and Sophi-A's Stripe success page (`sower-industries`'s
+  `src/pages/[lang]/sophi-a/next.astro`, `npm run build` confirmed it renders correctly).
+- 2026-09-09 - `src/mcp/server.js`: MCP introspection over the orchestrator's existing WebSocket
+  (`list_seats`, `get_seat`, `start_seat`, `stop_seat`, `configure_seat`, `wait_for_idle`),
+  discovering the running orchestrator via a new well-known port file
+  (`src/orchestrator/index.js` now writes `os.tmpdir()/sophia-orchestrator-port` alongside its
+  `PORT:<n>` stdout line). Tested for real with an actual MCP client against a standalone
+  orchestrator - found and fixed a real race in `wait_for_idle` (see DECISIONS.md), re-verified
+  fixed with three consecutive passing runs including a real Anthropic API round trip.

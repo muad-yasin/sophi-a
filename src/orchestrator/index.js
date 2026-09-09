@@ -4,7 +4,8 @@
 // port to stdout as `PORT:<port>` so the shell can read it and hand it to the frontend, then
 // dispatches seat start/stop commands to the invocation-mode-specific adapter and rebroadcasts
 // every seat event (PLAN.md "Status/event model": seat.start/working/output/idle/problem).
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -124,6 +125,15 @@ function main() {
     const { port } = wss.address();
     // The Tauri shell reads this exact line from stdout to discover the ephemeral port.
     console.log(`PORT:${port}`);
+    // Also drop it in a well-known file so src/mcp/server.js (a separate process, not spawned by
+    // Tauri) can find the same running orchestrator without the user copying a port number by
+    // hand. Last-writer-wins if more than one instance is running - fine for a debugging aid, not
+    // meant to arbitrate between concurrent instances.
+    try {
+      writeFileSync(join(tmpdir(), 'sophia-orchestrator-port'), String(port));
+    } catch {
+      // non-fatal - the MCP server just won't find a port to connect to
+    }
   });
 }
 

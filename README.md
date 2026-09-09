@@ -20,8 +20,22 @@ npm install
 npm run tauri dev
 ```
 
-No packaged installer yet - see `PLAN_PACKAGING.md`, which is settled but not fully built (build
-order: `HANDOFF_PACKAGING.md`).
+A packaged build now exists: `v0.1.0` (Windows NSIS installer, Linux AppImage) - both built for
+real by GitHub Actions, see `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md` for the plan and
+`DECISIONS.md` for what's actually been verified vs. not (real-VM acceptance testing is still
+open).
+
+## Introspection
+
+`src/mcp/server.js` exposes the running orchestrator (seat status/output/control) over MCP -
+useful for debugging without a native window's non-existent console:
+
+```
+claude mcp add sophia -- node /path/to/cnc-harness/src/mcp/server.js
+```
+
+Then a Claude Code session gets `list_seats`, `get_seat`, `start_seat`, `stop_seat`,
+`configure_seat`, and `wait_for_idle` against whatever Sophi-A instance is actually running.
 
 ## Platform support
 

@@ -12,9 +12,11 @@
     "package:orchestrator": "esbuild src/orchestrator/index.js --bundle --platform=node --format=esm --outfile=dist-orchestrator/index.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && cp src/orchestrator/seats.json dist-orchestrator/seats.json"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "ws": "^8.21.3"
+    "ws": "^8.21.3",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

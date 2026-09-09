@@ -142,3 +142,16 @@
   VM, and it passed. **Windows NSIS under Wine: inconclusive** - Wine's own prefix bootstrap never
   finished in this sandbox after 8+ minutes, so the installer itself was never reached; killed and
   cleaned up. AT-1/AT-2/AT-3 still need a real Windows machine. Full trace in DECISIONS.md.
+- 2026-09-09 - Fulfillment mails + runbook (`docs/fulfillment-mails.md`,
+  `docs/manual-fulfillment-runbook.md`) and trademark-safe Stripe copy
+  (`docs/stripe-product-copy.md`) written, closing three of `SHOP.md`'s open items. Named one real
+  unresolved gap: the GitHub repo is private, so a buyer can't reach the release assets directly -
+  author's call, not decided here. Sophi-A's Stripe success page also built
+  (`sower-industries`'s `/en/sophi-a/next/`, `npm run build` confirmed it renders) - pointing the
+  actual payment link at it is a dashboard action, not done here.
+- 2026-09-09 - Built `src/mcp/server.js` - the MCP introspection named in CLAUDE.md's "what's
+  next" since the very first build session, now real. Tested with an actual MCP client (not a
+  hand-rolled approximation) against a real standalone orchestrator; found and fixed a genuine
+  race in `wait_for_idle` along the way (it could report a just-started task as already finished
+  if polled before the seat's own "working" event arrived) - re-verified fixed with three
+  consecutive real runs. Full detail in DECISIONS.md.
