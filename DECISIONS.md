@@ -475,3 +475,38 @@
   cost (Apple Developer Program, notarization CI, a Mac runner) that only Muad can make -
   annotated in market-positioning.md and named here; PLAN_PACKAGING.md's scope deliberately not
   touched.
+- 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 3 (PLAN_PARALLEL_BUILD.md §4): the
+  comparison UI. Real, logged extension of item 2's original design: a hash-only manifest can
+  prove a file changed but can't show *what* changed - there's no "before" text to diff against.
+  `compareSnapshot.js`'s `writeCompareSnapshot` now also copies every tracked file's dispatch-
+  time content into `<workdir>/.compare-snapshot/` (mirroring the workdir's relative paths),
+  alongside the original `.compare-snapshot.json` hash index. Added the `diff` npm package
+  (small, standard, MIT) for `structuredPatch` - real line-level unified-diff hunks, not a
+  hand-rolled algorithm.
+  New pure functions: `changedSinceSnapshot(workdir)` (added/modified/deleted since dispatch,
+  hash-compared, never git - A1), `diffAgainstSnapshot(workdir, path)` (a real structured patch
+  against the preserved snapshot content), `currentFileHash(workdir, path)` (for the cross-
+  builder badge). New in-memory `compareGroups` Map in `index.js` (seatId -> the other seat ids
+  it was last dispatched with via `startMany`) - not persisted, not item 4's run-record, just
+  enough to compute §4's "same"/"differs" badge by comparing current hashes across whichever
+  seats were actually part of the same fan-out. Two new read-only WS commands,
+  `inspect_changes`/`get_diff`, replying directly on the requesting `ws` rather than
+  `broadcast()` - this is per-client query data, not seat state every connected client needs
+  pushed to it, a genuinely different shape than the existing `seat.*` event vocabulary.
+  Frontend: every builder tile (not just build-1) gets an "Inspect changes" toggle - a file list
+  with added/modified/deleted + same/differs/unique badges, and a click-to-diff pane rendering
+  real hunks with +/- line coloring.
+  **Cut, deliberately, matching PLAN_PARALLEL_BUILD.md §7's own explicit allowance**:
+  builder-vs-builder direct diff mode (diffing build-1's result against build-2's result
+  directly, rather than each against its own dispatch-time snapshot) - the plan names this as
+  the one item allowed to slip without re-scoping the rest if not trivial, and it wasn't: it
+  would need a second patch-computation path keyed by relative path across two arbitrary
+  workdirs rather than one workdir against its own snapshot. Same/differs still works without it
+  (computed from live hashes, not from a cross-diff render) - only the actual side-by-side diff
+  render for that specific comparison is deferred.
+  **Tested for real** against a standalone orchestrator, including the scenario the badge logic
+  exists for: two builders started on the same task, one file edited identically in both
+  (correctly badged "same"), then edited differently in one (correctly flips to "differs" on the
+  next query), plus a file only one builder touched (correctly "unique"), plus a real generated
+  diff for both a modified and a newly-added file, plus a rejected path-traversal attempt
+  (`../../etc/passwd`).

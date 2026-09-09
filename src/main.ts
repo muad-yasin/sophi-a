@@ -14,6 +14,35 @@ interface SeatEvent {
   detail?: string;
 }
 
+// Parallel-build-and-compare's read-only query replies (PLAN_PARALLEL_BUILD.md §4) - request/
+// response on the requesting client only, never broadcast, so these are never in SeatEventType.
+interface DiffHunk {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  lines: string[];
+}
+interface DiffPatch {
+  oldFileName: string;
+  newFileName: string;
+  hunks: DiffHunk[];
+}
+interface CompareChangesEvent {
+  type: "compare.changes";
+  seatId: string;
+  takenAt?: number;
+  changes?: { path: string; status: "added" | "modified" | "deleted"; crossBuilder: "same" | "differs" | "unique" }[];
+  error?: string;
+}
+interface CompareDiffEvent {
+  type: "compare.diff";
+  seatId: string;
+  path: string;
+  patch?: DiffPatch;
+  error?: string;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -211,8 +240,10 @@ async function connect() {
 
   ws.addEventListener("message", (event) => {
     try {
-      const evt = JSON.parse(event.data) as SeatEvent;
-      handleSeatEvent(evt);
+      const evt = JSON.parse(event.data) as SeatEvent | CompareChangesEvent | CompareDiffEvent;
+      if (evt.type === "compare.changes") handleCompareChanges(evt);
+      else if (evt.type === "compare.diff") handleCompareDiff(evt);
+      else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
     }
@@ -373,6 +404,103 @@ function setupBuild1CompareDispatch() {
     input.value = "";
     showCostConfirmModal(seatIds, task);
   });
+}
+
+// --- Parallel-build-and-compare: comparison UI (PLAN_PARALLEL_BUILD.md §4) ---
+// Every builder tile gets an "Inspect changes" toggle - a seat that was never part of a
+// comparison run just shows the empty-state message (the backend's `error` reply), no crash, no
+// special-casing needed here. Expanding sends {cmd:'inspect_changes', seatId}; clicking a file
+// in the resulting list sends {cmd:'get_diff', seatId, path} for that one file. Both are
+// request/response on the WS the app already holds - handleCompareChanges/handleCompareDiff
+// below render whatever comes back onto the seat's own tile, keyed by seatId in the reply.
+
+const BUILDER_SEAT_IDS = ["build-1", "build-2", "build-3"] as const;
+
+function setupInspectPanels() {
+  for (const seatId of BUILDER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const toggle = tile?.querySelector<HTMLButtonElement>('[data-role="inspect-toggle"]');
+    const panel = tile?.querySelector<HTMLElement>('[data-role="inspect-panel"]');
+    if (!tile || !toggle || !panel) continue;
+
+    toggle.addEventListener("click", () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      if (opening) sendCommand({ cmd: "inspect_changes", seatId });
+    });
+  }
+}
+
+const STATUS_LABEL: Record<string, string> = { added: "+", modified: "~", deleted: "-" };
+const CROSS_BUILDER_LABEL: Record<string, string> = { same: "same", differs: "differs", unique: "unique" };
+
+function handleCompareChanges(evt: CompareChangesEvent) {
+  const tile = tileEl(evt.seatId);
+  const empty = tile?.querySelector<HTMLElement>('[data-role="inspect-empty"]');
+  const list = tile?.querySelector<HTMLUListElement>('[data-role="inspect-file-list"]');
+  const diffEl = tile?.querySelector<HTMLElement>('[data-role="inspect-diff"]');
+  if (!tile || !empty || !list) return;
+
+  diffEl && (diffEl.hidden = true);
+  list.innerHTML = "";
+
+  if (evt.error || !evt.changes || evt.changes.length === 0) {
+    empty.hidden = false;
+    empty.textContent = evt.error ?? "No changes since dispatch.";
+    return;
+  }
+  empty.hidden = true;
+
+  for (const change of evt.changes) {
+    const li = document.createElement("li");
+    li.className = "inspect-file-row";
+
+    const status = document.createElement("span");
+    status.className = `inspect-file-status inspect-file-status-${change.status}`;
+    status.textContent = STATUS_LABEL[change.status] ?? "?";
+    status.setAttribute("aria-label", change.status);
+
+    const path = document.createElement("button");
+    path.type = "button";
+    path.className = "inspect-file-path";
+    path.textContent = change.path;
+    path.addEventListener("click", () => {
+      sendCommand({ cmd: "get_diff", seatId: evt.seatId, path: change.path });
+    });
+
+    const cross = document.createElement("span");
+    cross.className = `inspect-file-cross inspect-file-cross-${change.crossBuilder}`;
+    cross.textContent = CROSS_BUILDER_LABEL[change.crossBuilder] ?? change.crossBuilder;
+
+    li.append(status, path, cross);
+    list.appendChild(li);
+  }
+}
+
+function handleCompareDiff(evt: CompareDiffEvent) {
+  const tile = tileEl(evt.seatId);
+  const diffEl = tile?.querySelector<HTMLElement>('[data-role="inspect-diff"]');
+  if (!tile || !diffEl) return;
+
+  if (evt.error || !evt.patch) {
+    diffEl.hidden = false;
+    diffEl.textContent = evt.error ?? "No diff available.";
+    return;
+  }
+
+  diffEl.hidden = false;
+  diffEl.innerHTML = "";
+  for (const hunk of evt.patch.hunks) {
+    for (const line of hunk.lines) {
+      const div = document.createElement("div");
+      const marker = line.charAt(0);
+      div.className =
+        marker === "+" ? "diff-line diff-line-add" : marker === "-" ? "diff-line diff-line-del" : "diff-line";
+      div.textContent = line;
+      diffEl.appendChild(div);
+    }
+  }
 }
 
 // `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
@@ -540,6 +668,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupSetupPanel();
   setupBuild1CompareDispatch();
   setupCostConfirmModal();
+  setupInspectPanels();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

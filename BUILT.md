@@ -115,3 +115,11 @@
   runs only. Tested for real (pre-existing file, never-run-before workdir, single-seat-writes-
   nothing) - see DECISIONS.md. Also fixed a real gap found along the way: `.workdirs/` was
   untracked-and-unignored in git; added to `.gitignore`.
+- 2026-09-09 - Parallel-build-and-compare item 3 (PLAN_PARALLEL_BUILD.md §4; scope ledger
+  GLM-2). `compareSnapshot.js` extended to preserve real file content, not just hashes
+  (`.compare-snapshot/`); new `changedSinceSnapshot`/`diffAgainstSnapshot`/`currentFileHash`.
+  `index.js`: `compareGroups` tracking, `inspect_changes`/`get_diff` WS commands (request/
+  response, not broadcast). `index.html`/`src/main.ts`/`src/styles.css`: an "Inspect changes"
+  toggle on every builder tile, a file list with status + cross-builder badges, a click-to-diff
+  pane. Added the `diff` npm package. Tested for real - see DECISIONS.md. Builder-vs-builder
+  direct diff render cut per the plan's own explicit allowance; same/differs badges unaffected.

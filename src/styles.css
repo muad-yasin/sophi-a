@@ -62,6 +62,7 @@
   --border: color-mix(in srgb, #f2ede3 8%, transparent); /* Hairline */
   --divider: color-mix(in srgb, #f2ede3 14%, transparent);
   --scrim: rgba(6, 5, 4, 0.72); /* SMO Scrim - modal backdrops */
+  --sunken: #100f0c; /* SMO Sunken - a recess cut into a surface, e.g. the diff pane */
 
   /* text - SMO TextPrimary/TextSecondary/TextMuted/TextDisabled */
   --text-primary: #f2ede3;
@@ -721,4 +722,135 @@ body {
   display: flex;
   gap: var(--sp-2);
   justify-content: flex-end;
+}
+
+/* --- parallel-build-and-compare: comparison UI (PLAN_PARALLEL_BUILD.md §4) --- */
+
+.inspect-toggle {
+  align-self: flex-start;
+  font-family: var(--font-chrome);
+  font-size: 12px;
+  font-weight: var(--font-chrome-weight);
+  background: none;
+  border: none;
+  color: var(--accent-bright);
+  cursor: pointer;
+  padding: var(--sp-1) 0;
+  text-decoration: underline;
+}
+
+.inspect-panel {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-2);
+  margin-top: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.inspect-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-placeholder);
+  font-style: italic;
+}
+
+.inspect-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.inspect-file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 12px;
+}
+
+.inspect-file-status {
+  font-family: var(--font-chrome);
+  font-weight: 700;
+  width: 1.2em;
+  text-align: center;
+  border-radius: 3px;
+}
+
+.inspect-file-status-added {
+  color: var(--status-idle);
+}
+
+.inspect-file-status-modified {
+  color: var(--status-working);
+}
+
+.inspect-file-status-deleted {
+  color: var(--status-problem);
+}
+
+.inspect-file-path {
+  flex: 1 1 auto;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-chrome);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspect-file-path:hover {
+  text-decoration: underline;
+}
+
+.inspect-file-cross {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.inspect-file-cross-same {
+  color: var(--status-idle);
+}
+
+.inspect-file-cross-differs {
+  color: var(--status-problem);
+}
+
+.inspect-diff {
+  margin: 0;
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--sp-2);
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.diff-line {
+  white-space: pre;
+}
+
+.diff-line-add {
+  color: var(--status-idle);
+  background: color-mix(in srgb, var(--status-idle) 12%, transparent);
+}
+
+.diff-line-del {
+  color: var(--status-problem);
+  background: color-mix(in srgb, var(--status-problem) 12%, transparent);
 }

@@ -179,3 +179,11 @@
   Tested for real, including that empty-workdir case. Incidental find: `.workdirs/` was
   untracked-and-unignored in git - fixed (`.gitignore`), confirmed nothing from it was ever
   actually committed historically. Next: item 3 (comparison UI - file tree + diff viewer).
+- 2026-09-09 - Item 3 (comparison UI) done: every builder tile gets an "Inspect changes" toggle
+  showing changed files (added/modified/deleted) with same/differs/unique cross-builder badges,
+  and click-to-diff rendering real unified-diff hunks. Extended item 2's snapshot to also
+  preserve real file content (not just hashes) so actual diffs are possible - logged as a real,
+  deliberate extension in DECISIONS.md. Cut the one thing the plan explicitly allows cutting
+  (direct builder-vs-builder diff render) - same/differs badges still work without it. Tested for
+  real: same-then-differs badge flip, a unique file, real diffs for both a modified and a new
+  file, and a rejected path-traversal attempt. Next: item 4 (pick + disposition).

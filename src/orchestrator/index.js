@@ -13,7 +13,7 @@ import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSu
 import { startMessagesApiSeat } from './adapters/messagesApi.js';
 import { startRelayChainSeat } from './adapters/relayChainSubprocess.js';
 import { isAllowedProvider } from './providers.js';
-import { writeCompareSnapshot } from './compareSnapshot.js';
+import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash } from './compareSnapshot.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -78,6 +78,12 @@ export function stopSeat(seatId) {
 // existing builder seats (PLAN_PARALLEL_BUILD.md A5 - no new seats for this feature).
 const BUILDER_SEAT_IDS = ['build-1', 'build-2', 'build-3'];
 
+// seatId -> the other seat ids it was most recently dispatched together with, for the
+// "same"/"differs" cross-builder badge (PLAN_PARALLEL_BUILD.md §4). In-memory, replaced on every
+// new comparison dispatch - there is no persistent run history yet (that's item 4's job), this
+// is only ever "the last group this seat was part of."
+const compareGroups = new Map();
+
 // Enforced here, not just in the UI's confirmation modal - PLAN_PARALLEL_BUILD.md §3 is explicit
 // that the cost gate must be "backend-enforced, not just a UI courtesy": a direct WS call with
 // two or more seatIds and confirmed !== true is rejected before any subprocess exists, the same
@@ -105,9 +111,56 @@ export function startMany(wss, seatIds, task, confirmed) {
     for (const seatId of unique) {
       const workdir = seats[seatId]?.workdir;
       if (workdir) writeCompareSnapshot(join(root, workdir));
+      compareGroups.set(seatId, unique.filter(id => id !== seatId));
     }
   }
   for (const seatId of unique) startSeat(wss, seatId, task);
+}
+
+// Build order item 3 (PLAN_PARALLEL_BUILD.md §4): read-only queries for the comparison UI. These
+// are request/response, not broadcast - the existing seat.* event vocabulary is for state every
+// connected client needs pushed to it; a file tree or a diff is only relevant to whichever client
+// asked, so both reply directly on the requesting `ws`, never via `broadcast()`.
+function handleInspectChanges(ws, seatId) {
+  const workdir = seats[seatId]?.workdir;
+  if (!workdir) {
+    ws.send(JSON.stringify({ type: 'compare.changes', seatId, error: 'no workdir for this seat' }));
+    return;
+  }
+  const result = changedSinceSnapshot(join(root, workdir));
+  if (!result) {
+    ws.send(JSON.stringify({ type: 'compare.changes', seatId, error: 'no snapshot - this seat was never part of a comparison run' }));
+    return;
+  }
+  // "same"/"differs"/"unique" (PLAN_PARALLEL_BUILD.md §4) - computed against whichever other
+  // seats this one was last dispatched together with, comparing current file hashes, never the
+  // snapshot (the badge is about the *result*, not about what changed).
+  const siblingWorkdirs = (compareGroups.get(seatId) || [])
+    .map(sid => seats[sid]?.workdir)
+    .filter(Boolean)
+    .map(w => join(root, w));
+  const myWorkdir = join(root, workdir);
+  for (const change of result.changes) {
+    const myHash = currentFileHash(myWorkdir, change.path);
+    const siblingHashes = siblingWorkdirs.map(w => currentFileHash(w, change.path)).filter(h => h !== null);
+    if (siblingHashes.length === 0) change.crossBuilder = 'unique';
+    else change.crossBuilder = siblingHashes.every(h => h === myHash) ? 'same' : 'differs';
+  }
+  ws.send(JSON.stringify({ type: 'compare.changes', seatId, takenAt: result.takenAt, changes: result.changes }));
+}
+
+function handleGetDiff(ws, seatId, path) {
+  const workdir = seats[seatId]?.workdir;
+  if (!workdir || typeof path !== 'string' || path.includes('..')) {
+    ws.send(JSON.stringify({ type: 'compare.diff', seatId, path, error: 'invalid seat or path' }));
+    return;
+  }
+  const patch = diffAgainstSnapshot(join(root, workdir), path);
+  if (!patch) {
+    ws.send(JSON.stringify({ type: 'compare.diff', seatId, path, error: 'no snapshot and no current file - nothing to diff' }));
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'compare.diff', seatId, path, patch }));
 }
 
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
@@ -157,6 +210,8 @@ function main() {
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
       else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
       else if (msg.cmd === 'start_many') startMany(wss, msg.seatIds, msg.task, msg.confirmed);
+      else if (msg.cmd === 'inspect_changes') handleInspectChanges(ws, msg.seatId);
+      else if (msg.cmd === 'get_diff') handleGetDiff(ws, msg.seatId, msg.path);
     });
   });
 
