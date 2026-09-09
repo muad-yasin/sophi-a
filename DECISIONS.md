@@ -14,3 +14,18 @@
   existing repo (which already held PLAN.md/BOARD.md/HANDOFF.md) rather than a nested subdirectory.
 - 2026-09-09 - `cargo`/`rustc` require `. "$HOME/.cargo/env"` to be on PATH; added to `~/.bashrc` and
   `~/.bash_profile` so every future shell (including subagents') picks it up without re-sourcing.
+- 2026-09-09 - Multiple fresh subagents refused to build adapters/UI, quoting FOCUS.md wording
+  ("say so and stop", "No new projects. No new repos.") that no longer exists in the live file -
+  a stale-cache issue (their system-prompt-level import of FOCUS.md predates the same-day
+  rewrite), confirmed by `tool_uses: 0` in every such refusal (they never actually re-read the
+  file). One subagent's retry did independently re-verify FOCUS.md live and proceed, successfully
+  building and testing `relayChainSubprocess.js`. For the remaining two adapters, after a further
+  refusal round, the orchestrating session built them directly instead of continuing to relaunch
+  fresh agents against an unreliable authorization check.
+- 2026-09-09 - `messagesApi.js`'s call into relay's `src/providers.js` needed relay's own `.env`
+  loaded into this process - `providers.js` reads keys straight from `process.env` and never loads
+  `.env` itself (only relay's `cli.js` entry point does that). Added the same minimal `.env`
+  parsing relay's own `cli.js` uses, run once before the first real call.
+- 2026-09-09 - `claude-fable-5-1` (seats.json's advisor model string) is a real, accepted Anthropic
+  model id, confirmed by a real API call - not actually a placeholder needing resolution, despite
+  PLAN.md's own hedge about placeholder identifiers.

@@ -1,0 +1,53 @@
+{
+  "cnc": {
+    "role": "Command & Control",
+    "model": "claude-sonnet-5",
+    "invocation_mode": "claude-code-subprocess",
+    "session": "continued via --resume"
+  },
+  "advisor": {
+    "role": "Advisor",
+    "model": "claude-fable-5-1",
+    "invocation_mode": "messages-api",
+    "session": "stateless"
+  },
+  "plan-1": {
+    "role": "Planning module",
+    "default_chain": "plan-cheap",
+    "invocation_mode": "relay-chain-subprocess",
+    "session": "one relay run per task"
+  },
+  "plan-2": {
+    "role": "Planning module",
+    "default_chain": "plan-cheap",
+    "invocation_mode": "relay-chain-subprocess",
+    "session": "one relay run per task"
+  },
+  "plan-3": {
+    "role": "Planning module",
+    "default_chain": "plan-cheap",
+    "invocation_mode": "relay-chain-subprocess",
+    "session": "one relay run per task"
+  },
+  "build-1": {
+    "role": "Building module",
+    "model": "claude-sonnet-5",
+    "invocation_mode": "claude-code-subprocess",
+    "session": "continued via --resume, own working directory",
+    "workdir": ".workdirs/build-1"
+  },
+  "build-2": {
+    "role": "Building module",
+    "model": "claude-sonnet-5",
+    "invocation_mode": "claude-code-subprocess",
+    "session": "continued via --resume, own working directory",
+    "workdir": ".workdirs/build-2"
+  },
+  "build-3": {
+    "role": "Building module",
+    "model": "claude-sonnet-5",
+    "invocation_mode": "claude-code-subprocess",
+    "session": "continued via --resume, own working directory",
+    "workdir": ".workdirs/build-3"
+  }
+}
