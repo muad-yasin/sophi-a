@@ -310,3 +310,32 @@
   work happening in parallel. The JSON persistence code is the same read/serde/write shape already
   proven live earlier this session for `resolved-paths.json`, which is why this was judged an
   acceptable, named gap rather than a blocking one - but it is a real gap, not a checked box.
+- 2026-09-09 - Tested the actual `v0.1.0` release artifacts (downloaded via `gh release
+  download`, not rebuilt) - the strongest verification available without a real separate clean
+  VM. **Linux AppImage: a real success**, and a meaningfully closer approximation of AT-4 than
+  anything earlier this session. Extracted it (`--appimage-extract`, same FUSE-less workaround as
+  before) and ran its `AppRun` directly with an isolated `XDG_CONFIG_HOME` (simulating a machine
+  that has never run Sophi-A - no persisted-paths.json to short-circuit resolution). Confirmed
+  from the logs: the orchestrator entry and the Node runtime both resolved via
+  `app.path().resource_dir()` pointing at paths *inside the AppImage itself*
+  (`.../squashfs-root/usr/lib/Sophi-A/orchestrator/index.js`,
+  `.../squashfs-root/usr/lib/Sophi-A/node/node`) - not a dev fallback, not a stale persisted path,
+  the real packaged-resource mechanism. With `SOPHIA_RELAY_PATH` set (bypassing the interactive
+  picker, which needs a real display to dismiss), the orchestrator child actually spawned from
+  the bundled Node binary running the bundled orchestrator file, bound a real WebSocket port, and
+  answered the real seat-replay protocol correctly (`seat.idle` for all 8 seats, verified with a
+  direct `ws` client). The only failure was Tauri's own window creation
+  (`Could not create default EGL display: EGL_BAD_PARAMETER`) - a headless-sandbox GPU/display
+  limitation, not a Sophi-A defect; irrelevant to what AT-4 is actually checking (path resolution
+  and the orchestrator working from a foreign machine), which is now about as verified as this
+  sandbox allows. (An earlier attempt without the isolated `XDG_CONFIG_HOME` correctly picked up
+  *this machine's own* leftover dev-mode persisted state - not a bug, exactly the persisted-path
+  precedence step working as designed, but a reminder that this machine isn't genuinely clean and
+  the isolated-config version is the one that actually approximates AT-4.)
+  **Windows NSIS under Wine: attempted, abandoned, not a finding either way.** `wine
+  Sophi-A_0.1.0_x64-setup.exe /S` was run for real, but Wine's own one-time prefix bootstrap
+  (`wineboot`/`rundll32 setupapi`) never finished after 8+ minutes at ~98% CPU in this sandbox -
+  plausibly a resource-constrained-sandbox problem with Wine itself, not with the installer,
+  since the installer was never actually reached. Killed and cleaned up (`~/.wine` removed)
+  rather than let it run indefinitely. AT-1/AT-2/AT-3 remain genuinely untested; a real Windows
+  VM is still the only way to check them.

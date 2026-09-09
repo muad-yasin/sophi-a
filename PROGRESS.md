@@ -133,3 +133,12 @@
   panel wasn't exercised live in the real running app (Vite's dev port was already held by a
   concurrent session using this same repo, and forcing past that risked disrupting it) - named as
   a real, undischarged gap in DECISIONS.md, not glossed over.
+- 2026-09-09 - Tested the real `v0.1.0` release artifacts. **Linux AppImage: genuinely verified**
+  end to end on a simulated clean machine (isolated config dir) - extracted the real artifact,
+  ran it, confirmed both the orchestrator and Node runtime resolve from paths *inside the
+  AppImage* (not dev fallbacks, not stale local state), watched the bundled orchestrator actually
+  spawn and bind a real WebSocket port, and confirmed the real seat-replay protocol over it with
+  a direct client. This is the closest approximation of AT-4 achievable without an actual clean
+  VM, and it passed. **Windows NSIS under Wine: inconclusive** - Wine's own prefix bootstrap never
+  finished in this sandbox after 8+ minutes, so the installer itself was never reached; killed and
+  cleaned up. AT-1/AT-2/AT-3 still need a real Windows machine. Full trace in DECISIONS.md.
