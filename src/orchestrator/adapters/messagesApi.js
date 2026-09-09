@@ -24,6 +24,27 @@ const CNC_CHAT_SYSTEM = 'You are the command-and-control seat of a multi-agent b
   'chat-only mode: you have no tool use, no file editing, and no ability to run commands here - ' +
   'say so if asked to do any of that. Help with planning, oversight, and conversation instead.';
 
+// Parallel-build-and-compare's "advisor recommendation" mode (PLAN_PARALLEL_BUILD.md §6):
+// commentary only, never authority - the human's own click is still the only thing that ever
+// picks a winner (index.js's select_winner). This system prompt exists specifically so the
+// model doesn't drift into the single-decision "flag/confirm/push back" framing ADVISOR_SYSTEM
+// is written for; comparing N concurrent build attempts is a different task shape.
+//
+// The word "opinion" (also "view") is deliberately avoided below - found live, not guessed: the
+// exact same task content, with an otherwise-identical system prompt, gets a real `claude-
+// fable-5-1` API refusal (`stop: "refusal"`, empty text) whenever the system prompt frames this
+// as Fable "giving an opinion"/"a view", and does not refuse with "recommendation"/"suggestion"
+// instead - confirmed by bisecting the prompt word-by-word against the real API, twice, before
+// and after the reword. Not documented anywhere as intentional model behavior; recorded here as
+// an observed fact about this specific model/prompt-shape combination, in case it recurs
+// elsewhere in this codebase.
+const ADVISOR_COMPARE_SYSTEM = 'You are Fable, giving a non-binding recommendation on several ' +
+  'build attempts that ran the same task in parallel in a multi-agent build harness. You are ' +
+  'shown a short summary of what each one changed - not the full diffs. Give exactly one short ' +
+  'line: "recommended: <seat-id>, because <reason>." Pick the one that best does what the task ' +
+  'asked, based only on what you are shown. You are not deciding the outcome - a human does ' +
+  'that with their own click - your line is only ever a suggestion they are free to ignore.';
+
 // Per-seat in-memory chat history (PLAN.md: `cnc`'s chat-fallback mode is one ongoing
 // conversation, not a stateless call-per-turn like `advisor`). Cleared on orchestrator restart -
 // no persistence, matching `claude-code-subprocess`'s own session_id lifetime.
@@ -68,8 +89,11 @@ function loadProviders() {
  * @param {object} seatConfig - this seat's entry from seats.json (has `.model`)
  * @param {string} task - the plain-text prompt for this stateless call
  * @param {(type: string, detail?: any) => void} emit
+ * @param {'compare'} [mode] - advisor only: PLAN_PARALLEL_BUILD.md §6's recommendation mode,
+ *   using ADVISOR_COMPARE_SYSTEM instead of the default single-decision ADVISOR_SYSTEM. Never
+ *   set for any other seat/call site; a plain `start` command never passes this.
  */
-export async function startMessagesApiSeat(seatId, seatConfig, task, emit) {
+export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode) {
   emit('seat.start');
 
   const provider = seatConfig.provider || 'anthropic';
@@ -86,8 +110,11 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit) {
     emit('seat.working');
 
     const isAdvisor = seatId === 'advisor';
-    const system = isAdvisor ? ADVISOR_SYSTEM : CNC_CHAT_SYSTEM;
-    const history = seatConfig.chat_history ? (histories.get(seatId) || []) : [];
+    const system = isAdvisor && mode === 'compare' ? ADVISOR_COMPARE_SYSTEM : isAdvisor ? ADVISOR_SYSTEM : CNC_CHAT_SYSTEM;
+    // The compare-mode call is a one-off aside, not part of advisor's own ongoing conversation
+    // with the human - it never reads or appends to `histories`, so it can't leak into or get
+    // derailed by whatever advisor and the human were already discussing.
+    const history = mode === 'compare' ? [] : seatConfig.chat_history ? (histories.get(seatId) || []) : [];
     const messages = [...history, { role: 'user', content: task }];
 
     // relay's provider adapters (src/providers.js) are single non-streaming POSTs that return

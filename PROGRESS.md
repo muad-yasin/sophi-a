@@ -196,3 +196,13 @@
   with the winner's left untouched. All 5 build-order items for parallel-build-and-compare are
   now done. Next: "surface the debate" (the market-positioning analysis's headline feature) and
   cost transparency.
+- 2026-09-09 - Item 5 (advisor recommendation) done - **all 5 build-order items for parallel-
+  build-and-compare are now complete.** An "Ask advisor" button gets a one-line, non-binding
+  recommendation between builders in a comparison run. Two real bugs found and fixed by actually
+  testing against the live API rather than trusting the design: (1) the words "opinion"/"view" in
+  advisor's system prompt caused a genuine model refusal on this exact task shape - reworded to
+  "recommendation," confirmed fixed against the real API; (2) the original per-file summary
+  (status+path only) was too sparse to actually judge by - advisor itself flagged this
+  ("identical summaries... coin flip") before the fix, which added a short content preview per
+  file and the original task text to the prompt. Verified with a task that has a genuinely
+  correct answer: advisor correctly picked the matching builder, twice in a row.

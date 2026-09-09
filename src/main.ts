@@ -459,6 +459,12 @@ function setupInspectPanels() {
     tile.querySelector('[data-role="pick-btn"]')?.addEventListener("click", () => {
       sendCommand({ cmd: "select_winner", seatId, humanClick: true });
     });
+    // Non-binding (PLAN_PARALLEL_BUILD.md §6) - the reply is just another seat.output on
+    // advisor's own tile, handled by the existing handleSeatEvent path; nothing here gates or
+    // pre-selects the pick button above.
+    tile.querySelector('[data-role="ask-advisor-btn"]')?.addEventListener("click", () => {
+      sendCommand({ cmd: "advisor_recommend", seatId });
+    });
     tile.querySelector('[data-role="delete-workdir-btn"]')?.addEventListener("click", () => {
       if (!window.confirm(`Delete ${seatId}'s working directory? This cannot be undone.`)) return;
       sendCommand({ cmd: "delete_workdir", seatId, humanClick: true });

@@ -240,6 +240,52 @@ function handleListCompareRuns(ws) {
   ws.send(JSON.stringify({ type: 'compare.history', runs }));
 }
 
+// Build order item 5 (PLAN_PARALLEL_BUILD.md §6): a non-binding advisor recommendation over a
+// comparison group. Deliberately bypasses the normal startSeat/adapter dispatch table used
+// everywhere else in this file - this is a one-off aside to advisor, not a generic seat command,
+// and it needs the 'compare' mode flag messagesApi.js's startMessagesApiSeat takes only for this
+// call. Summaries only (changed-file lists), never full diffs, per §6's own token-cost note.
+// Takes one seat id - the group is whichever seats it was last dispatched with (`compareGroups`,
+// the same lookup §4's cross-builder badge uses), so the frontend only needs to know which tile
+// it was clicked from, not the whole group's membership.
+function handleAdvisorRecommend(wss, seatId) {
+  const group = compareGroups.get(seatId);
+  if (!group) {
+    console.error(`advisor_recommend rejected: "${seatId}" is not part of a known comparison run`);
+    return;
+  }
+  const unique = [seatId, ...group.siblings];
+  // A short current-content preview per changed file - not the full diff (§6's own token-cost
+  // concern), but enough real signal to actually judge by. Without this, two builders that both
+  // *added* a same-named file read as identical from the status/path alone ("added impl.py" vs
+  // "added impl.py") even when their content is completely different - found by actually running
+  // this and watching advisor correctly decline to guess, rather than assumed up front.
+  const PREVIEW_CHARS = 200;
+  const summaries = unique.map(seatId => {
+    const workdir = seats[seatId]?.workdir;
+    const result = workdir ? changedSinceSnapshot(join(root, workdir)) : null;
+    const files = (result?.changes || []).map(c => {
+      if (c.status === 'deleted') return `${c.status} ${c.path}`;
+      let preview = '';
+      try {
+        const full = join(root, workdir, c.path);
+        const text = readFileSync(full, 'utf8').slice(0, PREVIEW_CHARS);
+        preview = ` -> "${text.replace(/\s+/g, ' ').trim()}${text.length === PREVIEW_CHARS ? '...' : ''}"`;
+      } catch {
+        // binary or unreadable - status/path alone is still better than nothing
+      }
+      return `${c.status} ${c.path}${preview}`;
+    }).join('; ') || '(no changes recorded)';
+    return `${seatId} changed: ${files}`;
+  });
+  // Found by actually running this and reading the reply: without the original task text,
+  // advisor correctly refused to guess which result was "right" rather than fabricate a
+  // preference - honest, but not useful. Including it is the fix, not a design change.
+  const task = `The task given to each builder was: "${group.task}"\n\nCompare what each one ` +
+    `actually did and give your one-line recommendation.\n\n${summaries.join('\n')}`;
+  startMessagesApiSeat('advisor', seats.advisor, task, makeEmit(wss, 'advisor'), 'compare');
+}
+
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
 // addendum) - the other six seats have no configurable provider/model and this is rejected for
 // them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
@@ -292,6 +338,7 @@ function main() {
       else if (msg.cmd === 'select_winner') handleSelectWinner(wss, msg.seatId, msg.humanClick);
       else if (msg.cmd === 'delete_workdir') handleDeleteWorkdir(msg.seatId, msg.humanClick);
       else if (msg.cmd === 'list_compare_runs') handleListCompareRuns(ws);
+      else if (msg.cmd === 'advisor_recommend') handleAdvisorRecommend(wss, msg.seatId);
     });
   });
 

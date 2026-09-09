@@ -540,3 +540,41 @@
   the same task, gave them genuinely different output, inspected changes (correctly "differs"),
   picked build-1 as winner, confirmed the run record via `list_compare_runs`, then deleted
   build-2's (the retained seat's) workdir - build-1's stayed untouched on disk throughout.
+- 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 5 (PLAN_PARALLEL_BUILD.md §6): advisor's
+  non-binding recommendation - the last of the 5 build-order items, parallel-build-and-compare
+  is now fully built. `messagesApi.js`'s `startMessagesApiSeat` gained an optional 5th `mode`
+  param (`'compare'`), used only by a new `ADVISOR_COMPARE_SYSTEM` prompt and a stateless call
+  (never touches advisor's own ongoing `histories` - a one-off aside, not part of whatever
+  conversation advisor and the human were already having). `index.js`'s new
+  `handleAdvisorRecommend(wss, seatId)` deliberately bypasses the normal `startSeat`/adapter
+  dispatch table (this isn't a generic seat command) - it looks up the seat's `compareGroups`
+  entry, builds a per-file summary (status + a short current-content preview, not full diffs -
+  §6's own token-cost concern) for every participant, and calls `startMessagesApiSeat` directly
+  with `mode:'compare'`.
+  **A real, reproducible model-behavior finding, isolated by actually bisecting the prompt
+  against the live API rather than guessing**: the first working version's system prompt used
+  the words "opinion"/"view" ("giving a non-binding opinion on several build attempts") and got
+  a genuine `claude-fable-5-1` API refusal (`stop: "refusal"`, empty text) on the *exact* same
+  task content that succeeded fine with a neutral system prompt. Bisected word-by-word against
+  the real API (not assumed): "You are Fable, a helpful assistant." → succeeds; "You are Fable,
+  giving an opinion." → refuses, on the identical task, every time (3/3). Rewording to
+  "recommendation"/"suggestion" (no "opinion" or "view" anywhere) fixed it, confirmed twice more
+  against the real API before treating it as resolved. Not documented anywhere as intentional
+  Anthropic-side behavior; recorded as an observed fact in case it recurs elsewhere in this
+  codebase or a future session hits the same wall.
+  **A second real finding from the same debugging pass**: the first working version's per-file
+  summary was status+path only ("added impl.py"), which reads identically for two builders that
+  both *create* a same-named file with completely different content - confirmed live: advisor
+  correctly declined to guess rather than fabricate a preference ("both summaries are
+  identical... treat this as a coin flip"), an honest response to a genuinely underspecified
+  prompt, not a bug in the model. Fixed by adding a short current-content preview (200 chars) per
+  changed file, and separately by actually including the original task text in the prompt
+  (`compareGroups`'s own `task` field, previously computed but never passed through) - advisor's
+  first real recommendation had also flagged this exact gap unprompted ("the task statement isn't
+  included"). Both fixes verified against the real API with a task that has a genuinely correct
+  answer (ascending vs. descending sort): advisor correctly recommended the matching builder by
+  name, with an accurate reason, twice in a row.
+  Frontend: an "Ask advisor" button in each builder tile's pick-actions row; the reply surfaces
+  through the existing `seat.output`/advisor-tile path, no new rendering code needed - §6 is
+  explicit this is commentary only, so it deliberately does not gate or pre-select the Pick
+  button in any way.

@@ -130,3 +130,13 @@
   Retained badges, a Pick/Delete row per builder tile, a global Run History panel. Tested for
   real end to end (dispatch -> differing output -> pick -> history record -> delete the
   non-winner, winner untouched). All 5 build-order items for parallel-build-and-compare done.
+- 2026-09-09 - Parallel-build-and-compare item 5 (PLAN_PARALLEL_BUILD.md §6; scope ledger
+  GLM-3). `messagesApi.js`: `ADVISOR_COMPARE_SYSTEM`, optional `mode` param on
+  `startMessagesApiSeat`. `index.js`: `handleAdvisorRecommend` (bypasses the normal seat dispatch
+  table on purpose - a one-off aside, not a generic command), new `advisor_recommend` WS command.
+  `index.html`/`src/main.ts`: an "Ask advisor" button per builder tile. Found and fixed two real
+  bugs by testing against the live API: a genuine `claude-fable-5-1` refusal triggered by the
+  words "opinion"/"view" in the system prompt (reworded, confirmed fixed), and a too-sparse
+  per-file summary that made advisor correctly decline to guess (fixed with a content preview +
+  the original task text). Verified with a task that has a real correct answer - advisor picked
+  correctly, twice. All 5 build-order items for parallel-build-and-compare are now complete.
