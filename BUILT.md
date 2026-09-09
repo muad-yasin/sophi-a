@@ -100,3 +100,12 @@
   `PORT:<n>` stdout line). Tested for real with an actual MCP client against a standalone
   orchestrator - found and fixed a real race in `wait_for_idle` (see DECISIONS.md), re-verified
   fixed with three consecutive passing runs including a real Anthropic API round trip.
+- 2026-09-09 - Parallel-build-and-compare item 1 (PLAN_PARALLEL_BUILD.md §3; scope ledger
+  GLM-1/DEEPSEEK-2). `src/orchestrator/index.js`: `BUILDER_SEAT_IDS`, `startMany()` (backend-
+  enforced confirmed-guard), new `start_many` WS command. `index.html`/`src/main.ts`/
+  `src/styles.css`: build-1's compare-trigger checkbox row, `#cost-confirm-modal`, non-sticky
+  reset on confirm/cancel, single-builder path untouched. Tested for real against a standalone
+  orchestrator (rejection paths + a real 2-builder `claude` CLI dispatch) - see DECISIONS.md for
+  the full trace, including a logged deviation from the plan's literal "Tauri command" wording
+  (implemented as a WS command instead, matching how every other seat command already works) and
+  an incidental finding about `.workdirs/build-N` being shared across orchestrator instances.

@@ -72,6 +72,32 @@ export function stopSeat(seatId) {
   if (adapter?.stop) adapter.stop(seatId);
 }
 
+// Parallel-build-and-compare (PLAN_PARALLEL_BUILD.md §3, build order item 1): a fan-out dispatch
+// of one identical task string to more than one builder at once. Fan-out is capped at the three
+// existing builder seats (PLAN_PARALLEL_BUILD.md A5 - no new seats for this feature).
+const BUILDER_SEAT_IDS = ['build-1', 'build-2', 'build-3'];
+
+// Enforced here, not just in the UI's confirmation modal - PLAN_PARALLEL_BUILD.md §3 is explicit
+// that the cost gate must be "backend-enforced, not just a UI courtesy": a direct WS call with
+// two or more seatIds and confirmed !== true is rejected before any subprocess exists, the same
+// way configureSeat below rejects a disallowed provider before any API call is attempted.
+export function startMany(wss, seatIds, task, confirmed) {
+  if (!Array.isArray(seatIds) || seatIds.length === 0) {
+    console.error('start_many rejected: seatIds must be a non-empty array');
+    return;
+  }
+  const unique = [...new Set(seatIds)];
+  if (!unique.every(id => BUILDER_SEAT_IDS.includes(id))) {
+    console.error(`start_many rejected: seatIds must all be builder seats (${BUILDER_SEAT_IDS.join(', ')})`);
+    return;
+  }
+  if (unique.length > 1 && confirmed !== true) {
+    console.error('start_many rejected: dispatching to more than one seat requires confirmed:true');
+    return;
+  }
+  for (const seatId of unique) startSeat(wss, seatId, task);
+}
+
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
 // addendum) - the other six seats have no configurable provider/model and this is rejected for
 // them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
@@ -118,6 +144,7 @@ function main() {
       if (msg.cmd === 'start') startSeat(wss, msg.seatId, msg.task);
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
       else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
+      else if (msg.cmd === 'start_many') startMany(wss, msg.seatIds, msg.task, msg.confirmed);
     });
   });
 

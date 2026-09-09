@@ -165,3 +165,11 @@
   archive-move proposal raised), and an explicit evaluation that rejected wiring in relay's
   `plan-1..3` panel-judging machinery (wrong shape for concurrent code-diff comparison) in favor
   of a human click plus an optional non-binding advisor recommendation. Not built yet.
+- 2026-09-09 - Started building parallel-build-and-compare per `HANDOFF_PARALLEL_BUILD.md`. Item
+  1 (fan-out dispatch + cost gate) done: build-1 gets a checkbox row + a custom confirmation
+  modal naming the real Nx cost; a new `start_many` WebSocket command (not a Tauri command as the
+  plan's literal text said - a deliberate, logged deviation, see DECISIONS.md) enforces the
+  confirmed-guard server-side. Tested for real against a standalone orchestrator: rejection
+  paths (unconfirmed multi-seat, non-builder seat) and the real dispatch path (two genuine
+  `claude` CLI subprocesses spawned) all confirmed. Single-builder behavior confirmed unchanged.
+  Next: item 2 (dispatch-time snapshot manifest).

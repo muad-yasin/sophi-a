@@ -103,11 +103,15 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
   const stopBtn = tile.querySelector<HTMLButtonElement>('[data-role="stop-btn"]');
   const providerSelect = tile.querySelector<HTMLSelectElement>('[data-role="provider-select"]');
   const modelInput = tile.querySelector<HTMLInputElement>('[data-role="model-input"]');
+  const compareCheckboxes = tile.querySelectorAll<HTMLInputElement>(
+    '[data-role="also-build-2"], [data-role="also-build-3"]',
+  );
   if (taskInput) taskInput.disabled = working;
   if (sendBtn) sendBtn.disabled = working;
   if (stopBtn) stopBtn.disabled = !working;
   if (providerSelect) providerSelect.disabled = working;
   if (modelInput) modelInput.disabled = working;
+  compareCheckboxes.forEach((cb) => (cb.disabled = working));
 }
 
 function setOutput(seatId: string, text: string) {
@@ -260,14 +264,15 @@ function setupAdvisorActions() {
 // Every one of the eight tiles gets a task input + Send + Stop (PLAN.md's gap: no UI path
 // anywhere called startSeat/stopSeat before this). Submitting sends {cmd:'start', seatId, task}
 // over the existing WebSocket; Stop sends {cmd:'stop', seatId}. Both are simple no-ops via
-// sendCommand if the socket isn't open.
+// sendCommand if the socket isn't open. build-1 is special-cased below for parallel-build-and-
+// compare's fan-out dispatch (PLAN_PARALLEL_BUILD.md §3) - every other seat's form is untouched.
 function setupTaskForms() {
   for (const seatId of SEAT_IDS) {
     const tile = tileEl(seatId);
     if (!tile) continue;
 
     const form = tile.querySelector<HTMLFormElement>('[data-role="task-form"]');
-    if (form) {
+    if (form && seatId !== "build-1") {
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const input = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
@@ -287,6 +292,87 @@ function setupTaskForms() {
       });
     }
   }
+}
+
+// --- Parallel-build-and-compare: build-1's fan-out dispatch (PLAN_PARALLEL_BUILD.md §3) ---
+// A checkbox row next to build-1's task input ("also run on build-2/3"), unchecked and
+// non-sticky by default. With no boxes ticked, Send behaves exactly like every other tile's form
+// (single {cmd:'start'}, no modal) - that path is untouched above. With one or more boxes
+// ticked, Send is intercepted: a pre-spend confirmation modal names the real cost multiplier
+// before anything spawns, and only on explicit confirm does a single {cmd:'start_many',
+// seatIds, task, confirmed:true} go out - one fan-out call, not N independent sends.
+
+let pendingCompareDispatch: { seatIds: string[]; task: string } | null = null;
+
+function resetCompareCheckboxes() {
+  const tile = tileEl("build-1");
+  tile?.querySelectorAll<HTMLInputElement>(
+    '[data-role="also-build-2"], [data-role="also-build-3"]',
+  ).forEach((cb) => (cb.checked = false));
+}
+
+function hideCostConfirmModal() {
+  const modal = document.getElementById("cost-confirm-modal");
+  if (modal) modal.hidden = true;
+  pendingCompareDispatch = null;
+  // Non-sticky per PLAN_PARALLEL_BUILD.md §3: reset after every dispatch, confirmed OR
+  // cancelled, so there is no persisted "mode" a human could forget was on.
+  resetCompareCheckboxes();
+}
+
+function showCostConfirmModal(seatIds: string[], task: string) {
+  const modal = document.getElementById("cost-confirm-modal");
+  const title = document.getElementById("cost-confirm-title");
+  if (!modal || !title) return;
+  pendingCompareDispatch = { seatIds, task };
+  const n = seatIds.length;
+  title.textContent =
+    `This will run the same task on ${n} builders: ${n}x cost and ${n}x subscription-usage ` +
+    `consumption for this one task. Continue?`;
+  modal.hidden = false;
+}
+
+function setupCostConfirmModal() {
+  document
+    .querySelector('[data-role="cost-confirm-cancel"]')
+    ?.addEventListener("click", () => hideCostConfirmModal());
+
+  document.querySelector('[data-role="cost-confirm-confirm"]')?.addEventListener("click", () => {
+    if (!pendingCompareDispatch) return;
+    const { seatIds, task } = pendingCompareDispatch;
+    sendCommand({ cmd: "start_many", seatIds, task, confirmed: true });
+    for (const seatId of seatIds) echoTask(seatId, task);
+    hideCostConfirmModal();
+  });
+}
+
+function setupBuild1CompareDispatch() {
+  const tile = tileEl("build-1");
+  if (!tile) return;
+  const form = tile.querySelector<HTMLFormElement>('[data-role="task-form"]');
+  const input = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+  if (!form || !input) return;
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const task = input.value.trim();
+    if (!task) return;
+
+    const also2 = tile.querySelector<HTMLInputElement>('[data-role="also-build-2"]')?.checked;
+    const also3 = tile.querySelector<HTMLInputElement>('[data-role="also-build-3"]')?.checked;
+    const seatIds = ["build-1", ...(also2 ? ["build-2"] : []), ...(also3 ? ["build-3"] : [])];
+
+    if (seatIds.length === 1) {
+      // Unchanged single-builder path - no modal, exactly today's behavior.
+      sendCommand({ cmd: "start", seatId: "build-1", task });
+      echoTask("build-1", task);
+      input.value = "";
+      return;
+    }
+
+    input.value = "";
+    showCostConfirmModal(seatIds, task);
+  });
 }
 
 // `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
@@ -452,6 +538,8 @@ window.addEventListener("DOMContentLoaded", () => {
   setupTaskForms();
   setupSeatConfig();
   setupSetupPanel();
+  setupBuild1CompareDispatch();
+  setupCostConfirmModal();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

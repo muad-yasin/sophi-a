@@ -41,6 +41,16 @@
       </section>
     </div>
 
+    <div id="cost-confirm-modal" class="cost-confirm-modal" role="alertdialog" aria-labelledby="cost-confirm-title" hidden>
+      <div class="cost-confirm-box">
+        <p id="cost-confirm-title"></p>
+        <div class="cost-confirm-actions">
+          <button type="button" class="btn" data-role="cost-confirm-cancel">Cancel</button>
+          <button type="button" class="btn btn-send" data-role="cost-confirm-confirm">Confirm and run</button>
+        </div>
+      </div>
+    </div>
+
     <div id="connecting" class="connecting" role="status">
       <img class="brand-mark" src="/favicon.svg" alt="" aria-hidden="true" />
       <p>Connecting to orchestrator&hellip;</p>
@@ -167,6 +177,10 @@
         <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
         <form class="task-form" data-role="task-form">
           <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Builder 1"></textarea>
+          <div class="compare-trigger" data-role="compare-trigger">
+            <label><input type="checkbox" data-role="also-build-2" /> also run on Builder 2</label>
+            <label><input type="checkbox" data-role="also-build-3" /> also run on Builder 3</label>
+          </div>
           <div class="task-form-actions">
             <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
             <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>

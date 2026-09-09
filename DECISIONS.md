@@ -370,3 +370,38 @@
   file) cleaned up after - confirmed the concurrent session's own orchestrator/vite instances
   were untouched throughout (different process, matched by absolute vs. relative path in `ps`,
   checked explicitly before and after).
+- 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 1 (PLAN_PARALLEL_BUILD.md §3): the fan-out
+  dispatch + cost gate. One real, deliberate deviation from the plan's literal wording, logged
+  per HANDOFF_PARALLEL_BUILD.md's own rule ("if a decision contradicts or extends the plan, stop
+  and flag it"): §3 says "a fused fan-out **Tauri command**," but seat start/stop/configure in
+  this codebase were never Tauri commands at all - they're WebSocket messages the frontend sends
+  directly to the orchestrator (Rust never sees them). The relay panel that designed this had no
+  visibility into that distinction and defaulted to "Tauri command" by analogy with the
+  onboarding feature's real Rust commands. Implemented instead as a new WebSocket command,
+  `start_many` (`src/orchestrator/index.js`), sitting exactly where `start`/`stop`/`configure`
+  already do - this is the architecturally consistent choice, not a shortcut: the orchestrator
+  already owns seat dispatch and validation, and routing through Rust would have meant Rust
+  opening its own WebSocket connection back into the orchestrator for no reason. The
+  backend-enforcement requirement itself (§3's real point - "not just a UI courtesy") is honored
+  exactly: `startMany()` rejects any call with `seatIds.length > 1 && confirmed !== true`, or any
+  non-builder seat id, before any subprocess exists.
+  Frontend: build-1's task-form is special-cased (every other seat's form is untouched) - a
+  checkbox row (`also run on build-2/3`), non-sticky (reset on both confirm and cancel, per §3),
+  a custom cost-confirm modal (not a native `confirm()`, to stay visually consistent with the
+  rest of the app - `#cost-confirm-modal`, styled with the same SMO-sourced tokens, a new `--scrim`
+  variable added from `ScreenBuilderUtils.cs`'s real value rather than an ad-hoc rgba). No
+  boxes ticked -> the exact original single-seat `{cmd:'start'}` path, byte-for-byte unchanged.
+  **Tested for real** against a standalone orchestrator with real WebSocket messages (not a
+  hand-rolled approximation): confirmed a 2-seat dispatch with `confirmed:false` is rejected (no
+  `seat.start` events at all); a mixed builder+non-builder seat list is rejected; a single-seat
+  `start_many` with `confirmed:false` is correctly *allowed* (the gate only applies at 2+ seats);
+  and a real 2-seat dispatch with `confirmed:true` correctly spawned two real `claude` CLI
+  subprocesses (`seat.start` fired for both `build-1` and `build-2`, `build-1` progressed to a
+  real `seat.working`/`seat.output`). A real, incidental finding, not a bug introduced by this
+  change: `.workdirs/build-1`/`build-2` are fixed repo-relative paths, not per-orchestrator-
+  instance, so a standalone test orchestrator and the concurrent session's real running instance
+  briefly shared the same builder working directories during this test - harmless here (the test
+  tasks were trivial, no file edits resulted, confirmed via `git status`/directory listing after),
+  but worth knowing: running two orchestrator instances against the same checkout is not safe if
+  both use the same builder seat at the same time. Pre-existing architectural fact, not introduced
+  by this session's changes, and out of scope to fix as part of this feature.

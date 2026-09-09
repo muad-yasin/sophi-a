@@ -61,6 +61,7 @@
   --surface-modal: #26221a;
   --border: color-mix(in srgb, #f2ede3 8%, transparent); /* Hairline */
   --divider: color-mix(in srgb, #f2ede3 14%, transparent);
+  --scrim: rgba(6, 5, 4, 0.72); /* SMO Scrim - modal backdrops */
 
   /* text - SMO TextPrimary/TextSecondary/TextMuted/TextDisabled */
   --text-primary: #f2ede3;
@@ -664,4 +665,60 @@ body {
 
 .setup-provider-badge[data-set="true"] {
   color: var(--status-idle);
+}
+
+/* --- parallel-build-and-compare: build-1's fan-out trigger + cost-confirm modal
+   (PLAN_PARALLEL_BUILD.md §3) --- */
+
+.compare-trigger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compare-trigger label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  cursor: pointer;
+}
+
+.compare-trigger input:disabled {
+  cursor: not-allowed;
+}
+
+.cost-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+}
+
+.cost-confirm-box {
+  max-width: min(420px, calc(100vw - 2 * var(--sp-4)));
+  background: var(--surface-modal);
+  border: 1px solid var(--status-working);
+  border-radius: 10px;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.cost-confirm-box p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cost-confirm-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
 }
