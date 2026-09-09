@@ -1,5 +1,64 @@
 # PLAN.md - cnc-harness slice 1 - the command-and-control shell, real seats, no installer
 
+## Naming note (2026-09-09)
+
+The product is now named **Sophi-A** (Muad's call - the name and its visual identity are drawn
+from `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative; see DECISIONS.md). `cnc-harness`
+remains the repository/codename throughout this document and the rest of the on-disk paths
+(`RELAY_PATH` adjacency, `.workdirs/`, etc.) - only user-facing surfaces (window title, package
+name, README, the Stripe product) use "Sophi-A". Do not rename the repo directory itself; nothing
+below this note has been retroactively edited to say "Sophi-A" instead of "cnc-harness".
+
+## Addendum (2026-09-09, second) - cnc and advisor become provider-selectable, Grok excluded by policy
+
+After the first addendum above (which reversed Assumption 3 for `plan-1..3` only), the author
+made a second, separate decision the same day: `cnc` and `advisor` are no longer Claude/Fable-only
+either. He wants cnc-harness to be genuinely open source and to let a user swap either seat's
+underlying model to any frontier provider they like - OpenAI, Google/Gemini, Mistral, DeepSeek,
+Groq, Cohere, OpenRouter, Together, Z.ai - with one explicit, permanent exception: **xAI/Grok is
+never offered, by policy, not by technical limitation** ("for reasons" - the author's words, not
+elaborated here; treat this as a standing product rule, not a placeholder to revisit).
+
+This reuses relay's existing `src/providers.js` `call(provider, opts)` function unchanged - it
+already speaks to every provider above (see `OPENAI_COMPAT` in that file) via one OpenAI-compatible
+adapter shape, plus Anthropic's own Messages API. No new provider-calling code is written; the
+"multiple models, not just Anthropic's" differentiator PLAN.md already claimed for `plan-1..3` now
+also applies, in a lighter form, to `cnc` and `advisor`.
+
+**What actually changes per seat, honestly scoped:**
+
+- **`advisor`:** trivial generalization. `messagesApi.js` already calls `call('anthropic', ...)`
+  through relay's providers module for a single stateless request/response; the seat's `provider`
+  field (new, in `seats.json`, default `anthropic`) is now threaded through instead of hardcoded,
+  and the seat's `model` field is whatever model id that provider expects. Behavior (stateless,
+  one intervention per call) is unchanged for any provider.
+- **`cnc`:** not a trivial swap, and not pretended to be one. `cnc`'s Anthropic path stays exactly
+  what it is today - a real Claude Code CLI subprocess with tool use, file edits, and `--resume`
+  session continuity. There is no equivalent "coding-agent CLI" for OpenAI/Gemini/Mistral/etc.
+  wired into this repo, and none is being built to fake parity. When `cnc`'s `provider` is set to
+  anything other than `anthropic`, its `invocation_mode` switches from `claude-code-subprocess` to
+  `messages-api` (the same adapter `advisor` uses) - the seat becomes a real conversational chat
+  seat on that provider, with in-memory turn history so it still reads as one ongoing conversation,
+  but **without Claude Code's tool-use/file-editing capability**. This is disclosed in the seat's
+  UI state (a badge or label distinguishing "coding agent" from "chat only"), not left implicit -
+  a user choosing GPT-5/Gemini/Mistral for `cnc` gets a real, useful oversight/control chat, not a
+  degraded coding agent silently missing features it appears to promise.
+- **`plan-1..3` and `build-1..3`:** unchanged by this addendum. `plan-1..3` already run real
+  multi-provider relay chains (first addendum, above); `build-1..3` remain Claude Code subprocesses
+  only - there is no non-Anthropic coding-agent path for them either, and no request to add one.
+
+**Grok/xAI exclusion, mechanically:** `xai` is never added to the seat-settings allow-list the UI
+offers for `cnc`/`advisor`, even though relay's `providers.js` itself supports it (other cnc-harness
+features, like a future `plan-N` chain config, are free to keep using it if a chain author wants -
+the exclusion is scoped to what a `cnc-harness` end user can pick for `cnc`/`advisor` from this
+app's own UI, not a fork of relay itself).
+
+**Commercial-terms consequence:** this reopens item 5 of the "Commercial terms risk" section below
+for `cnc`/`advisor` the same way the first addendum opened it for `plan-1..3` - OpenAI's,
+Google's, Mistral's, DeepSeek's, Groq's, Cohere's, OpenRouter's, Together's, and Z.ai's own terms
+now govern any of those providers' use inside `cnc`/`advisor` too, not just `plan-1..3`. Same
+open item, wider surface; not re-litigated here.
+
 ## Addendum (2026-09-09) - planning modules now run real relay chains
 
 After this run finished (5/6 signed off, GLM dissenting on criterion 1), the author reviewed
@@ -41,8 +100,10 @@ fresh rather than trusting this paragraph's summary of it.
    depending on it via a `RELAY_PATH` environment variable rather than a published npm package or
    a submodule - relay is not packaged for npm yet, and this is the smallest thing that works today.
 2. Every seat drives a real subprocess or a real API call; nothing in slice 1 is mocked.
-3. **(Revised 2026-09-09.)** `cnc`, `advisor`, and `build-1..3` are Claude Code/Sonnet 5 or
-   Fable 5.1 only. `plan-1..3` are a deliberate, scoped exception: each spawns a real relay
+3. **(Revised 2026-09-09, twice.)** `build-1..3` remain Claude Code/Sonnet 5 only. `cnc` and
+   `advisor` are **no longer** Claude/Fable-only either - see "Addendum (2026-09-09, second)"
+   above for the provider-selectable design and the standing Grok/xAI exclusion. `plan-1..3` are a
+   deliberate, scoped exception: each spawns a real relay
    planning-chain run, which internally uses relay's own existing multi-lab critic panel
    (DeepSeek, Qwen, GLM, Mistral, Gemini, Kimi K3 - the same six labs that graded this very run).
    This is the product's actual differentiator ("many models, not just Anthropic's") made real for
@@ -230,7 +291,9 @@ No commercial release until every item above is checked and resolved.
   is decided here.
 - The three-way parallel-build-and-compare feature - deferred to a slice 2.
 - Any packaged, signed, or store-distributed installer for Linux or Windows.
-- Pricing, licensing terms, or a monetization mechanism for the product itself.
+- Pricing, licensing terms, or a monetization mechanism for the product itself. **(Reopened
+  2026-09-09** - the author has since decided to monetize cnc-harness directly via Stripe,
+  reusing sower-industries.de's existing payment-link/legal pattern; see DECISIONS.md.)
 
 ## Scope additions
 

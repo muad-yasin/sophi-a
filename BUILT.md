@@ -21,3 +21,63 @@
 - 2026-09-09 - Integration test (PLAN.md "the bar the whole must meet"). `npm run tauri dev`
   verified end-to-end: real compile, real process spawn chain, real WebSocket replay of all eight
   seats as idle on connect.
+- 2026-09-09 - Provider-selectable `cnc`/`advisor` (PLAN.md "Addendum (2026-09-09, second)").
+  `src/orchestrator/providers.js` (new): the allowed-provider list, xai/Grok deliberately absent.
+  `seats.json`: `provider`/`chat_history` fields added to `cnc`/`advisor`. `index.js`:
+  `effectiveInvocationMode` falls a claude-code-subprocess seat back to messages-api when its
+  provider isn't anthropic. `messagesApi.js`: generalized off the hardcoded `call('anthropic', ...)`
+  to `call(seatConfig.provider, ...)`, added a `cnc`-specific chat system prompt (honestly discloses
+  no tool-use in this mode) and per-seat in-memory chat history. Tested for real: advisor's existing
+  Anthropic path still works unchanged (regression check), an `xai` provider is rejected before any
+  API call, and an `openai` provider correctly reaches relay's dispatch (fails only on the missing
+  test key in this environment, not a code defect).
+- 2026-09-09 - Task-input UI + cnc/advisor provider picker (PLAN.md "Desktop shell and UI" /
+  Addendum "cnc and advisor become provider-selectable"; fills the gap DECISIONS.md's monetization
+  entry named: no UI path anywhere called `startSeat`). `index.html`: a task textarea + Send + Stop
+  added to all 8 tiles; a provider `<select>` + model-id text input + chat-only badge added to
+  `cnc`'s and `advisor`'s tiles only. `src/main.ts`: a module-level `currentWs` + `sendCommand()`
+  helper (no-ops safely if disconnected); `setControlsEnabled()` disables the task input/Send/
+  provider-config while a seat is `"working"` and only then enables Stop; `echoTask()` writes
+  "> task text" into the output slot on submit so the operator sees what they asked for;
+  `ALLOWED_PROVIDERS` mirrors `src/orchestrator/providers.js` (kept in sync manually, commented as
+  such - no shared-module setup between the frontend and the orchestrator sidecar yet).
+  `src/styles.css`: `.task-form`/`.task-input`/`.seat-config`/`.chat-only-badge` and `:disabled`
+  styling, reusing the existing surface/status palette. `src/orchestrator/index.js`: new
+  `configureSeat(seatId, {provider, model})` + a `cmd:'configure'` WebSocket handler - validates
+  `provider` via `isAllowedProvider` (`providers.js`), restricted to `cnc`/`advisor` via a
+  `CONFIGURABLE_SEAT_IDS` set, rejects an unknown or disallowed request with a server-side
+  `console.error` rather than crashing, and mutates only the in-memory seat entry (never persisted
+  to `seats.json`). Tested for real (see PROGRESS.md): a direct WebSocket protocol test against
+  both a standalone orchestrator process and the live one already spawned by a real `npm run tauri
+  dev` process, confirmed by finding and connecting to that process's actual bound port.
+- 2026-09-09 - Product named "Sophi-A" + visual identity ported from SMO (DECISIONS.md has the
+  full reasoning). `tauri.conf.json` (productName, window title, identifier ->
+  `com.sower.sophia`), `package.json` name, `index.html` title, `README.md` (real content,
+  replacing the stock Tauri template) all updated. `src/styles.css` rewritten against SMO's real
+  `ScreenBuilderUtils.cs` palette (Bg/Surface ladder, Text colors, Gain/Warning/Breaking status
+  mapping, Gold primary-action accent, AiAccent brand accent) and fonts (Space Grotesk + IBM Plex
+  Sans, copied into `src/fonts/` with their OFL licenses). `npx tsc --noEmit` clean after. Repo
+  folder name and internal paths (`RELAY_PATH`, etc.) deliberately left as `cnc-harness` - see
+  PLAN.md's new naming note.
+- 2026-09-09 - Packaging plan built through item 1 (PLAN_PACKAGING.md §2.1; scope ledger
+  DEEPSEEK-1/GLM-1). `src-tauri/src/lib.rs` rewritten: the four-step runtime path-resolution chain
+  (env var -> persisted JSON -> `resource_dir()` -> RELAY_PATH-only picker via
+  `tauri-plugin-dialog`) replaces the old `CARGO_MANIFEST_DIR` compile-time path, gated behind a
+  `cfg!(debug_assertions)` dev fallback that's compiled out of release builds entirely. Resolved
+  `RELAY_PATH` now passed to the orchestrator via `Command::env`. Tested for real: env-var,
+  persisted-path, and dev-fallback resolution all confirmed live; the picker step compiles but
+  wasn't interactively exercised (headless sandbox).
+- 2026-09-09 - Packaging plan built through items 2-5 (PLAN_PACKAGING.md §2.2-§2.4, §3/§3.1; scope
+  ledger DEEPSEEK-2/GLM-2 Windows, GLM-3 Linux, GEMINI-2 CI, GEMINI-3 mobile-scope-cut docs).
+  `package.json`: `package:orchestrator` (esbuild-bundles the orchestrator + `ws` into one
+  self-contained file, copies `seats.json` alongside) - verified standalone with zero
+  `node_modules`. `scripts/fetch-node-runtime.sh`: pinned, SHA-256-verified Node 22.23.2 fetch for
+  linux-x64/win-x64 - run for real for linux-x64. `tauri.conf.json`/`tauri.linux.conf.json`/
+  `tauri.windows.conf.json`: `bundle.targets` narrowed to `["nsis","appimage"]`, per-platform
+  resource mappings, `beforeBuildCommand` extended. `docs/signing-decision.md`,
+  `docs/linux-packaging-decision.md`, `.github/workflows/release.yml` (tag-triggered, both
+  platforms, installs `libfuse2` explicitly for Linux CI), `README.md`'s new "Platform support"
+  section. A real release build + AppImage bundling attempt reached the actual `linuxdeploy` step
+  before hitting a sandbox-only missing-`libfuse.so.2` blocker (not reproducible on GitHub's
+  runners, which the CI workflow now guards against anyway); Windows NSIS untested locally (no
+  Windows machine here). Full verified-vs-not detail in DECISIONS.md.

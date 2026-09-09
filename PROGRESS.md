@@ -38,3 +38,81 @@
   port`; connecting a client directly confirms the on-connect replay sends `seat.idle` for all
   eight seats in order (cnc, advisor, plan-1..3, build-1..3) - matching the frontend's green-tile
   rendering path exactly. This is the acceptance bar HANDOFF.md names for slice 1. Left running.
+- 2026-09-09 - Monetization initiative started: three research agents audited cnc-harness's real
+  gap to sellable, sower-industries' reusable payment/legal infra, and indie dev-tool pricing;
+  findings and decisions recorded in DECISIONS.md. Biggest finding: no UI path anywhere calls
+  `startSeat` today - the whole app is read-only tiles. Author decisions since: Stripe (not
+  Gumroad/LemonSqueezy) despite the VAT/OSS trade-off, `cnc`/`advisor` made provider-selectable
+  (any of relay's supported providers except xai/Grok, by policy), and the project is to be open
+  source. `cnc`/`advisor` provider-selection backend shipped and tested for real (see BUILT.md).
+  Next: the task-input UI (still missing entirely), a provider picker, product naming/visual
+  identity, and an OSS license choice - all in progress.
+- 2026-09-09 - Task-input UI + cnc/advisor provider picker shipped (PLAN.md "Desktop shell and
+  UI" / "Addendum (2026-09-09, second)"): every one of the 8 tiles (index.html/src/main.ts/
+  src/styles.css) now has a task textarea + Send + Stop, wired to the existing WebSocket protocol
+  (`{cmd:'start'|'stop', seatId, task}`); Send/task-input disable while a seat is "working", Stop
+  only enables then; submitting echoes "> task text" into the tile's output slot. `cnc`/`advisor`
+  additionally get a provider `<select>` (mirrors `src/orchestrator/providers.js`'s
+  `ALLOWED_PROVIDERS`, xai excluded) plus a free-text model-id input, sending
+  `{cmd:'configure', seatId, provider?, model?}`; `cnc` shows a "Chat only - no file access" badge
+  whenever its provider isn't anthropic. `src/orchestrator/index.js` gained `cmd:'configure'`
+  handling + `configureSeat()`, validating provider via `isAllowedProvider`, restricted to
+  `cnc`/`advisor`, runtime-only (not persisted to `seats.json`). Tested for real: `npx tsc
+  --noEmit` clean; a standalone protocol smoke test against a freshly spawned orchestrator
+  confirmed `configure` rejects an unknown-for-this-purpose seat (`build-1`) and a disallowed
+  provider (`xai`) with a server-side `console.error` and no crash, and accepts
+  `advisor` -> `openai`/`gpt-4o-mini`, after which a `start` command correctly reached relay's real
+  dispatch layer (failed only on the missing `OPENAI_API_KEY` in this environment, not on
+  rejection). Then re-ran the identical configure+start sequence directly against the orchestrator
+  sidecar spawned by a real, already-running `npm run tauri dev` process (its bound port confirmed
+  via `ss -tlnp` against that specific PID) - same result, so the actual app's own running instance
+  was exercised, not just a standalone copy. Could not capture a screenshot of the native window
+  itself: ImageMagick's `import` failed to parse its own arguments in this sandbox and no other
+  capture tool (Xvfb/wmctrl/xdotool/grim/gnome-screenshot) was present, so the visual render was
+  not directly observed - only the protocol and process behavior driving it were.
+- 2026-09-09 - Product named "Sophi-A"; visual identity ported from an existing Sower Industries
+  property, SMO (both Muad's direct call in chat, confirmed rather than assumed after finding
+  `~/Projects/SMO/SMO/Docs/Sophi-A.md` describes a real, shipped in-game AGI narrative arc of the
+  same name - a deliberate cross-property choice, not the naming mix-up from earlier this session).
+  Product-facing surfaces renamed (tauri.conf.json, package.json, index.html, README.md); repo
+  folder/internal paths deliberately left as `cnc-harness`. `src/styles.css` rebuilt against SMO's
+  actual design system (`ScreenBuilderUtils.cs`): real surface ladder, text colors, and a Gain/
+  Warning/Breaking status mapping replacing the old placeholder green/amber/red; Space Grotesk +
+  IBM Plex Sans fonts copied in with their OFL licenses. Full reasoning in DECISIONS.md.
+  Also ran: a real relay `plan-debate` chain (task `sophi-a-packaging-plan.md`, run id
+  `2026-09-09T02-29-54-628Z`, $0.34, unanimous sign-off round 1) producing a reviewed Windows/
+  Linux/Android/iOS packaging plan - `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/
+  `BOARD_PACKAGING.md` now in the repo. Headline: Windows (NSIS, unsigned v1) then Linux
+  (AppImage) for desktop; Android and iOS both explicitly out of scope for v1, each with its own
+  independent reasoning (mobile sandboxes forbid the subprocess spawning this app's whole
+  architecture depends on). Not yet built - `HANDOFF_PACKAGING.md` is the next session's starting
+  point, item 1 being the `CARGO_MANIFEST_DIR` compile-time-path fix everything else depends on.
+- 2026-09-09 - Asked "why not now" rather than waiting for a fresh session - correct call, no real
+  blocker existed. Built `HANDOFF_PACKAGING.md` item 1 (PLAN_PACKAGING.md §2.1) same session: the
+  runtime path-resolution chain replacing `CARGO_MANIFEST_DIR`, for the orchestrator entry, the
+  Node binary, and `RELAY_PATH`. `cargo check` clean; `npm run tauri dev` re-verified working with
+  no regressions (seat replay confirmed live over a real WebSocket connection, same as every prior
+  check this session). Three of the resolver's four steps tested live (env var, persisted-path,
+  dev fallback); the fourth (RELAY_PATH's first-run folder picker) is code-complete and compiles
+  but wasn't interactively exercised - no display in this sandbox. Full detail, including a real
+  packaging requirement the persisted-path test surfaced (bundled orchestrator resources need
+  `node_modules`, not just source files), in DECISIONS.md. Next: item 2 (Windows NSIS) and item 3
+  (Linux AppImage) per `HANDOFF_PACKAGING.md`'s order.
+- 2026-09-09 - Noticed real concurrent activity in this same repo mid-session (another session's
+  brand-identity work landed - `brand/BRAND.md`, regenerated icons - plus a live relay chain run
+  and a live dev instance neither started by this session). Not disruptive, not reverted; logged
+  in DECISIONS.md, and this session stopped killing `cnc-harness` processes freely once it noticed.
+- 2026-09-09 - Built `HANDOFF_PACKAGING.md` items 2-4 (Windows NSIS config, Linux AppImage config,
+  CI pipeline) plus item 5 (Android/iOS scope-cut doc, added to README.md). Orchestrator now
+  bundles into one self-contained file via esbuild (verified standalone with zero `node_modules`);
+  a pinned, SHA-256-verified Node 22.23.2 fetch script exists and was run for real for linux-x64.
+  `tauri.conf.json` narrowed to exactly the two in-scope targets (nsis, appimage) with per-platform
+  resource mappings. `docs/signing-decision.md`, `docs/linux-packaging-decision.md`, and
+  `.github/workflows/release.yml` all written. A full local AppImage build got through a real
+  release compile and into real bundling before hitting a sandbox-only blocker (missing
+  `libfuse.so.2`, needs interactive `sudo` to fix, not available here) - the CI workflow installs
+  it explicitly so this won't recur there. Windows NSIS was never attempted locally (no Windows
+  machine/cross-toolchain in this sandbox) - CI is where it first actually runs, and no tag has
+  been pushed yet. Full detail and what's verified vs. not in DECISIONS.md. Remaining before
+  PLAN_PACKAGING.md's acceptance tests can actually be run: push a tag, watch the CI build succeed
+  on real GitHub-hosted runners, then work through AT-1 through AT-8 on real clean VMs.

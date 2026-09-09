@@ -1,10 +1,16 @@
-# cnc-harness
+# Sophi-A (repo/codename: cnc-harness)
 
 We build cool shit first, cheaply. This is the harness-as-product: a Tauri desktop shell that
 visualizes and drives eight real Claude/Fable/relay seats - one C&C chat, one advisor, three
 planning modules (each a real relay chain: cheap mass-thinking, many labs), three building
 modules (real Claude Code subprocesses) - so a vibecoder gets more out of the models they already
 pay for. That's the whole pitch. Don't over-govern it; build, test for real, ship the next slice.
+
+Product name (2026-09-09, Muad's call): **Sophi-A** - named and visually themed after
+`~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property choice.
+The repo folder and internal paths stay `cnc-harness`; see PLAN.md's naming note and DECISIONS.md.
+Open source (Apache-2.0), monetized via a packaged build sold on Stripe (`SHOP.md`) - see there and
+`DECISIONS.md` for the current price/launch-country state, which moves faster than this file.
 
 ## Start here, in order
 
@@ -18,6 +24,10 @@ pay for. That's the whole pitch. Don't over-govern it; build, test for real, shi
    internalizing: **run the thing before trusting it compiles.** A CSS specificity bug (`[hidden]`
    silently defeated by author `display` rules) looked exactly like a WebSocket connectivity bug
    for a long stretch. `npm run tauri dev`, actually look at the window, don't just `tsc --noEmit`.
+6. `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/`BOARD_PACKAGING.md` - the same real-multi-lab-panel
+   treatment (5 labs this time, `plan-debate` chain, unanimous round-1 sign-off), run a second time
+   (2026-09-09) for the Windows/Linux/Android/iOS packaging question. Not built yet; read before
+   starting any packaging work, same as item 1.
 
 ## The relationship to relay
 

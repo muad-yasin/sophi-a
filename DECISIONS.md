@@ -54,3 +54,217 @@
   Tauri's IPC custom protocol, forcing a postMessage fallback - removed). Added a `debug_log`
   Tauri command + `/tmp/cnc-harness-frontend-debug.log` along the way specifically because a
   native window has no console either side can casually read - kept deliberately, not a one-off.
+- 2026-09-09 - Monetization research (three parallel agents) found cnc-harness's actual gap to
+  sellable is functional, not legal: no UI path anywhere calls `startSeat` (the "cnc" tile has no
+  chat/task input at all), no packaging (`npm run tauri build` isn't wired, and the orchestrator's
+  spawn path is compile-time-absolute per the entry above), and no onboarding for the Rust/Node/
+  authenticated-CLI/relay-checkout/multi-provider-keys setup a stranger would need. Checked
+  Anthropic's current Claude Code legal/compliance page directly (code.claude.com/docs/en/
+  legal-and-compliance, 2026-09-09): cnc-harness's existing BYOK model (each end user authenticates
+  their own Claude Code/API credentials; the unmodified `claude` CLI is spawned, never a shared
+  seller subscription) already matches the sanctioned pattern for PLAN.md's commercial-terms risk
+  item 1/2 - that specific fear is resolved, not just deferred. Items 3 (trademark/naming in
+  marketing) and 5 (each other provider's own terms, now wider per the addendum above) remain open.
+- 2026-09-09 - Monetization channel: Stripe direct (reusing sower-industries.de's existing
+  payment-link + EU consent-at-checkout + Impressum pattern), not Gumroad/LemonSqueezy, per the
+  author's explicit cost call (their ~5-10% cut vs. Stripe's ~1.5-2.9%+fixed fee). Trade-off named,
+  not hidden: Gumroad/LemonSqueezy act as merchant of record and handle VAT/OSS automatically;
+  Stripe direct does not, so cnc-harness inherits the exact same open VAT/OSS-registration gap
+  already blocking cross-border sales on the live plan-shop product
+  (`sower-industries/Docs/PlanShop_Legal.md` §4). Until OSS registration happens, sell to Germany
+  only (that doc's own stopgap) or hold cross-border sales - a business decision for the author to
+  make explicitly before the Stripe payment link goes live, not one to default silently.
+- 2026-09-09 - `cnc` and `advisor` provider-selection is built on relay's existing
+  `src/providers.js` `call(provider, opts)` (already supports openai, google, mistral, deepseek,
+  groq, cohere, openrouter, together, zai, plus anthropic) - no new provider-calling code. `xai`
+  (Grok) is deliberately never added to cnc-harness's own seat-settings allow-list, per the
+  author's explicit, unelaborated instruction ("anything goes, but Grok... for reasons") - a
+  standing product rule, not a technical gap, and not something a future session should "fix" by
+  adding Grok back in without asking first. See PLAN.md's second 2026-09-09 addendum for the full
+  design, including why `cnc` on a non-Anthropic provider is honestly a chat-only seat (no
+  tool-use/file-editing), not a fake-equivalent coding agent.
+- 2026-09-09 - Product named **Sophi-A**, visual identity sourced from SMO (both Muad's explicit
+  call). Investigated before applying anything: `~/Projects/SMO/SMO/Docs/Sophi-A.md` is a real,
+  fully-shipped in-game narrative arc ("Project Sophi-A" - Sophia-but-Artificial, an AGI-endgame
+  Data Center storyline in SMO, the mobile idle game). This is a deliberate cross-property naming
+  choice, not a mix-up (unlike the earlier relay/cnc-harness naming confusion this same session -
+  confirmed directly with Muad rather than assumed). Applied: `tauri.conf.json` productName ->
+  "Sophi-A", window title -> "Sophi-A", `identifier` -> `com.sower.sophia` (changed now, before
+  anything ships, rather than after users have an installed app under the old id), `package.json`
+  name -> `sophi-a`, `index.html` title, `README.md` rewritten from the stock Tauri template.
+  Repo/folder name and all internal path references (`RELAY_PATH`, `.workdirs/`, PLAN.md's own
+  historical text) deliberately kept as `cnc-harness` - only user-facing surfaces changed; see
+  PLAN.md's new naming note.
+- 2026-09-09 - Visual identity ported from SMO's actual, real design system (not invented fresh):
+  `~/Projects/SMO/SMO/Assets/Scripts/Editor/Shared/ScreenBuilderUtils.cs` is the source of truth
+  for the near-black `Bg`/`Surface`/`SurfaceElevated`/`SurfaceModal`/`Sunken` ladder, `TextPrimary/
+  Secondary/Muted/Disabled`, the `Gain`/`Warning`/`Breaking` semantic colors, `Gold` (buttons/
+  overlines), and `AiAccent` (already SMO's own "AI/algorithm" thematic color - reused here as
+  Sophi-A's brand accent since it's genuinely an AI-orchestration tool). Mapped, not copied
+  verbatim, since SMO has no "agent seat status" concept of its own: idle -> Gain, working ->
+  Warning, problem -> Breaking (previously plain green/amber/red hex values with no source of
+  truth). Fonts (Space Grotesk for chrome/numerals, IBM Plex Sans for body) copied from SMO's own
+  `Assets/Fonts/` (both Google Fonts under OFL, safe to reuse - OFL.txt copied alongside each into
+  `src/fonts/`) and wired via `@font-face`. Deliberately did NOT adopt SMO's third face, Hanken
+  Grotesk (a named hero-title tier used at exactly 2 call sites in SMO, by SMO's own "never an
+  inheritance" rule) - this app has no equivalent single hero-headline surface to justify one.
+  `src/styles.css`'s header comment names `ScreenBuilderUtils.cs` as the resync source if SMO's
+  palette changes again.
+- 2026-09-09 - The author wants cnc-harness open source. No LICENSE file exists yet in this repo -
+  named here as an open item, not resolved: license choice (MIT/Apache-2.0 are the likely
+  candidates for a project selling a packaged build while keeping source free) is a real decision
+  with consequences (e.g. Apache-2.0's patent grant vs. MIT's simplicity) and hasn't been made.
+- 2026-09-09 - Task-echo on submit ("> task text" in the tile's output slot) is deliberately
+  transient, not a persistent transcript: it renders in the same single-line/line-clamped output
+  slot the seat's own next `seat.output`/`seat.idle` event will immediately overwrite. A real
+  append-only transcript would mean restructuring the output model from "shows the last event's
+  text" to a log the UI renders incrementally - more than this pass needs; PLAN.md doesn't specify
+  either way, so the smaller change was made and is named here rather than silently assumed.
+- 2026-09-09 - Provider `<select>`/model-id input for `cnc`/`advisor` are disabled while that
+  seat's status is `"working"`, same as its task input/Send - PLAN.md only says to disable "the
+  input+button", but swapping a seat's provider mid-turn (with in-memory chat history keyed to the
+  old provider) is confusing enough that the same rule was extended to cover it.
+- 2026-09-09 - The model-id field sends `{cmd:'configure', ...}` on blur/Enter, not per keystroke -
+  a free-text field firing a WebSocket command on every character would spam the orchestrator with
+  intermediate, invalid model ids while the operator is still typing.
+- 2026-09-09 - The "chat only - no file access" badge (PLAN.md's second 2026-09-09 addendum) was
+  built for the `cnc` tile only, not `advisor`'s - `advisor` is messages-api in every provider
+  configuration and its capability never changes when its provider changes, so disclosing a mode
+  switch there would be disclosing something that isn't true.
+- 2026-09-09 - Verification of this UI pass was real but partial: `npx tsc --noEmit` is clean, and
+  the new WebSocket protocol (`start`/`stop`/`configure`) was exercised for real against both a
+  freshly spawned orchestrator and the orchestrator sidecar actually backing an already-running
+  `npm run tauri dev` window (found via its bound port). What was *not* verified is the visual
+  render itself - ImageMagick's `import` errored on its own arguments in this sandbox
+  (`import: missing an image filename` even when one was given), and no other capture tool
+  (Xvfb/wmctrl/xdotool/grim/gnome-screenshot) was present, so no screenshot of the actual tiles,
+  layout, or badge exists. Named here rather than implied by the protocol-level test passing.
+- 2026-09-09 - License resolved: Apache-2.0, not MIT. `LICENSE` added; `package.json` and
+  `src-tauri/Cargo.toml` both carry a matching `"license": "Apache-2.0"` field. Reasoning: this
+  project wraps and calls multiple third-party AI providers' APIs (Anthropic, OpenAI, Google,
+  Mistral, DeepSeek, Groq, Cohere, OpenRouter, Together, Z.ai) and ships a paid packaged build
+  alongside the free source - Apache-2.0's explicit patent grant plus its patent-litigation
+  retaliation clause (§3: sue over patents, lose the license) gives real protection here that MIT
+  is silent on, and it's the standard choice for the "free source, paid packaged/hosted build"
+  commercial pattern this project follows. Note for the record, not a reversal: relay
+  (`~/Projects/relay`, this project's own dependency) is MIT per its `package.json` - that's fine,
+  it's a separate repo consumed via `RELAY_PATH`/CLI spawn, not code merged into this one, so the
+  two projects are free to pick different licenses. Quick embarrassing-secrets pass done alongside
+  this (grepped for API keys/tokens/passwords, hardcoded emails, and `/home/user` paths across
+  tracked source): clean. No secrets or personal paths beyond the one already-known, already-
+  documented dev-machine-only absolute path in `src-tauri/src/lib.rs` (`CARGO_MANIFEST_DIR`,
+  build-time, accepted limitation - see the "spawned as a plain child process" entry above). Minor,
+  non-blocking: `README.md` is still the stock `npm create tauri-app` template text, not
+  project-specific - worth a pass before the repo goes public, not a security issue (resolved same
+  day - see the naming-rename entry above, `README.md` now has real content).
+- 2026-09-09 - Ran the packaging/installer question through the actual relay harness, per Muad's
+  explicit instruction ("run it through the harness"), mirroring exactly how the original
+  `PLAN.md` was produced - not a shortcut, the real thing. Task written to
+  `~/Projects/relay/tasks/sophi-a-packaging-plan.md` (deliberately front-loaded the mobile
+  subprocess-sandboxing wall and the BYOK/unmodified-CLI legal constraint into the task itself, so
+  the panel would be forced to confront them rather than produce a naively-uniform four-platform
+  plan). Chain: `plan-debate` (5 real labs debate, blind panel, up to 3 revision rounds) - picked
+  over the cheaper `plan-cheap`/`verify` chains because this is genuine new architecture (mobile
+  subprocess constraints, signing trade-offs) worth real cross-lab debate, and over the heavier
+  `idea-open-c2`/`plan-debate-open-c2` (open-scope, 6-lab) chains because this is a bounded slice
+  of an existing product, not a genuinely new idea. Dry-run priced worst-case at $2.01; actual run
+  (`2026-09-09T02-29-54-628Z`) converged in round 1 - every lab signed off on the first draft, no
+  revision needed - for $0.34. Result: `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/
+  `BOARD_PACKAGING.md`, same shape as the original plan triplet. Headline decisions: Windows first
+  (NSIS, unsigned v1, no auto-update), Linux second (AppImage only, not deb - a real debate-round
+  reversal after four of five labs objected to an initial deb proposal), Android and iOS both
+  explicitly out of scope for v1 with independent reasoning per platform (not a combined "mobile is
+  hard" hand-wave) - see PLAN_PACKAGING.md §3/§3.1. Not yet built; HANDOFF_PACKAGING.md is the next
+  session's starting point.
+- 2026-09-09 - Stripe payment link created (Muad's own dashboard click, per the standing rule).
+  Real settled price: **€20**, not `SHOP.md`'s $29 recommendation - a real, deliberate call, not
+  drift; matches `sower-industries.de/plan`'s own €20 price and this same conversation's earlier
+  "we cannot afford" pushback on higher numbers. `SHOP.md` updated to record €20 as settled while
+  keeping the original $29 pricing-math reasoning intact (not rewritten to retrofit €20 - the math
+  was real reasoning at the time, just anchored to a number the author didn't ultimately pick).
+- 2026-09-09 - Built `HANDOFF_PACKAGING.md` item 1 (PLAN_PACKAGING.md §2.1, the runtime
+  path-resolution chain), same session, no gap - see PROGRESS.md's "why not now" note.
+  `src-tauri/src/lib.rs` rewritten: `resolve()` implements the four-step chain (env var ->
+  persisted JSON at `<app_config_dir>/resolved-paths.json` -> `app.path().resource_dir()` ->
+  RELAY_PATH-only picker via `tauri-plugin-dialog`'s `blocking_pick_folder()`), with a
+  `cfg!(debug_assertions)`-gated dev fallback to the old CARGO_MANIFEST_DIR-relative paths so
+  `npm run tauri dev` needs no setup - that fallback is compiled out of release builds entirely,
+  so it can never be the silent culprit AT-1 checks for. Added `tauri-plugin-dialog` (only Rust
+  dependency needed; the picker is invoked from `setup()`, not through JS, so no capability grant
+  was needed). The resolved `RELAY_PATH` is passed to the spawned orchestrator via `Command::env`,
+  replacing its own independent `../relay`-relative default.
+  **Tested for real, three of the four steps, live**: (1) env var - set
+  `SOPHIA_ORCHESTRATOR_PATH`, relaunched, log confirmed it won over the dev fallback; (2) persisted
+  path - hand-edited `resolved-paths.json` to point at a copy of the orchestrator in `/tmp`,
+  relaunched, log confirmed it won and the process actually spawned from there (see next
+  paragraph for what that surfaced); (3) dev fallback - confirmed multiple times across every test,
+  including a plain "nothing else set" baseline before and after. Step 4 (the picker) was not
+  interactively exercised - `blocking_pick_folder()` needs a real display, this sandbox is
+  headless, and the only way to force the picker to fire here would be making the dev-fallback
+  relay checkout at `~/Projects/relay` temporarily unavailable, which risks disrupting other
+  concurrent work in this workspace. Code-complete and compiles; named as unverified rather than
+  claimed.
+  **A real finding from the persisted-path test**: pointing the resolver at a bare copy of
+  `src/orchestrator/` (source files only, no `node_modules`) failed with `ERR_MODULE_NOT_FOUND:
+  'ws'` - not a resolver bug (it correctly found and spawned from the copy), but a genuine
+  packaging requirement PLAN_PACKAGING.md's §2.1/§2.4 didn't spell out: whatever gets bundled into
+  Tauri's `bundle.resources` for the orchestrator must include its resolved `node_modules` (or be
+  pre-bundled into one file, e.g. via esbuild/ncc) - a bare copy of the source directory is not
+  enough. Worth doing explicitly as part of HANDOFF_PACKAGING.md item 2/3, not assumed.
+  All test artifacts (the `/tmp` orchestrator copy, the temporarily-edited persisted-paths.json,
+  stray dev-server instances) were cleaned up after; `resolved-paths.json` is back to
+  `{orchestrator: null, node: null, relay: null}` and a plain `npm run tauri dev` was re-verified
+  clean as the last step.
+- 2026-09-09 - Noticed mid-session, unprompted: another concurrent process/session is actively
+  using this exact repo right now - `brand/BRAND.md` and a full icon regeneration landed on disk
+  without this session writing them (real, high-quality visual-identity work, consistent with the
+  naming/SMO-palette decisions already recorded here; not reverted, per this workspace's own "take
+  it as current state" convention), and `ps` shows a live `node .../relay/src/cli.js --resume
+  runs/2026-09-09T02-53-53-017Z` process plus a live `vite`/orchestrator pair that this session did
+  not start. Read as: Sophi-A (or another session) is being genuinely dogfooded concurrently while
+  this session builds the packaging pipeline - exactly the multi-seat premise the product is built
+  on. Consequence: stopped killing `cnc-harness`-related processes indiscriminately partway through
+  this session once this became clear, to avoid disrupting that live activity; one `cargo check`
+  hit a real "Text file busy" error trying to overwrite `target/debug/node/node` while a
+  concurrently-running orchestrator instance had that exact file open - not a bug in the code
+  written this session, a resource-contention artifact from two things building/running against
+  the same `target/debug` directory at once. Left as-is rather than force-killing the other
+  session's process to make a redundant check pass (the same resolver logic was already verified
+  clean earlier in this same session, before the concurrent activity ramped up).
+- 2026-09-09 - Built `HANDOFF_PACKAGING.md` items 2-4 (PLAN_PACKAGING.md §2.2-§2.4) same session.
+  `package.json`: added `esbuild` (devDependency) and `package:orchestrator`
+  (bundles `src/orchestrator/index.js` into one self-contained ESM file via esbuild, inlining `ws`
+  - resolves the `node_modules` gap named above - then copies `seats.json` alongside; verified for
+  real by running the bundled output completely standalone in an empty `/tmp` directory with zero
+  `node_modules`, confirmed it binds and prints `PORT:<n>`). `scripts/fetch-node-runtime.sh`: pins
+  Node 22.23.2, hardcodes its real linux-x64/win-x64 SHA-256 hashes (read once from
+  nodejs.org's own SHASUMS256.txt, not re-fetched and trusted at run time - that would defeat
+  pinning), verifies before extracting; run for real for linux-x64, binary confirmed executable
+  (`--version` prints `v22.23.2`). `tauri.conf.json`: `bundle.targets` narrowed from `"all"` to
+  `["nsis", "appimage"]` (no deb/rpm/msi/dmg - macOS was never in scope for this plan either, only
+  Windows/Linux/Android/iOS per the original ask), `windows.nsis.installMode: "currentUser"`, and
+  `beforeBuildCommand` extended to also run `package:orchestrator`. Per-platform resource mappings
+  split into new `tauri.linux.conf.json`/`tauri.windows.conf.json` (each maps the bundled
+  orchestrator to `orchestrator/` and its platform's `dist-node/<target>` to `node/` in the
+  resource dir) rather than relying on unclear merge semantics for a shared `resources` key.
+  `.gitignore` updated - `dist-orchestrator`/`dist-node` are regenerated build output, never
+  committed (the Node runtime alone is 50-100MB/platform). `docs/signing-decision.md` and
+  `docs/linux-packaging-decision.md` written per §6's requirement that these trade-offs be named,
+  not silently assumed. `.github/workflows/release.yml` written: tag-triggered, a Linux job
+  (installs `libfuse2` explicitly - Ubuntu's GitHub-hosted runner images have dropped it by
+  default, a known AppImage-CI gap, not Sophi-A-specific) and a Windows job (fetches the pinned
+  win-x64 Node runtime via a PowerShell step, same pinned hash as the local script), both
+  uploading to a shared release job. `README.md` gained a "Platform support" section covering the
+  Android/iOS scope cut for anyone who doesn't read PLAN_PACKAGING.md directly (item 5).
+  **Honestly verified vs. not**: the orchestrator bundling and Node-runtime-fetch-and-verify steps
+  were run for real, successfully, in this sandbox. A full `npm run tauri build --bundles
+  appimage` was attempted for real and got all the way through a real 2m15s release compile and
+  into the actual AppImage bundling step (proving the Rust resource-resolution code and
+  `tauri.conf.json` config are structurally sound) before failing on `linuxdeploy` needing
+  `libfuse.so.2`, which this sandbox doesn't have and `sudo` can't install non-interactively here -
+  see `docs/linux-packaging-decision.md` for the full trace, including the manual
+  `--appimage-extract-and-run` workaround that confirmed linuxdeploy itself works fine once that's
+  supplied. The Windows NSIS build was never attempted locally at all - there is no Windows machine
+  or cross-compilation toolchain in this sandbox; the CI workflow is the first place it will
+  actually run, and that hasn't happened yet either (no tag has been pushed). Named as unverified,
+  not claimed working.

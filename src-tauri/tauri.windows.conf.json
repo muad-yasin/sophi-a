@@ -1,0 +1,8 @@
+{
+  "bundle": {
+    "resources": {
+      "../dist-orchestrator": "orchestrator",
+      "../dist-node/win-x64": "node"
+    }
+  }
+}
