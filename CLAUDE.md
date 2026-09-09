@@ -62,10 +62,13 @@ npm run tauri dev
 Slice 1's bar (met, 2026-09-09): the window opens showing all eight seat tiles, green/idle, driven
 by a real WebSocket from a real orchestrator process Rust spawned.
 
-## What's next (proposed, not started)
+## What's next
 
-The parallel-build-and-compare feature and mobile are both explicitly deferred in PLAN.md/
-PLAN_PACKAGING.md, not designed yet.
+Mobile is explicitly deferred in PLAN_PACKAGING.md §3/§3.1 - designed as "not doing this," which
+counts as designed. Parallel-build-and-compare now has a real design too -
+`PLAN_PARALLEL_BUILD.md`/`HANDOFF_PARALLEL_BUILD.md`/`BOARD_PARALLEL_BUILD.md` (same real
+multi-lab-panel treatment as `PLAN.md` and `PLAN_PACKAGING.md`, unanimous round-1 sign-off,
+2026-09-09) - read before starting any of that work, same as those two.
 
 ## MCP introspection (built 2026-09-09)
 

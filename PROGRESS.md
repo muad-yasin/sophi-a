@@ -155,3 +155,13 @@
   race in `wait_for_idle` along the way (it could report a just-started task as already finished
   if polled before the seat's own "working" event arrived) - re-verified fixed with three
   consecutive real runs. Full detail in DECISIONS.md.
+- 2026-09-09 - Ran the last remaining item from the day's punch list through the real relay
+  harness: parallel-build-and-compare, the feature PLAN.md had only ever named, never designed.
+  `plan-debate` chain, run id `2026-09-09T10-20-19-041Z`, $0.32, unanimous round-1 sign-off.
+  Result: `PLAN_PARALLEL_BUILD.md`/`HANDOFF_PARALLEL_BUILD.md`/`BOARD_PARALLEL_BUILD.md`. Headline
+  decisions: a per-task (non-sticky) checkbox trigger fused with a pre-spend Nx-cost confirmation
+  modal, a hash-manifest diff baseline (not git - workdirs aren't git repos), retain-in-place
+  disposition for non-picked builders forever (unanimous board reversal of every auto-delete/
+  archive-move proposal raised), and an explicit evaluation that rejected wiring in relay's
+  `plan-1..3` panel-judging machinery (wrong shape for concurrent code-diff comparison) in favor
+  of a human click plus an optional non-binding advisor recommendation. Not built yet.
