@@ -1,23 +1,88 @@
-/* cnc-harness control room - dark neutral surface ladder, restrained glow-status system.
-   Palette fixed by PLAN.md: #22c55e idle green, #eab308 working orange, #ef4444 problem red.
-   Everything else here builds a coherent dark ground for those three to sit on. */
+/* Sophi-A control room - visual identity ported from SMO's real design system (2026-09-09,
+   Muad's explicit call: "Visual Identity: SMO"). Source of truth for every value below:
+   ~/Projects/SMO/SMO/Assets/Scripts/Editor/Shared/ScreenBuilderUtils.cs - kept in sync manually,
+   there is no shared-module setup between a Unity project and a Tauri web frontend. Do not
+   invent new colors here; if SMO's palette changes, resync from that file, don't drift locally.
+
+   Status ring mapping (Sophi-A's own choice, not copied 1:1 from SMO's own UI - SMO has no
+   "agent working" concept): idle -> Gain (SMO's stock-gain green), working -> Warning (SMO's
+   caution orange), problem -> Breaking (SMO's breaking-news red). Brand/chrome accent is
+   AiAccent, deliberately reused from SMO's own "algorithm tier" AI-thematic color, since Sophi-A
+   literally is an AI-orchestration tool; Gold stays reserved for primary-action buttons (Send),
+   matching SMO's own "buttons, overlines" usage. */
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./fonts/SpaceGrotesk/SpaceGrotesk-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./fonts/SpaceGrotesk/SpaceGrotesk-Medium.ttf") format("truetype");
+  font-weight: 500;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./fonts/SpaceGrotesk/SpaceGrotesk-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("./fonts/SpaceGrotesk/SpaceGrotesk-Bold.ttf") format("truetype");
+  font-weight: 700;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("./fonts/IBMPlexSans/IBMPlexSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("./fonts/IBMPlexSans/IBMPlexSans-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("./fonts/IBMPlexSans/IBMPlexSans-Medium.ttf") format("truetype");
+  font-weight: 500;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("./fonts/IBMPlexSans/IBMPlexSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
 
 :root {
-  /* surface ladder, darkest to lightest */
-  --bg: #0b0d10;
-  --surface: #15181d;
-  --surface-raised: #1b1f26;
-  --border: #2a2f37;
+  /* surface ladder - SMO ScreenBuilderUtils.cs Bg/Surface/SurfaceElevated/SurfaceModal/Sunken */
+  --bg: #0a0908;
+  --surface: #161511;
+  --surface-raised: #1b1815; /* SurfaceLit - where a card's own light lands */
+  --surface-modal: #26221a;
+  --border: color-mix(in srgb, #f2ede3 8%, transparent); /* Hairline */
+  --divider: color-mix(in srgb, #f2ede3 14%, transparent);
 
-  /* text */
-  --text-primary: #e6e8eb;
-  --text-secondary: #9aa0a8;
-  --text-placeholder: #5b6169;
+  /* text - SMO TextPrimary/TextSecondary/TextMuted/TextDisabled */
+  --text-primary: #f2ede3;
+  --text-secondary: #b3ac9c;
+  --text-placeholder: #85806f;
+  --text-disabled: #57534a;
 
-  /* status - fixed by PLAN.md, do not adjust without a stated reason */
-  --status-idle: #22c55e;
-  --status-working: #eab308;
-  --status-problem: #ef4444;
+  /* status - SMO Gain/Warning/Breaking, repurposed for agent-seat status (Sophi-A's own mapping,
+     not an SMO UI concept - see file header) */
+  --status-idle: #45c689;
+  --status-working: #e08a3c;
+  --status-problem: #c7362b;
+  --on-problem: #fbede9; /* SMO OnBreaking - text on a --status-problem fill */
+
+  /* brand/chrome accent - SMO AiAccent (already the "algorithm/AI" thematic color in-game) */
+  --accent: #5b7088;
+  --accent-bright: #8fa6c2; /* AiAccentDark */
+
+  /* primary-action accent - SMO Gold, reserved for buttons per SMO's own usage discipline */
+  --gold: #c9a24d;
+  --gold-bright: #e9c97f;
+  --on-gold: #171207;
 
   /* spacing scale, multiples of 4 */
   --sp-1: 4px;
@@ -27,7 +92,11 @@
   --sp-6: 24px;
   --sp-8: 32px;
 
-  /* type scale - at most two sizes/weights per screen */
+  /* type - SMO's two-family rule: Space Grotesk for chrome/numerals/labels/buttons, IBM Plex
+     Sans for body prose. No third (Hanken Grotesk) hero face here - this app has no single
+     hero-headline call site to justify one, per SMO's own "never an inheritance" rule for it. */
+  --font-chrome: "Space Grotesk", -apple-system, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
   --font-chrome-size: 13px;
   --font-chrome-weight: 600;
   --font-body-size: 14px;
@@ -54,7 +123,7 @@ body {
   height: 100%;
   background: var(--bg);
   color: var(--text-primary);
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: var(--font-body);
   font-size: var(--font-body-size);
   font-weight: var(--font-body-weight);
 }
@@ -70,12 +139,28 @@ body {
   position: fixed;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--sp-4);
   background: var(--bg);
   color: var(--text-secondary);
   font-size: var(--font-chrome-size);
   z-index: 10;
+}
+
+/* the brand mark - Sophi-A's own asymptote-star identity (brand/sophi-a-mark.svg), a slow breath
+   rather than a spinner: it never resolves to "done", it approaches - the same idea the mark
+   itself is drawn from (see brand/BRAND.md) */
+.brand-mark {
+  width: 96px;
+  height: 96px;
+  animation: brand-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes brand-breathe {
+  0%, 100% { opacity: 0.75; transform: scale(0.97); }
+  50% { opacity: 1; transform: scale(1.03); }
 }
 
 .conn-error {
@@ -196,6 +281,7 @@ body {
 }
 
 .tile-name {
+  font-family: var(--font-chrome);
   font-size: var(--font-chrome-size);
   font-weight: var(--font-chrome-weight);
   color: var(--text-primary);
@@ -203,6 +289,7 @@ body {
 
 /* color is never the sole carrier of status - a text badge always accompanies the glow ring */
 .status-badge {
+  font-family: var(--font-chrome);
   font-size: 11px;
   font-weight: var(--font-chrome-weight);
   text-transform: uppercase;
@@ -300,6 +387,7 @@ body {
 
 .btn {
   font: inherit;
+  font-family: var(--font-chrome);
   font-size: var(--font-chrome-size);
   font-weight: var(--font-chrome-weight);
   padding: var(--sp-2) var(--sp-4);
@@ -317,4 +405,114 @@ body {
 
 .btn-dismiss {
   border-color: var(--text-secondary);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- task input: every tile gets one, per PLAN.md's monetization-gap fix (no UI path anywhere
+   called startSeat before this) --- */
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  flex: 0 0 auto;
+}
+
+.task-input {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: var(--font-body-size);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  resize: vertical;
+  min-height: 44px;
+}
+
+.task-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.task-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.task-form-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.task-form-actions .btn {
+  flex: 1 1 auto;
+}
+
+/* Send is the primary action - SMO's Gold is reserved for buttons/overlines, so it's the one
+   place in this app that departs from the status-color set. */
+.btn-send {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.btn-stop {
+  border-color: var(--status-problem);
+}
+
+/* --- cnc/advisor: provider + model picker, chat-only disclosure --- */
+
+.seat-config {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--sp-3);
+  flex: 0 0 auto;
+}
+
+.seat-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-family: var(--font-chrome);
+  font-size: var(--font-chrome-size);
+  color: var(--text-secondary);
+  flex: 1 1 140px;
+}
+
+.seat-config-field select,
+.seat-config-field input {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: var(--font-body-size);
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--sp-2) var(--sp-3);
+  min-height: 44px;
+}
+
+.seat-config-field select:disabled,
+.seat-config-field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* color is never the sole carrier here either - the badge is a labeled text chip, not a dot */
+.chat-only-badge {
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  font-weight: var(--font-chrome-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px var(--sp-2);
+  border-radius: 4px;
+  color: var(--status-working);
+  border: 1px solid var(--status-working);
+  white-space: nowrap;
 }

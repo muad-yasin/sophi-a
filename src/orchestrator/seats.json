@@ -2,14 +2,18 @@
   "cnc": {
     "role": "Command & Control",
     "model": "claude-sonnet-5",
+    "provider": "anthropic",
     "invocation_mode": "claude-code-subprocess",
-    "session": "continued via --resume"
+    "session": "continued via --resume",
+    "chat_history": true
   },
   "advisor": {
     "role": "Advisor",
     "model": "claude-fable-5-1",
+    "provider": "anthropic",
     "invocation_mode": "messages-api",
-    "session": "stateless"
+    "session": "stateless",
+    "chat_history": false
   },
   "plan-1": {
     "role": "Planning module",

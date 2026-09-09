@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSubprocess.js';
 import { startMessagesApiSeat } from './adapters/messagesApi.js';
 import { startRelayChainSeat } from './adapters/relayChainSubprocess.js';
+import { isAllowedProvider } from './providers.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -43,18 +44,59 @@ function makeEmit(wss, seatId) {
   };
 }
 
+// `cnc`'s native invocation_mode is claude-code-subprocess (Anthropic only - real tool use, file
+// edits, --resume continuity). PLAN.md's second 2026-09-09 addendum makes `cnc` (and `advisor`,
+// already messages-api) provider-selectable: when a seat declares `provider` and it isn't
+// `anthropic`, a claude-code-subprocess seat falls back to messages-api - a real chat seat on
+// that provider, honestly without tool-use/file-editing, never a faked equivalent coding agent.
+function effectiveInvocationMode(seat) {
+  if (seat.invocation_mode === 'claude-code-subprocess' && seat.provider && seat.provider !== 'anthropic') {
+    return 'messages-api';
+  }
+  return seat.invocation_mode;
+}
+
 export function startSeat(wss, seatId, task) {
   const seat = seats[seatId];
   if (!seat) throw new Error(`Unknown seat: ${seatId}`);
-  const adapter = adapters[seat.invocation_mode];
-  if (!adapter) throw new Error(`No adapter for invocation_mode: ${seat.invocation_mode}`);
+  const mode = effectiveInvocationMode(seat);
+  const adapter = adapters[mode];
+  if (!adapter) throw new Error(`No adapter for invocation_mode: ${mode}`);
   return adapter.start(seatId, seat, task, makeEmit(wss, seatId));
 }
 
 export function stopSeat(seatId) {
   const seat = seats[seatId];
-  const adapter = seat && adapters[seat.invocation_mode];
+  const adapter = seat && adapters[effectiveInvocationMode(seat)];
   if (adapter?.stop) adapter.stop(seatId);
+}
+
+// Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
+// addendum) - the other six seats have no configurable provider/model and this is rejected for
+// them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
+// matches the ephemeral nature of an in-memory session (seats.json stays the on-disk default).
+const CONFIGURABLE_SEAT_IDS = new Set(['cnc', 'advisor']);
+
+export function configureSeat(seatId, { provider, model } = {}) {
+  if (!CONFIGURABLE_SEAT_IDS.has(seatId)) {
+    console.error(`configure rejected: seat "${seatId}" is not configurable`);
+    return;
+  }
+  const seat = seats[seatId];
+  if (!seat) {
+    console.error(`configure rejected: unknown seat "${seatId}"`);
+    return;
+  }
+  if (provider !== undefined) {
+    if (!isAllowedProvider(provider)) {
+      console.error(`configure rejected: provider "${provider}" is not in cnc-harness's allowed-provider list`);
+      return;
+    }
+    seat.provider = provider;
+  }
+  if (model !== undefined && model !== '') {
+    seat.model = model;
+  }
 }
 
 export function getStatus(seatId) {
@@ -74,6 +116,7 @@ function main() {
       try { msg = JSON.parse(raw.toString()); } catch { return; }
       if (msg.cmd === 'start') startSeat(wss, msg.seatId, msg.task);
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
+      else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
     });
   });
 

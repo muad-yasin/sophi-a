@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Sophi-A mark - the asymptote star.
+    Palette is not invented here: the gold/gold-bright CSS variables are SMO's own "AI Upgrades" Gold,
+    already reused 1:1 in src/styles.css; the corona/ember stops below are desaturated-to-sRGB versions of
+    the actual HDR values in SMO's SophiACoronaGenerator.cs (corona anchor list) and
+    SophiAVisualDriver.cs (coreDim/coreFull), converted from >1.0 bloom floats to display-safe hex.
+    Six flare rays, uneven lengths - a static, symmetric sunburst is exactly the "frozen prominence"
+    complaint SophiAFlareAnimator.cs's own header comment names; asymmetry is the cheap fix for a
+    still image that a real animated build (see brand/BRAND.md's own notes) can later make literal.
+  -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fdf6e3" stop-opacity="0.55"/>
+      <stop offset="35%" stop-color="#e9c97f" stop-opacity="0.30"/>
+      <stop offset="70%" stop-color="#c9a24d" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c9a24d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="47%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="#fffdf6"/>
+      <stop offset="26%" stop-color="#fdeec0"/>
+      <stop offset="48%" stop-color="#f2d18e"/>
+      <stop offset="68%" stop-color="#dcac57"/>
+      <stop offset="88%" stop-color="#a8763a"/>
+      <stop offset="100%" stop-color="#6b4420"/>
+    </radialGradient>
+    <linearGradient id="flare" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f9c97f" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#c9a24d" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#c9a24d" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soften" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+    <filter id="softenWide" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="#0a0908"/>
+
+  <circle cx="256" cy="256" r="248" fill="url(#glow)"/>
+
+  <!-- six flares, uneven length/width - the asymmetric "prominence" read -->
+  <g filter="url(#soften)">
+    <path d="M 256 256 L 246 30 L 262 30 Z" fill="url(#flare)" transform="rotate(8 256 256)"/>
+    <path d="M 256 256 L 248 62 L 260 62 Z" fill="url(#flare)" transform="rotate(66 256 256)"/>
+    <path d="M 256 256 L 244 20 L 264 20 Z" fill="url(#flare)" transform="rotate(132 256 256)"/>
+    <path d="M 256 256 L 249 70 L 259 70 Z" fill="url(#flare)" transform="rotate(191 256 256)"/>
+    <path d="M 256 256 L 245 26 L 263 26 Z" fill="url(#flare)" transform="rotate(247 256 256)"/>
+    <path d="M 256 256 L 250 78 L 258 78 Z" fill="url(#flare)" transform="rotate(305 256 256)"/>
+  </g>
+
+  <circle cx="256" cy="256" r="150" fill="#0a0908" opacity="0.35" filter="url(#softenWide)"/>
+  <circle cx="256" cy="256" r="146" fill="url(#orb)"/>
+</svg>

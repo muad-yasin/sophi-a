@@ -27,6 +27,27 @@ const SEAT_IDS = [
   "build-3",
 ] as const;
 
+// The two seats whose underlying provider/model are user-selectable (PLAN.md "Addendum
+// (2026-09-09, second)"). The other six have no `provider` field in seats.json at all.
+const CONFIGURABLE_SEAT_IDS = ["cnc", "advisor"] as const;
+
+// Mirrors src/orchestrator/providers.js's ALLOWED_PROVIDERS - that file is the source of truth
+// for this list; keep the two in sync manually, there is no shared-module setup between this
+// Tauri frontend and the Node orchestrator sidecar yet. xai/Grok is deliberately excluded by
+// standing product policy - do not add it back without asking first.
+const ALLOWED_PROVIDERS: { id: string; label: string }[] = [
+  { id: "anthropic", label: "Anthropic (Claude / Fable)" },
+  { id: "openai", label: "OpenAI" },
+  { id: "google", label: "Google (Gemini)" },
+  { id: "mistral", label: "Mistral" },
+  { id: "deepseek", label: "DeepSeek" },
+  { id: "groq", label: "Groq" },
+  { id: "cohere", label: "Cohere" },
+  { id: "openrouter", label: "OpenRouter" },
+  { id: "together", label: "Together" },
+  { id: "zai", label: "Z.ai" },
+];
+
 const connectingEl = document.getElementById("connecting")!;
 const connErrorEl = document.getElementById("conn-error")!;
 const gridEl = document.getElementById("grid")!;
@@ -50,12 +71,43 @@ function tileEl(seatId: string): HTMLElement | null {
   return document.getElementById(`tile-${seatId}`);
 }
 
+// The live WebSocket connection, reachable outside connect() so the task-form/config-picker
+// submit handlers below can send commands on it. `sendCommand` no-ops safely (and logs) when
+// there is no open connection, rather than throwing from inside a click/submit handler.
+let currentWs: WebSocket | null = null;
+
+function sendCommand(cmd: Record<string, unknown>) {
+  if (currentWs && currentWs.readyState === WebSocket.OPEN) {
+    currentWs.send(JSON.stringify(cmd));
+  } else {
+    debugLog(`sendCommand no-op, not connected: ${JSON.stringify(cmd)}`);
+  }
+}
+
 function setStatus(seatId: string, status: Status) {
   const tile = tileEl(seatId);
   if (!tile) return;
   tile.dataset.status = status;
   const badge = tile.querySelector('[data-role="badge"]');
   if (badge) badge.textContent = status;
+  setControlsEnabled(tile, status);
+}
+
+// Task input/Send/provider-config are disabled while the seat is working (an in-flight turn
+// shouldn't be interrupted by a second `start`, and a provider/model swap mid-turn is confusing);
+// Stop is only meaningful while something is actually running.
+function setControlsEnabled(tile: HTMLElement, status: Status) {
+  const working = status === "working";
+  const taskInput = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+  const sendBtn = tile.querySelector<HTMLButtonElement>('[data-role="send-btn"]');
+  const stopBtn = tile.querySelector<HTMLButtonElement>('[data-role="stop-btn"]');
+  const providerSelect = tile.querySelector<HTMLSelectElement>('[data-role="provider-select"]');
+  const modelInput = tile.querySelector<HTMLInputElement>('[data-role="model-input"]');
+  if (taskInput) taskInput.disabled = working;
+  if (sendBtn) sendBtn.disabled = working;
+  if (stopBtn) stopBtn.disabled = !working;
+  if (providerSelect) providerSelect.disabled = working;
+  if (modelInput) modelInput.disabled = working;
 }
 
 function setOutput(seatId: string, text: string) {
@@ -64,6 +116,20 @@ function setOutput(seatId: string, text: string) {
   const output = tile.querySelector('[data-role="output"]');
   if (!output) return;
   output.textContent = text;
+  output.classList.remove("placeholder");
+}
+
+// A visual record of what the operator asked for, since seat.output/seat.idle only ever carry
+// the seat's own response text, never the operator's message. This is deliberately transient -
+// it renders in the same single-line output slot the seat's own next event will overwrite, not a
+// persistent transcript (that would need restructuring the output model into an append log,
+// which is more than this pass needs - see DECISIONS.md).
+function echoTask(seatId: string, task: string) {
+  const tile = tileEl(seatId);
+  if (!tile) return;
+  const output = tile.querySelector('[data-role="output"]');
+  if (!output) return;
+  output.textContent = `> ${task}`;
   output.classList.remove("placeholder");
 }
 
@@ -135,6 +201,7 @@ async function connect() {
     clearTimeout(watchdog);
     attempt = 0;
     everConnected = true;
+    currentWs = ws;
     showConnected();
   });
 
@@ -150,6 +217,7 @@ async function connect() {
   ws.addEventListener("close", (e) => {
     clearTimeout(watchdog);
     debugLog(`WebSocket closed: code=${e.code} reason=${e.reason}`);
+    if (currentWs === ws) currentWs = null;
     if (everConnected) showConnectionError();
     else showConnecting();
     scheduleReconnect();
@@ -189,15 +257,95 @@ function setupAdvisorActions() {
   });
 }
 
+// Every one of the eight tiles gets a task input + Send + Stop (PLAN.md's gap: no UI path
+// anywhere called startSeat/stopSeat before this). Submitting sends {cmd:'start', seatId, task}
+// over the existing WebSocket; Stop sends {cmd:'stop', seatId}. Both are simple no-ops via
+// sendCommand if the socket isn't open.
+function setupTaskForms() {
+  for (const seatId of SEAT_IDS) {
+    const tile = tileEl(seatId);
+    if (!tile) continue;
+
+    const form = tile.querySelector<HTMLFormElement>('[data-role="task-form"]');
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const input = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+        if (!input) return;
+        const task = input.value.trim();
+        if (!task) return;
+        sendCommand({ cmd: "start", seatId, task });
+        echoTask(seatId, task);
+        input.value = "";
+      });
+    }
+
+    const stopBtn = tile.querySelector<HTMLButtonElement>('[data-role="stop-btn"]');
+    if (stopBtn) {
+      stopBtn.addEventListener("click", () => {
+        sendCommand({ cmd: "stop", seatId });
+      });
+    }
+  }
+}
+
+// `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
+// id field. Provider changes send {cmd:'configure', seatId, provider} immediately; the model
+// field sends {cmd:'configure', seatId, model} on blur/Enter rather than per keystroke. `cnc`
+// additionally gets a "chat only" badge disclosed whenever its provider isn't anthropic (PLAN.md
+// "Addendum (2026-09-09, second)": a non-Anthropic cnc loses tool-use/file-editing and must not
+// imply parity with the Claude Code coding-agent mode).
+function setupSeatConfig() {
+  for (const seatId of CONFIGURABLE_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    if (!tile) continue;
+
+    const select = tile.querySelector<HTMLSelectElement>('[data-role="provider-select"]');
+    const modelInput = tile.querySelector<HTMLInputElement>('[data-role="model-input"]');
+    const badge = tile.querySelector<HTMLElement>('[data-role="chat-only-badge"]');
+
+    if (select) {
+      for (const p of ALLOWED_PROVIDERS) {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.label;
+        select.appendChild(opt);
+      }
+      select.value = "anthropic";
+      select.addEventListener("change", () => {
+        sendCommand({ cmd: "configure", seatId, provider: select.value });
+        if (badge) badge.hidden = select.value === "anthropic";
+      });
+    }
+
+    if (modelInput) {
+      const sendModel = () => {
+        const model = modelInput.value.trim();
+        if (model) sendCommand({ cmd: "configure", seatId, model });
+      };
+      modelInput.addEventListener("blur", sendModel);
+      modelInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          sendModel();
+        }
+      });
+    }
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   showConnecting();
   setupAdvisorToggle();
   setupAdvisorActions();
+  setupTaskForms();
+  setupSeatConfig();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {
     const tile = tileEl(seatId);
     if (tile && !tile.dataset.status) tile.dataset.status = "idle";
+    if (tile) setControlsEnabled(tile, (tile.dataset.status as Status) || "idle");
   }
   connect();
 });
