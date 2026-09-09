@@ -187,3 +187,12 @@
   (direct builder-vs-builder diff render) - same/differs badges still work without it. Tested for
   real: same-then-differs badge flip, a unique file, real diffs for both a modified and a new
   file, and a rejected path-traversal attempt. Next: item 4 (pick + disposition).
+- 2026-09-09 - Item 4 (pick + disposition) done: "Pick this one" writes a run record naming the
+  winner/task/participants; every other participating seat gets "Retained" and keeps a manual
+  "Delete workdir" button; retain-in-place is otherwise permanent - nothing anywhere auto-deletes.
+  Both mutating actions require a server-enforced `humanClick:true` flag, not just a UI courtesy.
+  A compact "Run history" panel lists past picks. Tested for real end to end: dispatch, differing
+  output, inspect, pick, history record, then delete the retained (non-winning) seat's workdir
+  with the winner's left untouched. All 5 build-order items for parallel-build-and-compare are
+  now done. Next: "surface the debate" (the market-positioning analysis's headline feature) and
+  cost transparency.

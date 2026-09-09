@@ -42,6 +42,23 @@ interface CompareDiffEvent {
   patch?: DiffPatch;
   error?: string;
 }
+interface ComparePickEvent {
+  type: "compare.pick";
+  winner: string;
+  participants: string[];
+  taskId: string;
+}
+interface CompareRunRecord {
+  taskId: string;
+  task: string;
+  winner: string;
+  participants: string[];
+  pickedAt: number;
+}
+interface CompareHistoryEvent {
+  type: "compare.history";
+  runs: CompareRunRecord[];
+}
 
 type Status = "idle" | "working" | "problem";
 
@@ -240,9 +257,16 @@ async function connect() {
 
   ws.addEventListener("message", (event) => {
     try {
-      const evt = JSON.parse(event.data) as SeatEvent | CompareChangesEvent | CompareDiffEvent;
+      const evt = JSON.parse(event.data) as
+        | SeatEvent
+        | CompareChangesEvent
+        | CompareDiffEvent
+        | ComparePickEvent
+        | CompareHistoryEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
+      else if (evt.type === "compare.pick") handleComparePick(evt);
+      else if (evt.type === "compare.history") handleCompareHistory(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -429,6 +453,16 @@ function setupInspectPanels() {
       toggle.setAttribute("aria-expanded", String(opening));
       if (opening) sendCommand({ cmd: "inspect_changes", seatId });
     });
+
+    // §5's guard checks for this flag server-side too - humanClick:true is not decorative, the
+    // backend genuinely rejects a pick/delete without it (see DECISIONS.md).
+    tile.querySelector('[data-role="pick-btn"]')?.addEventListener("click", () => {
+      sendCommand({ cmd: "select_winner", seatId, humanClick: true });
+    });
+    tile.querySelector('[data-role="delete-workdir-btn"]')?.addEventListener("click", () => {
+      if (!window.confirm(`Delete ${seatId}'s working directory? This cannot be undone.`)) return;
+      sendCommand({ cmd: "delete_workdir", seatId, humanClick: true });
+    });
   }
 }
 
@@ -440,17 +474,22 @@ function handleCompareChanges(evt: CompareChangesEvent) {
   const empty = tile?.querySelector<HTMLElement>('[data-role="inspect-empty"]');
   const list = tile?.querySelector<HTMLUListElement>('[data-role="inspect-file-list"]');
   const diffEl = tile?.querySelector<HTMLElement>('[data-role="inspect-diff"]');
+  const pickActions = tile?.querySelector<HTMLElement>('[data-role="inspect-pick-actions"]');
   if (!tile || !empty || !list) return;
 
   diffEl && (diffEl.hidden = true);
   list.innerHTML = "";
 
+  // A seat with no snapshot was never part of a comparison run - no pick/delete makes sense
+  // there either (§5's actions are scoped to seats that actually ran a comparison task).
   if (evt.error || !evt.changes || evt.changes.length === 0) {
     empty.hidden = false;
     empty.textContent = evt.error ?? "No changes since dispatch.";
+    if (pickActions) pickActions.hidden = true;
     return;
   }
   empty.hidden = true;
+  if (pickActions) pickActions.hidden = false;
 
   for (const change of evt.changes) {
     const li = document.createElement("li");
@@ -501,6 +540,66 @@ function handleCompareDiff(evt: CompareDiffEvent) {
       diffEl.appendChild(div);
     }
   }
+}
+
+// Disposition (PLAN_PARALLEL_BUILD.md §5): winner gets a "Winner" badge and loses its own
+// pick/delete row (already decided, nothing left to do there); every other participant gets
+// "Retained" and keeps its Delete button - retain-in-place is the only automatic behavior, the
+// delete stays a deliberate, separate human action.
+function handleComparePick(evt: ComparePickEvent) {
+  for (const seatId of evt.participants) {
+    const tile = tileEl(seatId);
+    const badge = tile?.querySelector<HTMLElement>('[data-role="pick-badge"]');
+    const pickActions = tile?.querySelector<HTMLElement>('[data-role="inspect-pick-actions"]');
+    const pickBtn = tile?.querySelector<HTMLButtonElement>('[data-role="pick-btn"]');
+    if (!badge) continue;
+
+    const isWinner = seatId === evt.winner;
+    badge.hidden = false;
+    badge.textContent = isWinner ? "Winner" : "Retained";
+    badge.dataset.picked = isWinner ? "winner" : "retained";
+    if (pickBtn) pickBtn.hidden = true; // already decided for this comparison run
+    if (pickActions) pickActions.hidden = false;
+  }
+}
+
+function handleCompareHistory(evt: CompareHistoryEvent) {
+  const list = document.getElementById("history-list");
+  if (!list) return;
+  list.innerHTML = "";
+  if (evt.runs.length === 0) {
+    const li = document.createElement("li");
+    li.className = "history-empty";
+    li.textContent = "No comparison runs yet.";
+    list.appendChild(li);
+    return;
+  }
+  for (const run of evt.runs) {
+    const li = document.createElement("li");
+    li.className = "history-row";
+    const when = new Date(run.pickedAt).toLocaleString();
+    li.textContent = `${when} - winner: ${run.winner} (of ${run.participants.join(", ")}) - "${run.task}"`;
+    list.appendChild(li);
+  }
+}
+
+function setupHistoryPanel() {
+  const toggle = document.getElementById("history-toggle");
+  const panel = document.getElementById("history-panel");
+  const close = document.getElementById("history-close");
+  if (!toggle || !panel) return;
+
+  const open = () => {
+    panel.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    sendCommand({ cmd: "list_compare_runs" });
+  };
+  const closePanel = () => {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+  toggle.addEventListener("click", () => (panel.hidden ? open() : closePanel()));
+  close?.addEventListener("click", closePanel);
 }
 
 // `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
@@ -669,6 +768,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupBuild1CompareDispatch();
   setupCostConfirmModal();
   setupInspectPanels();
+  setupHistoryPanel();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

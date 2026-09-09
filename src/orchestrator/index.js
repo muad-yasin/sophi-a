@@ -4,7 +4,7 @@
 // port to stdout as `PORT:<port>` so the shell can read it and hand it to the frontend, then
 // dispatches seat start/stop commands to the invocation-mode-specific adapter and rebroadcasts
 // every seat event (PLAN.md "Status/event model": seat.start/working/output/idle/problem).
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -78,10 +78,11 @@ export function stopSeat(seatId) {
 // existing builder seats (PLAN_PARALLEL_BUILD.md A5 - no new seats for this feature).
 const BUILDER_SEAT_IDS = ['build-1', 'build-2', 'build-3'];
 
-// seatId -> the other seat ids it was most recently dispatched together with, for the
-// "same"/"differs" cross-builder badge (PLAN_PARALLEL_BUILD.md §4). In-memory, replaced on every
-// new comparison dispatch - there is no persistent run history yet (that's item 4's job), this
-// is only ever "the last group this seat was part of."
+// seatId -> { siblings, taskId, task } for the most recent comparison dispatch it was part of -
+// siblings feed the "same"/"differs" cross-builder badge (§4); taskId/task are what item 4's
+// pick action names in its run record. In-memory, replaced on every new comparison dispatch -
+// item 4's run *records* are the persistent history, this is only "the last group this seat was
+// part of" for computing badges and knowing who else participated when a pick happens.
 const compareGroups = new Map();
 
 // Enforced here, not just in the UI's confirmation modal - PLAN_PARALLEL_BUILD.md §3 is explicit
@@ -108,10 +109,11 @@ export function startMany(wss, seatIds, task, confirmed) {
   // never goes through startMany at all (the frontend sends a plain {cmd:'start'} for that case),
   // but this guard also covers a single-seat startMany call directly, which needs no snapshot.
   if (unique.length > 1) {
+    const taskId = String(Date.now());
     for (const seatId of unique) {
       const workdir = seats[seatId]?.workdir;
       if (workdir) writeCompareSnapshot(join(root, workdir));
-      compareGroups.set(seatId, unique.filter(id => id !== seatId));
+      compareGroups.set(seatId, { siblings: unique.filter(id => id !== seatId), taskId, task });
     }
   }
   for (const seatId of unique) startSeat(wss, seatId, task);
@@ -135,7 +137,7 @@ function handleInspectChanges(ws, seatId) {
   // "same"/"differs"/"unique" (PLAN_PARALLEL_BUILD.md §4) - computed against whichever other
   // seats this one was last dispatched together with, comparing current file hashes, never the
   // snapshot (the badge is about the *result*, not about what changed).
-  const siblingWorkdirs = (compareGroups.get(seatId) || [])
+  const siblingWorkdirs = (compareGroups.get(seatId)?.siblings || [])
     .map(sid => seats[sid]?.workdir)
     .filter(Boolean)
     .map(w => join(root, w));
@@ -161,6 +163,81 @@ function handleGetDiff(ws, seatId, path) {
     return;
   }
   ws.send(JSON.stringify({ type: 'compare.diff', seatId, path, patch }));
+}
+
+// Build order item 4 (PLAN_PARALLEL_BUILD.md §5): pick + disposition. Run records live under
+// the repo's own .workdirs/.compare/ (not inside any one builder's workdir, so picking never
+// touches the thing being judged) - one JSON file per comparison task, named by its dispatch
+// timestamp. This is the persistent history item 3's in-memory `compareGroups` deliberately
+// isn't.
+const COMPARE_RECORDS_DIR = join(root, '.workdirs', '.compare');
+
+// §5 is explicit: "the select_winner write path rejects any call that did not originate from a
+// frontend human click event" - humanClick is that flag. Every WS command in this file is
+// already only ever sent from a real UI action today, so this is defense-in-depth against a
+// future caller (another tool, a script, a later automation) picking a winner without a human -
+// not a defense against anything that can reach this code path right now.
+function handleSelectWinner(wss, seatId, humanClick) {
+  if (humanClick !== true) {
+    console.error('select_winner rejected: missing human-click origin flag');
+    return;
+  }
+  const group = compareGroups.get(seatId);
+  if (!group) {
+    console.error(`select_winner rejected: "${seatId}" is not part of a known comparison run`);
+    return;
+  }
+  const participants = [seatId, ...group.siblings];
+  mkdirSync(COMPARE_RECORDS_DIR, { recursive: true });
+  const record = {
+    taskId: group.taskId,
+    task: group.task,
+    winner: seatId,
+    participants,
+    pickedAt: Date.now(),
+  };
+  writeFileSync(join(COMPARE_RECORDS_DIR, `${group.taskId}.json`), JSON.stringify(record, null, 2));
+  // Broadcast, unlike inspect_changes/get_diff above - a pick changes shared state (every
+  // participating tile's Winner/Retained badge), not a per-client query result. No single
+  // `seatId` here - this event is about the whole group, not one seat.
+  broadcast(wss, { type: 'compare.pick', winner: seatId, participants, taskId: group.taskId });
+}
+
+// Disposition (§5): retained in place, unconditionally, until a human explicitly deletes it -
+// never moved, renamed, or auto-deleted by anything else in this file. Same human-click guard as
+// select_winner, for the same reason.
+function handleDeleteWorkdir(seatId, humanClick) {
+  if (humanClick !== true) {
+    console.error('delete_workdir rejected: missing human-click origin flag');
+    return;
+  }
+  const workdir = seats[seatId]?.workdir;
+  if (!workdir) {
+    console.error(`delete_workdir rejected: "${seatId}" has no workdir`);
+    return;
+  }
+  const full = join(root, workdir);
+  if (existsSync(full)) rmSync(full, { recursive: true, force: true });
+  compareGroups.delete(seatId);
+}
+
+function handleListCompareRuns(ws) {
+  if (!existsSync(COMPARE_RECORDS_DIR)) {
+    ws.send(JSON.stringify({ type: 'compare.history', runs: [] }));
+    return;
+  }
+  const runs = readdirSync(COMPARE_RECORDS_DIR)
+    .filter(f => f.endsWith('.json'))
+    .map(f => {
+      try {
+        return JSON.parse(readFileSync(join(COMPARE_RECORDS_DIR, f), 'utf8'));
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.pickedAt - a.pickedAt);
+  ws.send(JSON.stringify({ type: 'compare.history', runs }));
 }
 
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
@@ -212,6 +289,9 @@ function main() {
       else if (msg.cmd === 'start_many') startMany(wss, msg.seatIds, msg.task, msg.confirmed);
       else if (msg.cmd === 'inspect_changes') handleInspectChanges(ws, msg.seatId);
       else if (msg.cmd === 'get_diff') handleGetDiff(ws, msg.seatId, msg.path);
+      else if (msg.cmd === 'select_winner') handleSelectWinner(wss, msg.seatId, msg.humanClick);
+      else if (msg.cmd === 'delete_workdir') handleDeleteWorkdir(msg.seatId, msg.humanClick);
+      else if (msg.cmd === 'list_compare_runs') handleListCompareRuns(ws);
     });
   });
 

@@ -510,3 +510,33 @@
   next query), plus a file only one builder touched (correctly "unique"), plus a real generated
   diff for both a modified and a newly-added file, plus a rejected path-traversal attempt
   (`../../etc/passwd`).
+- 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 4 (PLAN_PARALLEL_BUILD.md §5): pick +
+  disposition. Run records live at the repo's own `.workdirs/.compare/<taskId>.json` (already
+  gitignored - it's under `.workdirs`), not inside any one builder's own workdir, so picking a
+  winner never touches the thing being judged. `taskId` is generated once per multi-seat
+  dispatch (`startMany`'s own `Date.now()`), and `compareGroups` (item 3's in-memory tracking)
+  was extended to carry `{siblings, taskId, task}` instead of just `siblings`, so a pick can name
+  exactly which task and which other seats were part of the same comparison run.
+  Two new mutating WS commands (`select_winner`, `delete_workdir`) both require an explicit
+  `humanClick: true` flag, rejected server-side if absent or false - PLAN_PARALLEL_BUILD.md §5 is
+  explicit this must be enforced, not a UI courtesy. Named honestly: every WS command in this
+  file is already only ever sent from a real UI action today, so this flag is defense-in-depth
+  against a *future* caller (another tool, a script, later automation) picking a winner or
+  deleting real file output without a human - not a defense against anything that can reach this
+  code path right now. `select_winner` broadcasts `compare.pick` (unlike item 3's query commands,
+  this is shared state - every participating tile's badge needs to update, not just the
+  requester's). One new read-only query, `list_compare_runs`, for the run-history strip.
+  **Disposition matches §5 exactly**: `delete_workdir` is the *only* code path that removes a
+  workdir, and only on an explicit human click - nothing in `select_winner`, `startMany`, or
+  anywhere else moves, renames, or auto-deletes a builder's output, ever.
+  Frontend: a "Winner"/"Retained" badge per tile (gold border for Winner, matching Gold's
+  reserved "primary action" role in the SMO palette), a "Pick this one"/"Delete workdir" row
+  inside each tile's inspect panel (hidden until there's an actual comparison to act on), and a
+  compact global "Run history" panel (reusing `.setup-panel`'s box, its own toggle button) - a
+  native `window.confirm()` guards the delete click specifically, the one place this pass used a
+  browser-native dialog rather than a custom modal, since it's a rare, deliberate, destructive
+  action where the standard browser confirmation is honest UI, not worth a bespoke component for.
+  **Tested for real** end to end against a standalone orchestrator: dispatched two builders on
+  the same task, gave them genuinely different output, inspected changes (correctly "differs"),
+  picked build-1 as winner, confirmed the run record via `list_compare_runs`, then deleted
+  build-2's (the retained seat's) workdir - build-1's stayed untouched on disk throughout.

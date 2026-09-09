@@ -123,3 +123,10 @@
   toggle on every builder tile, a file list with status + cross-builder badges, a click-to-diff
   pane. Added the `diff` npm package. Tested for real - see DECISIONS.md. Builder-vs-builder
   direct diff render cut per the plan's own explicit allowance; same/differs badges unaffected.
+- 2026-09-09 - Parallel-build-and-compare item 4 (PLAN_PARALLEL_BUILD.md §5; scope ledger
+  GLM-3/DEEPSEEK-3/QWEN-3). `index.js`: `select_winner`/`delete_workdir` (both require
+  server-enforced `humanClick:true`), `list_compare_runs`, run records at
+  `.workdirs/.compare/<taskId>.json`. `index.html`/`src/main.ts`/`src/styles.css`: Winner/
+  Retained badges, a Pick/Delete row per builder tile, a global Run History panel. Tested for
+  real end to end (dispatch -> differing output -> pick -> history record -> delete the
+  non-winner, winner untouched). All 5 build-order items for parallel-build-and-compare done.

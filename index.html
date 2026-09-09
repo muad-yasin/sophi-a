@@ -13,6 +13,19 @@
       Setup
     </button>
 
+    <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
+      Run history
+    </button>
+
+    <div id="history-panel" class="setup-panel history-panel" role="dialog" aria-labelledby="history-panel-title" hidden>
+      <div class="setup-panel-header">
+        <h2 id="history-panel-title">Run history</h2>
+        <button type="button" id="history-close" class="setup-close" aria-label="Close run history">&times;</button>
+      </div>
+      <p class="setup-hint">Past parallel-build-and-compare picks, winners only.</p>
+      <ul id="history-list" class="history-list"></ul>
+    </div>
+
     <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>
       <div class="setup-panel-header">
         <h2 id="setup-panel-title">Setup</h2>
@@ -172,6 +185,7 @@
       <section class="tile builder" id="tile-build-1" data-seat="build-1">
         <header class="tile-header">
           <span class="tile-name">Builder 1</span>
+          <span class="pick-badge" data-role="pick-badge" hidden></span>
           <span class="status-badge" data-role="badge">idle</span>
         </header>
         <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
@@ -191,12 +205,17 @@
           <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
           <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
           <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
+          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+          </div>
         </div>
       </section>
 
       <section class="tile builder" id="tile-build-2" data-seat="build-2">
         <header class="tile-header">
           <span class="tile-name">Builder 2</span>
+          <span class="pick-badge" data-role="pick-badge" hidden></span>
           <span class="status-badge" data-role="badge">idle</span>
         </header>
         <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
@@ -212,12 +231,17 @@
           <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
           <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
           <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
+          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+          </div>
         </div>
       </section>
 
       <section class="tile builder" id="tile-build-3" data-seat="build-3">
         <header class="tile-header">
           <span class="tile-name">Builder 3</span>
+          <span class="pick-badge" data-role="pick-badge" hidden></span>
           <span class="status-badge" data-role="badge">idle</span>
         </header>
         <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
@@ -233,6 +257,10 @@
           <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
           <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
           <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
+          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+          </div>
         </div>
       </section>
     </main>
