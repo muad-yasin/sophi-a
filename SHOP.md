@@ -77,18 +77,24 @@ outcome this section argued for, just anchored to a different number.
   ("Sophi-A", €20) - this workspace's established rule (`sower-industries/CLAUDE.md`: "Stripe
   payment links are created by the author in the dashboard, never by a session") held; nothing
   here created or simulated one.
-- **Delivery mechanism.** No packaging/build automation exists yet (`npm run tauri build` isn't
-  wired - PROGRESS.md, DECISIONS.md) and the parallel UI/packaging effort isn't done. Until it is,
-  the first N buyers get fulfilled by hand: payment notification -> author builds and uploads the
-  binary -> email with a download link, mirroring `ManualFulfillmentRunbook.md`'s pattern exactly
-  (notice the sale, do the work, send it, read-before-send). No automated delivery in v1.
+- **Delivery mechanism: built, one real gap flagged.** Packaging now exists for real (`v0.1.0`,
+  `PLAN_PACKAGING.md`) - real Windows/Linux installers exist as GitHub Release assets. Fulfillment
+  mails and the copy-pasteable runbook are written: `docs/fulfillment-mails.md`,
+  `docs/manual-fulfillment-runbook.md` (mirrors `ManualFulfillmentRunbook.md`'s pattern - notice
+  the sale, do the work, send it). **Genuinely unresolved**: the GitHub repo is currently private,
+  so a buyer can't reach the release assets directly - either make the repo public (matches the
+  open-source decision already made) or re-host the two files somewhere reachable without a
+  GitHub login. Author's call, named in the runbook, not assumed either way.
+- **Stripe success page: built.** `sower-industries` now has `/en/sophi-a/next/`, mirroring
+  `/plan/next.astro`'s pattern. Once deployed, point the Sophi-A payment link's success URL at
+  `https://sower-industries.de/en/sophi-a/next/` - a dashboard action, not done here.
 - **Product name: settled, 2026-09-09 - "Sophi-A"** (Muad's own call; the name and the "Visual
   Identity: SMO" direction both draw on an existing Sower Industries property - see DECISIONS.md).
   This name passes the trademark check on its face (no "Claude"/"Anthropic"/"Claude Code" in it),
-  but the actual marketing copy (the eventual Stripe product page/description) still needs a
-  trademark-safe read against Anthropic's brand guidelines before it ships: no implied endorsement,
-  plain-text "runs Claude Code" is fine (checked directly against code.claude.com/docs/en/
-  legal-and-compliance, 2026-09-09 - see DECISIONS.md). Not done yet - do before publishing copy.
+  Trademark-safe copy for the actual Stripe product now drafted: `docs/stripe-product-copy.md`
+  (checked against code.claude.com/docs/en/legal-and-compliance, 2026-09-09 - see DECISIONS.md).
+  Pasting it into Stripe's dashboard is the author's own action, same rule as the payment link
+  itself - not done here.
 
 ## Non-goals for v1
 
