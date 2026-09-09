@@ -1,10 +1,15 @@
 # Sophi-A (repo/codename: cnc-harness)
 
 We build cool shit first, cheaply. This is the harness-as-product: a Tauri desktop shell that
-visualizes and drives eight real Claude/Fable/relay seats - one C&C chat, one advisor, three
-planning modules (each a real relay chain: cheap mass-thinking, many labs), three building
-modules (real Claude Code subprocesses) - so a vibecoder gets more out of the models they already
-pay for. That's the whole pitch. Don't over-govern it; build, test for real, ship the next slice.
+drives eight real Claude/Fable/relay seats - one C&C chat, one advisor, three planning modules,
+three building modules (real Claude Code subprocesses) - so a vibecoder gets more out of the
+models they already pay for. The part that isn't a Conductor/Nimbalyst clone (both are real
+parallel-session managers for Claude Code, see `docs/market-positioning.md`): each planning seat
+runs a real relay chain in which one model drafts the plan and critic seats from five *other*
+labs grade it blind, round after round, until they sign off or the run records exactly who
+refused and why - adversarial cross-lab review of the plan before any build seat touches code,
+not N copies of one agent racing to the same answer. That's the whole pitch. Don't over-govern
+it; build, test for real, ship the next slice.
 
 Product name (2026-09-09, Muad's call): **Sophi-A** - named and visually themed after
 `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property choice.

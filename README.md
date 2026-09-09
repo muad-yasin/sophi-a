@@ -1,10 +1,18 @@
 # Sophi-A
 
-A Tauri desktop shell that visualizes and drives eight real Claude/Fable/relay agent "seats" at
-once - one Command & Control chat, one Advisor, three planning modules (each a real relay debate
-chain), three building modules (real Claude Code subprocesses) - so a vibecoder gets more out of
-the models and subscriptions they already pay for. Open source (Apache-2.0); bring your own
-Claude Code/API credentials, nothing is resold.
+A Tauri desktop shell that drives eight real Claude/Fable/relay agent "seats" at once - one
+Command & Control chat, one Advisor, three planning modules, three building modules (real Claude
+Code subprocesses) - so a vibecoder gets more out of the models and subscriptions they already
+pay for. Open source (Apache-2.0); bring your own Claude Code/API credentials, nothing is resold.
+
+What makes it different from a parallel-session manager like conductor.build or Nimbalyst: the
+three planning seats don't run more copies of the same agent. Each one spawns a real relay
+chain (`RELAY_PATH`, see `PLAN.md`; `plan-cheap` by default) where one model
+drafts a plan and critic seats from five other labs (Qwen, GLM, Cohere, Gemini, Llama - never
+Grok) grade it blind, the draft is revised against their objections, and the run ends either with
+their sign-off or with a `report.json` naming exactly which lab refused and why. That cross-lab
+argument happens *before* any building seat writes code, and the receipts stay in the run folder.
+(Repo-level comparison and what's still unverified: `docs/market-positioning.md`.)
 
 `cnc`/`advisor` can also run on any of several other frontier providers (OpenAI, Google Gemini,
 Mistral, DeepSeek, Groq, Cohere, OpenRouter, Together, Z.ai) instead of Anthropic - see PLAN.md's

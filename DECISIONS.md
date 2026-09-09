@@ -428,3 +428,50 @@
   directory, meaning a future `git add -A` could sweep a builder's real file edits into a commit.
   Confirmed via `git log --all -- .workdirs` that nothing from it was ever actually committed
   historically, then added it to `.gitignore` so it can't happen going forward.
+- 2026-09-09 - Critical read of `docs/market-positioning.md` (written earlier today from a
+  sower-industries session) against this repo's actual code, documentation-only pass. Four
+  findings, three corrected in place, one deliberately left open:
+  (1) **The differentiator claim is real but was overstated.** The mechanism exists and is not
+  aspirational - `src/orchestrator/adapters/relayChainSubprocess.js` spawns `node <relay>/src/
+  cli.js --chain <chain>` for real and polls `report.json`, exactly as PLAN.md's first addendum
+  and BOARD.md describe. But `seats.json` gives `plan-1..3` the `plan-cheap` chain, and there is
+  no per-task chain override in the WebSocket `start` command (`index.js` reads only
+  `seatConfig.default_chain`). `relay/chains/plan-cheap.json` is one Anthropic Sonnet 5 builder
+  drafting, five critic seats from other labs (Qwen, GLM, Cohere, Gemini, Llama) grading blind,
+  Sonnet revising - real cross-lab adversarial critique, but *one* proposer. "Multiple labs
+  independently proposing" describes relay's `plan-debate` chain (real; it produced
+  PLAN_PACKAGING.md and PLAN_PARALLEL_BUILD.md), not the seat default. "Seven labs" is wrong in
+  either chain: six (Anthropic plus five), matching BOARD.md. Corrected in market-positioning.md
+  with a precision note rather than a silent rewrite; `CLAUDE.md`'s pitch paragraph and
+  `README.md`'s description rewritten to state the differentiator as what the code does
+  (one drafts, five other labs grade blind, sign-off or a named refusal, before any build seat
+  runs) instead of the structural "eight seats" framing that reads as a Conductor/Nimbalyst
+  clone.
+  (2) **The MCP-server claim was technically wrong, corrected in place.** market-positioning.md
+  said `src/mcp/server.js` "exposes seat status/output over a WebSocket." Read the file: it is a
+  `StdioServerTransport` MCP server that is itself a WebSocket *client* to the loopback
+  orchestrator (`ws://127.0.0.1:<port>` from `os.tmpdir()/sophia-orchestrator-port`). It exposes
+  nothing a browser or phone could connect to. The reusable seam for any remote-monitoring
+  feature is the orchestrator's own WS protocol, which PLAN_PACKAGING.md §3 already names as
+  loopback-only and needing an authenticated non-loopback listener first. Struck through and
+  corrected in the doc, original wording kept visible.
+  (3) **Feature idea 4 (inline diff review) checked: genuinely missing.** `src/main.ts` contains
+  no diff view; `compareSnapshot.js` is a mtime/sha256 manifest, not a renderer. Noted in the doc.
+  (4) **macOS: an unreconciled scope claim, left for Muad, not resolved here.** The doc's
+  "Standing direction" says the macOS gap should be closed before marketing and cites "the
+  harness-prompt draft for a macOS packaging/notarization plan, discussed the same session." No
+  such draft exists anywhere findable: searched this repo, `~/Projects/sower-industries`,
+  `~/Projects/relay` (incl. `tasks/`), `~/Projects/Ideas.md`, `~/Projects/FOCUS.md`, by filename
+  (`*harness-prompt*`, `*macos*`, `*prompt*`) and content (`harness-prompt`, `notariz`). The only
+  macOS-notarization text in the whole workspace belongs to `~/Projects/parztream` (a separate
+  product with its own `packaging/macos/` and CI) - plausibly what the positioning session had
+  in mind, but it is not a Sophi-A plan. Meanwhile every concrete artifact says the opposite:
+  PLAN_PACKAGING.md scopes Windows+Linux only and never names macOS (the "no dmg" entry above
+  records that explicitly), and both the live shop page (`sower-industries/Docs/
+  SophiAShop_Page.md`) and this repo's `docs/fulfillment-mails.md` tell buyers "no macOS build
+  exists yet." So either the draft lives somewhere outside `~/Projects` (a chat transcript, an
+  unsaved session), or the positioning doc asserted a commitment nothing else records. Either
+  way, whether macOS is a precondition for marketing Sophi-A is a real product decision with a
+  cost (Apple Developer Program, notarization CI, a Mac runner) that only Muad can make -
+  annotated in market-positioning.md and named here; PLAN_PACKAGING.md's scope deliberately not
+  touched.
