@@ -147,3 +147,12 @@
   cache so the panel renders correctly even if it was closed when the event arrived. Tested for
   real against relay's free mock chains (no API cost) - confirmed the real report.json signoff
   shape renders correctly.
+- 2026-09-09 - Cost transparency (docs/market-positioning.md's feature idea #3, the last item
+  of "build all of it, in that order"). `src/orchestrator/costEstimate.js` (new file) runs
+  relay's own real `node src/cli.js --chain <chain> --dry-run` and parses its stdout - no
+  reimplementation of relay's pricing math. `src/orchestrator/index.js`: new `estimate_cost` WS
+  request/response command, restricted to seats with a `default_chain` (plan-1..3).
+  `index.html`/`src/main.ts`/`src/styles.css`: a "Cost" toggle next to Debate on each `plan-N`
+  tile, fetched once per seat per session and cached. Verified the parser byte-for-byte against
+  relay's real `plan-cheap` CLI output ($1.75/run, 11 rows) and the full WS round-trip against a
+  standalone orchestrator instance. See DECISIONS.md for full detail.

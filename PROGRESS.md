@@ -212,3 +212,11 @@
   structured data (previously flattened into a plain string, now a real `debate.report` event).
   Tested for real against relay's free `mock`/`mock-unanimous` chains - no API cost, confirmed
   the exact signoff shape a real paid chain produces. Next: cost transparency on the seat tile.
+- 2026-09-09 - Built cost transparency - the last item of "build all of it, in that order"
+  (market-positioning.md feature idea #3). Each `plan-N` tile gets a "Cost" toggle showing relay's
+  own real `--dry-run` pricing table for that seat's chain (per-stage $ + total, $1.75/run for
+  `plan-cheap`) - relay's own CLI does the pricing, this only parses its real stdout, so a change
+  to relay's chain configs or pricing.json is reflected here for free. Verified the parser against
+  the real CLI output (byte-for-byte match) and the full WS request/response path against a
+  standalone orchestrator instance. All three items of "build all of it, in that order" (the
+  rest of parallel-build-and-compare, surface the debate, cost transparency) are now done.

@@ -19,7 +19,7 @@ const RUN_TIMEOUT_MS = 600_000; // 600s - a real multi-lab chain run takes minut
 // Resolved lazily (inside the exported function, not at module top-level) because this
 // module and src/orchestrator/index.js import each other; `root` is a live ES-module
 // binding that is only actually assigned by the time a seat is started, not at import time.
-function resolveRelayPath() {
+export function resolveRelayPath() {
   return resolve(process.env.RELAY_PATH || join(root, '..', 'relay'));
 }
 

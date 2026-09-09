@@ -599,3 +599,42 @@
   produces - the same shape a real paid chain (`plan-cheap`, `plan-debate`) would produce, per
   `relay/src/cli.js`'s own report-writing code, not re-spent real money to re-confirm what the
   source already shows plainly.
+- 2026-09-09 - Built cost transparency - `docs/market-positioning.md` feature idea #3, the last
+  item of "build all of it, in that order". Chosen approach: reuse relay's own `--dry-run` CLI
+  path exactly as-is, not reimplement its pricing math. relay already prices a whole chain run
+  from the chain config's own declared token assumptions, without calling any model
+  (`relay/src/cli.js`'s `--dry-run` branch; the same thing relay's own MCP server's `dry_run`
+  tool does - `execFileSync`, not a re-derivation). A new `src/orchestrator/costEstimate.js`
+  spawns `node <relayPath>/src/cli.js --chain <chain> --dry-run` and parses its real stdout table
+  (label/seat/input/output/$ per stage, a TOTAL line, an optional "no price on file for" line)
+  into structured JSON - deliberately parsing the CLI's real output rather than adding a
+  machine-readable flag to relay itself, since this module already promises (in its header
+  comment, mirroring `relayChainSubprocess.js`'s existing promise) "does not modify relay in any
+  way". A future change to relay's chain configs or `pricing.json` is reflected here for free the
+  next time a tile asks - nothing here can drift out of sync with the thing actually pricing a
+  run, because nothing here re-derives the price. New WS request/response command
+  `estimate_cost` (`{seatId}` -> `{type:'cost.estimate', seatId, chain, rows, total, unpriced}`
+  or `{error}`) in `src/orchestrator/index.js` - request/response, not broadcast, same reasoning
+  as `inspect_changes`/`get_diff`: a price estimate is only relevant to whichever client asked.
+  Scoped to `plan-1..3` only (the only seats with a `default_chain`) - `build-N`'s Claude Code
+  subprocesses and `cnc`/`advisor`'s messages-api calls have no relay chain to price and are
+  metered differently (subscription seat-minutes / provider API billing respectively), out of
+  scope for this feature by construction, not an oversight.
+  Frontend: a "Cost" toggle on each `plan-N` tile, next to Debate, following the exact same
+  per-seat-cache-so-reopening-renders-instantly pattern `debateCache`/`renderDebatePanel`
+  established - except costCache is populated by an explicit `estimate_cost` request the first
+  time a tile's Cost panel opens (a chain's own token assumptions don't change task-to-task, and
+  there is no runtime chain-swap UI for `plan-N` seats, so one estimate per seat per session is
+  correct, not a staleness risk to guard against).
+  **Verified for real, twice, against no faked data**: (1) `estimateChainCost` run directly
+  against relay's actual `plan-cheap` chain (no `--task` needed for `--dry-run` per relay's own
+  CLI, confirmed via `relay/src/cli.js`'s own arg-parsing: `!taskPath && !dryRun && !resumeRun`
+  is the only case that prints `--help` and exits) - parsed output matched the real CLI's
+  11-row table and $1.75 TOTAL exactly, byte for byte against manually running the same command.
+  (2) A standalone orchestrator instance spun up in isolation, sent `{cmd:'estimate_cost',
+  seatId:'plan-1'}` over a real WebSocket, and received back the correctly-shaped
+  `cost.estimate` event - the full request/response path, not just the parser in isolation.
+  `npx tsc --noEmit` and `node --check` both clean. The live Tauri window itself was not
+  exercised for this feature (port 1420 is held by a concurrent session's dev server, the same
+  constraint noted for every other UI-only feature built this session) - the HTML/CSS/TS were
+  hand-verified against the existing, already-shipped Debate panel's exact structure instead.

@@ -76,6 +76,26 @@ interface DebateReportEvent {
   detail: DebateReportDetail;
 }
 
+// Cost transparency (market-positioning.md feature idea #3) - relay's own real `--dry-run`
+// pricing of a plan-N seat's chain, requested on demand (WS "estimate_cost"), never pushed.
+interface CostEstimateRow {
+  label: string;
+  seat: string;
+  input: number;
+  output: number;
+  usd: number | null;
+  priced: boolean;
+}
+interface CostEstimateEvent {
+  type: "cost.estimate";
+  seatId: string;
+  chain?: string;
+  rows?: CostEstimateRow[];
+  total?: { input: number; output: number; usd: number };
+  unpriced?: string[];
+  error?: string;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -279,12 +299,14 @@ async function connect() {
         | CompareDiffEvent
         | ComparePickEvent
         | CompareHistoryEvent
-        | DebateReportEvent;
+        | DebateReportEvent
+        | CostEstimateEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
       else if (evt.type === "compare.history") handleCompareHistory(evt);
       else if (evt.type === "debate.report") handleDebateReport(evt);
+      else if (evt.type === "cost.estimate") handleCostEstimate(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -697,6 +719,81 @@ function setupDebatePanels() {
   }
 }
 
+// Priced once per session per seat (a chain's own token assumptions don't change task-to-task,
+// and there is no runtime chain-swap UI for plan-N seats), so the toggle only ever sends
+// estimate_cost the first time it opens - reopening renders the cached reply instantly.
+const costCache = new Map<string, CostEstimateEvent>();
+
+function formatUsd(n: number): string {
+  return `$${n.toFixed(n < 0.01 && n > 0 ? 4 : 2)}`;
+}
+
+function renderCostPanel(seatId: string) {
+  const tile = tileEl(seatId);
+  const empty = tile?.querySelector<HTMLElement>('[data-role="cost-empty"]');
+  const rowList = tile?.querySelector<HTMLUListElement>('[data-role="cost-row-list"]');
+  const totalEl = tile?.querySelector<HTMLElement>('[data-role="cost-total"]');
+  if (!tile || !empty || !rowList || !totalEl) return;
+
+  const est = costCache.get(seatId);
+  rowList.innerHTML = "";
+  totalEl.textContent = "";
+
+  if (!est) {
+    empty.hidden = false;
+    empty.textContent = "Pricing this seat's chain…";
+    return;
+  }
+  if (est.error) {
+    empty.hidden = false;
+    empty.textContent = est.error;
+    return;
+  }
+  empty.hidden = true;
+
+  for (const row of est.rows ?? []) {
+    const li = document.createElement("li");
+    li.className = "cost-row";
+    li.textContent = `${row.label} (${row.seat}) — ${row.priced ? formatUsd(row.usd!) : "unpriced"}`;
+    rowList.appendChild(li);
+  }
+  if (est.total) {
+    totalEl.textContent = `Total: ${formatUsd(est.total.usd)} per run (${est.chain}, worst case — a clean first critique stops early and costs less)`;
+  }
+  if (est.unpriced?.length) {
+    const li = document.createElement("li");
+    li.className = "cost-row cost-row-unpriced";
+    li.textContent = `No price on file for: ${est.unpriced.join(", ")}`;
+    rowList.appendChild(li);
+  }
+}
+
+function handleCostEstimate(evt: CostEstimateEvent) {
+  costCache.set(evt.seatId, evt);
+  const tile = tileEl(evt.seatId);
+  const panel = tile?.querySelector<HTMLElement>('[data-role="cost-panel"]');
+  if (panel && !panel.hidden) renderCostPanel(evt.seatId); // live-update if already open
+}
+
+function setupCostPanels() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const toggle = tile?.querySelector<HTMLButtonElement>('[data-role="cost-toggle"]');
+    const panel = tile?.querySelector<HTMLElement>('[data-role="cost-panel"]');
+    if (!tile || !toggle || !panel) continue;
+
+    toggle.addEventListener("click", () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      if (opening) {
+        renderCostPanel(seatId);
+        if (!costCache.has(seatId)) sendCommand({ cmd: "estimate_cost", seatId });
+      }
+    });
+  }
+}
+
 // `cnc`/`advisor` only: a provider <select> (mirroring ALLOWED_PROVIDERS) plus a free-text model
 // id field. Provider changes send {cmd:'configure', seatId, provider} immediately; the model
 // field sends {cmd:'configure', seatId, model} on blur/Enter rather than per keystroke. `cnc`
@@ -865,6 +962,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupInspectPanels();
   setupHistoryPanel();
   setupDebatePanels();
+  setupCostPanels();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

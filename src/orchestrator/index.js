@@ -11,9 +11,10 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSubprocess.js';
 import { startMessagesApiSeat } from './adapters/messagesApi.js';
-import { startRelayChainSeat } from './adapters/relayChainSubprocess.js';
+import { startRelayChainSeat, resolveRelayPath } from './adapters/relayChainSubprocess.js';
 import { isAllowedProvider } from './providers.js';
 import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash } from './compareSnapshot.js';
+import { estimateChainCost } from './costEstimate.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -286,6 +287,21 @@ function handleAdvisorRecommend(wss, seatId) {
   startMessagesApiSeat('advisor', seats.advisor, task, makeEmit(wss, 'advisor'), 'compare');
 }
 
+// Cost transparency (market-positioning.md feature idea #3, last item of "build all of it, in
+// that order"): a plan-N tile's own real relay chain, priced by relay's own `--dry-run` before
+// anyone spends real money starting it. Request/response, not broadcast - like inspect_changes/
+// get_diff above, a price estimate is only relevant to whichever client asked for it.
+function handleEstimateCost(ws, seatId) {
+  const seat = seats[seatId];
+  const chain = seat?.default_chain;
+  if (!chain) {
+    ws.send(JSON.stringify({ type: 'cost.estimate', seatId, error: `"${seatId}" has no relay chain to price` }));
+    return;
+  }
+  const result = estimateChainCost(resolveRelayPath(), chain);
+  ws.send(JSON.stringify({ type: 'cost.estimate', seatId, chain, ...result }));
+}
+
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
 // addendum) - the other six seats have no configurable provider/model and this is rejected for
 // them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
@@ -339,6 +355,7 @@ function main() {
       else if (msg.cmd === 'delete_workdir') handleDeleteWorkdir(msg.seatId, msg.humanClick);
       else if (msg.cmd === 'list_compare_runs') handleListCompareRuns(ws);
       else if (msg.cmd === 'advisor_recommend') handleAdvisorRecommend(wss, msg.seatId);
+      else if (msg.cmd === 'estimate_cost') handleEstimateCost(ws, msg.seatId);
     });
   });
 
