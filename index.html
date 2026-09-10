@@ -9,6 +9,22 @@
   </head>
 
   <body>
+    <!-- Shared defs for every .council-seal instance below (three, one per plan-N tile) - ids
+         are document-unique on purpose so each seal's <use>/url(#...) refs share one definition
+         instead of tripling the same gradient markup. See brand/council-seal.svg (the source
+         this was trimmed from) and brand/HIGH_COUNCIL.md for the full identity spec. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <radialGradient id="council-orb" cx="47%" cy="45%" r="58%">
+          <stop offset="0%" stop-color="#fffdf6"/>
+          <stop offset="26%" stop-color="#fdeec0"/>
+          <stop offset="48%" stop-color="#f2d18e"/>
+          <stop offset="68%" stop-color="#dcac57"/>
+          <stop offset="88%" stop-color="#a8763a"/>
+          <stop offset="100%" stop-color="#6b4420"/>
+        </radialGradient>
+      </defs>
+    </svg>
     <header class="app-header">
       <div class="app-brand" aria-hidden="true">
         <img class="app-brand-mark" src="/favicon.svg" alt="" />
@@ -141,6 +157,16 @@
         </div>
         <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
         <div class="debate-panel" data-role="debate-panel" hidden>
+          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
+            <g class="council-ring">
+              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+            </g>
+            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+          </svg>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
@@ -169,6 +195,16 @@
         </div>
         <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
         <div class="debate-panel" data-role="debate-panel" hidden>
+          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
+            <g class="council-ring">
+              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+            </g>
+            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+          </svg>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
@@ -197,6 +233,16 @@
         </div>
         <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
         <div class="debate-panel" data-role="debate-panel" hidden>
+          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
+            <g class="council-ring">
+              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+            </g>
+            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+          </svg>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>

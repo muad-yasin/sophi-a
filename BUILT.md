@@ -173,3 +173,16 @@
   and `cargo check` both clean; no live-window run this pass (same port-1420 constraint noted
   elsewhere in this file for concurrent-session UI work) - token/handshake path hand-verified
   end to end across all four files instead.
+- 2026-09-10 - Council seal wired into the live Debate panel. index.html: a shared <defs> block
+  (one `council-orb` gradient, referenced by url(#...) from three per-tile instances instead of
+  tripling the markup) plus a trimmed `.council-seal` inline SVG per plan-N tile - five ring
+  wedges, each with `data-provider` set to relay's own signoff provider string. src/main.ts:
+  renderDebatePanel resets all wedges on every render, then for each report.signoff entry adds
+  debate-signed-off/debate-objected/debate-abstained to the matching wedge via
+  `.seat[data-provider="${CSS.escape(s.provider)}"]` (CSS.escape since the value reaches a
+  template-built selector, even though it's controlled config data, not user/model text).
+  src/styles.css: the three state classes (signed-off bright, objected dimmed near-invisible,
+  abstained dashed) per brand/HIGH_COUNCIL.md's documented "lit = signed off, dimmed = objected"
+  rule. Verified for real: loaded a running dev build in Chrome, injected each of the three
+  states via the console, screenshotted and confirmed the wedges actually change - not a
+  code-reading check.

@@ -128,7 +128,17 @@ Working taglines (pick one per surface, don't run all three on the same page):
 - `plan-debate`'s "labs propose blind, then argue" mechanism has no identity here on purpose - see
   the roster note above. A second seal for that chain is a real follow-up, not scoped into this
   pass.
-- No animated verdict state built (the "Live verdict" render is designed above but
-  `council-seal.svg`'s live-toggle classes are static CSS, not wired to a real WS event yet) -
-  first landing page ships the idle/full-council state only; wiring live per-run opacity into the
-  in-app Debate panel is separate work, not done in this pass.
+- The landing page (`marketing/index.html`) still ships the idle/full-council state only - it's a
+  static asset, not wired to a real run.
+- **Built 2026-09-10, second pass:** the in-app Debate panel now carries the live-verdict state.
+  A trimmed inline `.council-seal` (index.html, one per `plan-N` tile - full ring geometry, no
+  flare rays, `<circle>` orb reusing a single shared `<defs>` block instead of tripling the
+  gradient markup) sits above the existing signoff list. `renderDebatePanel` (src/main.ts) drives
+  each wedge's `debate-signed-off`/`debate-objected`/`debate-abstained` class straight from that
+  run's real `report.json` signoff array - matched by `data-provider` against relay's own
+  `signoff[].provider` string verbatim (`labOf()` in `relay/src/chain.js` falls back to
+  `seat.provider`, so the real values are `together`/`zai`/`cohere`/`google`/`openrouter`, not
+  friendly lab names - a direct selector match, no lookup table to drift out of sync with a
+  chain-config change). Verified by injecting real signoff states into a running dev build in
+  Chrome and confirming each wedge's opacity actually changes - not just that the CSS classes
+  exist.

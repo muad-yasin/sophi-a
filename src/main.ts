@@ -668,12 +668,22 @@ function renderDebatePanel(seatId: string) {
   const signoffList = tile?.querySelector<HTMLUListElement>('[data-role="debate-signoff-list"]');
   const scoreboardList = tile?.querySelector<HTMLUListElement>('[data-role="debate-scoreboard-list"]');
   const failureList = tile?.querySelector<HTMLUListElement>('[data-role="debate-failure-list"]');
+  const seal = tile?.querySelector<SVGSVGElement>('[data-role="debate-seal"]');
   if (!tile || !empty || !signoffList || !scoreboardList || !failureList) return;
 
   const report = debateCache.get(seatId);
   signoffList.innerHTML = "";
   scoreboardList.innerHTML = "";
   failureList.innerHTML = "";
+
+  // "The High Council" (brand/HIGH_COUNCIL.md): the seal's five ring wedges each carry a
+  // data-provider matching relay's own signoff[].provider string verbatim (labOf(seat) in
+  // relay/src/chain.js falls back to seat.provider - "together"/"zai"/"cohere"/"google"/
+  // "openrouter" for plan-cheap.json's critics, not a friendly lab name) - so this is a direct
+  // selector match, not a lookup table that can drift out of sync with a chain-config change.
+  seal?.querySelectorAll<SVGPathElement>(".seat").forEach(el => {
+    el.classList.remove("debate-signed-off", "debate-objected", "debate-abstained");
+  });
 
   if (!report) {
     empty.hidden = false;
@@ -693,6 +703,9 @@ function renderDebatePanel(seatId: string) {
     labelEl.textContent = `${s.provider} (${s.model})`;
     li.append(markEl, labelEl);
     signoffList.appendChild(li);
+
+    const seatEl = seal?.querySelector<SVGPathElement>(`.seat[data-provider="${CSS.escape(s.provider)}"]`);
+    seatEl?.classList.add(`debate-${state}`);
   }
 
   // relayChainSubprocess.js's own comment: report.json already has the scoreboard data a real

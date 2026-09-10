@@ -259,3 +259,11 @@
   2026-09-09 - and the Stripe payment link, which SHOP.md records was created by hand but never
   records the link itself) - both need a real URL pasted in before this deploys anywhere, not
   invented here per the standing "don't guess URLs" rule.
+- 2026-09-10 - Wired "The High Council" into the live in-app Debate panel (brand/HIGH_COUNCIL.md's
+  "live verdict" design, built the same day as the identity itself). Each plan-N tile's Debate
+  panel now shows the Council seal above the existing signoff list, with each of the five ring
+  wedges lit, dimmed, or dashed straight from that run's real report.json signoff - matched by
+  relay's own provider string (together/zai/cohere/google/openrouter), not a friendly-name lookup
+  table, so it can't drift out of sync with a chain-config change. Verified in a real running dev
+  build in Chrome, not just read back from the code - injected real signoff states and confirmed
+  each wedge's opacity actually moves. npx tsc --noEmit clean.

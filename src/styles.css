@@ -989,6 +989,28 @@ body {
   overflow-y: auto;
 }
 
+/* "The High Council" (brand/HIGH_COUNCIL.md) - the seal above the signoff list. Idle default
+   (no report yet, or a seat with no signoff entry) is a dim, even ring - the "live verdict"
+   state HIGH_COUNCIL.md designs, driven per-seat by renderDebatePanel from a real report.json,
+   not a static "everyone agreed" image (see that doc's own warning against faking this). */
+.council-seal {
+  display: block;
+  margin: 0 auto var(--sp-2);
+  flex-shrink: 0;
+}
+.council-seal .seat {
+  opacity: 0.22;
+  transition: opacity 0.5s ease;
+}
+.council-seal .seat.debate-signed-off { opacity: 0.85; }
+.council-seal .seat.debate-objected { opacity: 0.12; }
+.council-seal .seat.debate-abstained {
+  opacity: 0.4;
+  stroke: var(--text-placeholder);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
 .debate-signoff-list,
 .debate-scoreboard-list,
 .debate-failure-list {
