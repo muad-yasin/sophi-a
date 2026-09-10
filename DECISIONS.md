@@ -726,3 +726,20 @@ Scope limit, deliberate: a `relay-chain-subprocess` seat (`plan-1..3`) only has 
 chain uses six providers total. Checking every critic provider a chain might reach is real added
 scope this step's acceptance test doesn't ask for - the seat that drafts/revises (and whose
 failure aborts a run immediately) is what's checked.
+
+## 2026-09-10: Phase 1 Step 2 - verification method (Tauri isn't present in a plain browser)
+
+The wizard panel's acceptance test ("a bad key names itself exactly; after fixing it, that seat's
+Send enables without restarting the app") was verified against the real code path, not a
+DOM-only mockup: `window.__TAURI_INTERNALS__.invoke` and `window.WebSocket` were stubbed in a
+real Chrome tab (no Tauri webview available outside the packaged app), then the page was left to
+run its own real `connect()` -> auth -> `{cmd:'preflight'}` flow, and a fake `message` event
+carried a synthetic `preflight.result` payload into the real `handlePreflightResult` handler.
+Confirmed: the panel auto-shows on a failure, each row shows the exact per-seat failing-check
+text (not a generic error), only failing seats' Send buttons disable, and re-firing a second
+`preflight.result` with everything green re-enables the previously-disabled Send button with no
+reload - the literal acceptance test. `formatPreflightDetail` doesn't reproduce the plan's exact
+example string ("Anthropic key: 401") verbatim - it renders "Key rejected (HTTP 401)" instead,
+extracting the same real information (which check, what code) without hardcoding a provider-name
+lookup the frontend doesn't otherwise need. Judged as meeting the acceptance test's real intent,
+named here rather than silently claimed as a literal string match.

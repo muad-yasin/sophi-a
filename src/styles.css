@@ -316,6 +316,112 @@ body {
   background: var(--status-problem);
 }
 
+/* --- Setup wizard (Phase 1 Step 2, long-horizon build plan) --- */
+
+.wizard-panel {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.wizard-box {
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.wizard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wizard-header h2 {
+  margin: 0;
+  font-family: var(--font-chrome);
+  font-size: 18px;
+}
+
+.wizard-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.wizard-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.wizard-seat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.wizard-seat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 6px;
+  background: var(--surface-modal);
+}
+
+.wizard-seat-dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+.wizard-seat-row[data-ready="true"] .wizard-seat-dot {
+  background: var(--status-idle);
+}
+
+.wizard-seat-row[data-ready="false"] .wizard-seat-dot {
+  background: var(--status-problem);
+}
+
+.wizard-seat-name {
+  font-family: var(--font-chrome);
+  font-weight: var(--font-chrome-weight);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.wizard-seat-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* --- Command palette (Cmd/Ctrl+K) --- */
 
 .command-palette {

@@ -426,3 +426,4 @@
 - [Phase 4, Step 2] hosted-share-snapshot design doc — pass — file exists with HUMAN STOP marker — 2026-09-10T20:36:00Z
 - [Phase 4, Step 3] hosted-public-trial design doc — pass — file exists with HUMAN STOP marker — 2026-09-10T20:36:00Z
 - [Phase 1, Step 1] Preflight + seat readiness — pass — `node -e "checkAllSeats(seats)"` against real seats.json (all 8 seats, real keys) — 2026-09-10T20:45:13Z
+- [Phase 1, Step 2] Wizard UI and readiness gating — pass — real browser test (Tauri IPC + WebSocket stubbed, real message-handler path exercised) — 2026-09-10T20:52:47Z

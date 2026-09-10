@@ -98,6 +98,17 @@ interface CostEstimateEvent {
   error?: string;
 }
 
+interface PreflightSeatResult {
+  seat: string;
+  status: "ready" | "error";
+  error?: { type: "missing_cli" | "network" | "auth"; detail: string };
+}
+interface PreflightResultEvent {
+  type: "preflight.result";
+  results: PreflightSeatResult[];
+  isFirstRun: boolean;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -177,11 +188,25 @@ function setStatus(seatId: string, status: Status) {
   setControlsEnabled(tile, status);
 }
 
+// Phase 1 Step 1/2 (long-horizon build plan): seatId -> ready, from the orchestrator's real
+// {cmd:'preflight'} check. Absent means "not checked yet" - treated as ready so a Send button
+// doesn't flash disabled-with-no-explanation before the first reply lands (the wizard panel, not
+// a blocked button, is where an actual failure gets explained).
+const seatReadiness = new Map<string, boolean>();
+
+function isSeatReady(seatId: string | undefined): boolean {
+  if (!seatId) return true;
+  return seatReadiness.get(seatId) ?? true;
+}
+
 // Task input/Send/provider-config are disabled while the seat is working (an in-flight turn
 // shouldn't be interrupted by a second `start`, and a provider/model swap mid-turn is confusing);
-// Stop is only meaningful while something is actually running.
+// Stop is only meaningful while something is actually running. Send is additionally disabled for
+// any seat the last preflight check marked not-ready - a red seat can't be sent to no matter its
+// working/idle/problem status.
 function setControlsEnabled(tile: HTMLElement, status: Status) {
   const working = status === "working";
+  const notReady = !isSeatReady(tile.dataset.seat);
   const taskInput = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
   const sendBtn = tile.querySelector<HTMLButtonElement>('[data-role="send-btn"]');
   const stopBtn = tile.querySelector<HTMLButtonElement>('[data-role="stop-btn"]');
@@ -191,11 +216,84 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
     '[data-role="also-build-2"], [data-role="also-build-3"]',
   );
   if (taskInput) taskInput.disabled = working;
-  if (sendBtn) sendBtn.disabled = working;
+  if (sendBtn) sendBtn.disabled = working || notReady;
   if (stopBtn) stopBtn.disabled = !working;
   if (providerSelect) providerSelect.disabled = working;
   if (modelInput) modelInput.disabled = working;
   compareCheckboxes.forEach((cb) => (cb.disabled = working));
+}
+
+function reapplySeatControls(seatId: string) {
+  const tile = tileEl(seatId);
+  if (!tile) return;
+  setControlsEnabled(tile, (tile.dataset.status as Status) || "idle");
+}
+
+function formatPreflightDetail(error: PreflightSeatResult["error"]): string {
+  if (!error) return "";
+  if (error.type === "missing_cli") {
+    const bin = error.detail.match(/spawn (\S+)/)?.[1] ?? "required CLI";
+    return `${bin}: not found on PATH`;
+  }
+  if (error.type === "network") return "No reply within 2s - check your connection";
+  // 'auth': either "<ENV_VAR> is not set" (already reads clean) or a real HTTP rejection.
+  const code = error.detail.match(/HTTP (\d+)/)?.[1];
+  return code ? `Key rejected (HTTP ${code})` : error.detail;
+}
+
+function renderWizardPanel(results: PreflightSeatResult[]) {
+  const list = document.querySelector<HTMLUListElement>('[data-role="wizard-seat-list"]');
+  if (!list) return;
+  list.innerHTML = "";
+  for (const r of results) {
+    const li = document.createElement("li");
+    li.className = "wizard-seat-row";
+    li.dataset.ready = String(r.status === "ready");
+    const dot = document.createElement("span");
+    dot.className = "wizard-seat-dot";
+    const textWrap = document.createElement("div");
+    const nameEl = document.createElement("div");
+    nameEl.className = "wizard-seat-name";
+    nameEl.textContent = paletteSeatLabel(r.seat);
+    textWrap.appendChild(nameEl);
+    if (r.status === "error") {
+      const detailEl = document.createElement("div");
+      detailEl.className = "wizard-seat-detail";
+      detailEl.textContent = formatPreflightDetail(r.error);
+      textWrap.appendChild(detailEl);
+    }
+    li.append(dot, textWrap);
+    list.appendChild(li);
+  }
+}
+
+function showWizardPanel() {
+  const panel = document.getElementById("wizard-panel");
+  if (panel) panel.hidden = false;
+}
+
+function hideWizardPanel() {
+  const panel = document.getElementById("wizard-panel");
+  if (panel) panel.hidden = true;
+}
+
+function handlePreflightResult(evt: PreflightResultEvent) {
+  seatReadiness.clear();
+  for (const r of evt.results) seatReadiness.set(r.seat, r.status === "ready");
+  for (const r of evt.results) reapplySeatControls(r.seat);
+  renderWizardPanel(evt.results);
+  const hasFailure = evt.results.some((r) => r.status === "error");
+  // Shown on first launch regardless of outcome (onboarding), or on any later launch where a
+  // seat is actually failing - never auto-shown on a clean repeat launch, matching "re-show only
+  // on failure" once past the first run.
+  if (evt.isFirstRun || hasFailure) showWizardPanel();
+}
+
+function setupWizardPanel() {
+  document.querySelector('[data-role="wizard-close"]')?.addEventListener("click", () => hideWizardPanel());
+  document.querySelector('[data-role="wizard-recheck"]')?.addEventListener("click", () => {
+    sendCommand({ cmd: "preflight" });
+  });
 }
 
 function setOutput(seatId: string, text: string) {
@@ -304,6 +402,9 @@ async function connect() {
     everConnected = true;
     currentWs = ws;
     showConnected();
+    // Phase 1 Step 1/2: re-check every seat's real readiness on every connect, not only once -
+    // a fixed key or a fresh install both need this to run again without a restart.
+    sendCommand({ cmd: "preflight" });
   });
 
   ws.addEventListener("message", (event) => {
@@ -315,13 +416,15 @@ async function connect() {
         | ComparePickEvent
         | CompareHistoryEvent
         | DebateReportEvent
-        | CostEstimateEvent;
+        | CostEstimateEvent
+        | PreflightResultEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
       else if (evt.type === "compare.history") handleCompareHistory(evt);
       else if (evt.type === "debate.report") handleDebateReport(evt);
       else if (evt.type === "cost.estimate") handleCostEstimate(evt);
+      else if (evt.type === "preflight.result") handlePreflightResult(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -1237,6 +1340,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupForwardConfirmModal();
   setupForwardControls();
   setupCommandPalette();
+  setupWizardPanel();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

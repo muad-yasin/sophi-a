@@ -6,7 +6,7 @@
 // every seat event (PLAN.md "Status/event model": seat.start/working/output/idle/problem).
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
-import { tmpdir } from 'node:os';
+import { tmpdir, homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -16,6 +16,7 @@ import { startRelayChainSeat, resolveRelayPath } from './adapters/relayChainSubp
 import { isAllowedProvider } from './providers.js';
 import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash } from './compareSnapshot.js';
 import { estimateChainCost } from './costEstimate.js';
+import { checkAllSeats } from './preflight.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -416,6 +417,32 @@ function handleEstimateCost(ws, seatId) {
   ws.send(JSON.stringify({ type: 'cost.estimate', seatId, chain, ...result }));
 }
 
+// Phase 1 Step 1/2 of the long-horizon build plan (relay run
+// 2026-09-10T20-03-03-692Z/revise-1.md): request/response, like estimate_cost above - readiness
+// is only relevant to whichever client asked. `~/.sophia/wizard-state.json` is the plan's own
+// named persistence path (a fixed home-directory location, not Tauri's app-config-dir - the
+// wizard is meant to be legible/inspectable outside the app too). `isFirstRun` is true only when
+// that file didn't exist before this check - the frontend uses it to show the wizard panel even
+// on a first launch with everything green (onboarding), not only on failure.
+const WIZARD_STATE_PATH = join(homedir(), '.sophia', 'wizard-state.json');
+
+async function handlePreflight(ws) {
+  const isFirstRun = !existsSync(WIZARD_STATE_PATH);
+  const results = await checkAllSeats(seats);
+  const state = {
+    version: 1,
+    last_check: new Date().toISOString(),
+    seats: Object.fromEntries(results.map(r => [r.seat, { ready: r.status === 'ready' }])),
+  };
+  try {
+    mkdirSync(dirname(WIZARD_STATE_PATH), { recursive: true });
+    writeFileSync(WIZARD_STATE_PATH, JSON.stringify(state, null, 2));
+  } catch (err) {
+    console.error(`preflight: failed to persist wizard-state.json: ${err.message}`);
+  }
+  ws.send(JSON.stringify({ type: 'preflight.result', results, isFirstRun }));
+}
+
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
 // addendum) - the other six seats have no configurable provider/model and this is rejected for
 // them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
@@ -521,6 +548,7 @@ function main() {
       else if (msg.cmd === 'advisor_recommend') handleAdvisorRecommend(wss, msg.seatId);
       else if (msg.cmd === 'estimate_cost') handleEstimateCost(ws, msg.seatId);
       else if (msg.cmd === 'forward_deliverable') forwardDeliverable(wss, msg.fromSeatId, msg.toSeatId, msg.confirmed);
+      else if (msg.cmd === 'preflight') handlePreflight(ws);
     });
   });
 

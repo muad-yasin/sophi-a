@@ -106,6 +106,24 @@
       </div>
     </div>
 
+    <!-- Setup wizard (Phase 1 Step 2, long-horizon build plan) - shown on first launch, or on any
+         later launch where a seat's readiness check fails. Per-seat readiness comes from the
+         orchestrator's real `{cmd:'preflight'}` check (src/orchestrator/preflight.js) - a real
+         API ping on the operator's own key, not a guess from whether an env var is merely set. -->
+    <div id="wizard-panel" class="wizard-panel" role="dialog" aria-label="Setup wizard" hidden>
+      <div class="wizard-box">
+        <div class="wizard-header">
+          <h2>Setup</h2>
+          <button type="button" class="wizard-close" data-role="wizard-close" aria-label="Close setup wizard">&times;</button>
+        </div>
+        <p class="wizard-hint">Every seat is checked against your own keys before you can send it a task.</p>
+        <ul class="wizard-seat-list" data-role="wizard-seat-list"></ul>
+        <div class="wizard-actions">
+          <button type="button" class="btn" data-role="wizard-recheck">Recheck</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Command palette (Cmd/Ctrl+K) - dispatch a task to any seat without hunting for its tile,
          useful specifically when juggling several seats/sessions at once. Single-seat dispatch
          only - build-1's own fan-out checkboxes are still the path for parallel-build-and-compare,
