@@ -641,3 +641,23 @@
   exercised for this feature (port 1420 is held by a concurrent session's dev server, the same
   constraint noted for every other UI-only feature built this session) - the HTML/CSS/TS were
   hand-verified against the existing, already-shipped Debate panel's exact structure instead.
+
+- 2026-09-10 - Pre-public-release secret audit, ahead of making the repo public. Full `git log
+  --all -p` content sweep (not just current-tree grep - going public exposes every commit, so
+  history matters as much as HEAD) for known key/token shapes (`sk-ant-`, `sk_live_`/`sk_test_`,
+  `AIza...`, `ghp_`/`github_pat_`, `AKIA...`, `xoxb-`, PEM private-key headers) and for generic
+  `SOMETHING_KEY=<value>`/`SOMETHING_SECRET=<value>` assignment patterns: zero matches. Every
+  `*_API_KEY` occurrence in history is either an env-var *name* (`ANTHROPIC_API_KEY`, etc. -
+  `providers.js`'s `PROVIDER_ENV_VARS` list) or prose describing the architecture, never a real
+  value. `.env.example` is the only `.env*`-shaped file ever committed, unchanged since its first
+  commit (path placeholder only, `RELAY_PATH=../relay`) - confirmed via `git log --follow -p`.
+  `api-keys.json`/`resolved-paths.json` (where real secrets actually live, via
+  `<app_config_dir>`) were never added by name in any commit. No PEM/certificate material
+  anywhere (matches `docs/signing-decision.md`'s "v1 ships unsigned, no certificate configured").
+  `.github/workflows/release.yml` uses only the implicit default `GITHUB_TOKEN` via
+  `permissions: contents: write`, no other secrets referenced. No personal email addresses
+  leaked into `docs/fulfillment-mails.md`/`docs/manual-fulfillment-runbook.md`. `.gitignore`
+  hardened with explicit `.env`/`api-keys.json`/`resolved-paths.json`/cert-file rules as a
+  backstop, even though no code path in this repo currently writes any of them into the working
+  tree (API keys are Tauri `<app_config_dir>`-scoped, outside the repo entirely; relay's own
+  `.env` belongs to the separate relay checkout). Conclusion: clean to make public as-is.

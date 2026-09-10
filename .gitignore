@@ -24,6 +24,20 @@ dist-node
 # real gap - a stray `git add -A` could have swept a builder's real edits into a commit.
 .workdirs
 
+# Secrets - nothing in this repo's own code ever writes these into the working tree today (API
+# keys live in Tauri's <app_config_dir>/api-keys.json, outside the repo; relay's .env belongs to
+# the separate relay checkout) - checked via full git history/content audit before making this
+# repo public, 2026-09-10. Listed anyway as a backstop against a future accidental `cp`/`git add -A`,
+# not because one of these has ever existed here.
+.env
+.env.*
+!.env.example
+api-keys.json
+resolved-paths.json
+*.pem
+*.p12
+*.pfx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
