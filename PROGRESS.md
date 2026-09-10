@@ -316,3 +316,49 @@
   side-channel check, not just eyeballing markup) - while headings/bold/lists/code/safe links
   and syntax highlighting (Python + JS, cross-checked) all rendered correctly. npx tsc --noEmit
   and a real `vite build` both clean.
+- 2026-09-10 - All three requested features built, in the order asked: (1) "plan approved" ->
+  "code exists" forward-flow (docs/security-prompt-injection.md's S2 forward rule, the first
+  named candidate: plan-N deliverable into build-N), (2) native OS notifications on a seat's
+  working->idle/problem transition, (3) a command palette (Cmd/Ctrl+K) for single-seat dispatch
+  without hunting for a tile.
+
+  Feature 1: `forwardDeliverable` (src/orchestrator/index.js) - all three of the forward rule's
+  requirements: untrusted-content framing (`<plan-deliverable trust="untrusted-model-output">`,
+  same pattern as handleAdvisorRecommend's `<builder>` tags), a server-enforced `confirmed`
+  flag (rejected before any subprocess exists, same discipline as `start_many`), and a 16,000-
+  char cap. A new `lastDeliverable` cache holds the server's own copy of each planner seat's real
+  deliverable (populated only on a passed run, matching relayChainSubprocess's succeed()/fail()
+  split) so forwarding trusts the server's record, not whatever a WS client claims. Frontend: a
+  Forward-to-build select + button on each plan-N tile, visibly disabled until that seat's most
+  recent run actually signed off, plus a confirm modal naming exactly what's about to happen.
+  Verified live against the real running orchestrator: all four rejection paths (missing
+  confirmed, wrong seat role x2, no cached deliverable) fire correctly with the exact console
+  messages expected - confirmed by real WS test script + reading the orchestrator's own stderr
+  log, not assumed. The happy-path dispatch (wrap + startSeat) is simple deterministic string
+  logic verified by code review, not by a real paid run.
+
+  Feature 2: `src/seatNotify.ts` - real OS notifications via `@tauri-apps/plugin-notification`
+  (`tauri-plugin-notification` added Rust-side + `notification:default` capability), permission
+  requested once at startup. Fires only on a genuine working->idle/problem transition (checked via
+  the tile's own previous `dataset.status`), never on the initial per-seat status replay a fresh
+  connection gets. Skips notifying if the window already has focus - the tile already shows it,
+  a notification on top would be noise.
+
+  Feature 3: a two-step command palette (search seats -> pick one -> type task -> Send),
+  Cmd/Ctrl+K to open, Escape or backdrop click to close. Token-AND search (fixed live during
+  testing: a naive single-substring match rejected a real query like "build 2" against "Builder 2"
+  - the space doesn't literally appear in either the label or the seatId). Disables the task
+  input/Send if the selected seat is already working, mirroring every per-tile form's own guard.
+  Single-seat dispatch only - build-1's fan-out checkboxes remain the one path for parallel-
+  build-and-compare. Verified live in a real browser: search filtering, seat selection, real
+  submit (echoed into the target tile's own output pane), busy-seat disabling, and Escape-close
+  all confirmed working, not just read back from the code.
+
+  One real mistake made and fixed mid-session: ran a manual `cargo check` against the same
+  `target/debug` directory the live `npm run tauri dev` process was using, which collided with
+  its own rebuild and crashed the whole window (`Text file busy` - Linux can't overwrite a
+  running binary). Relaunched cleanly; Muad confirmed the window came back before work continued.
+  Lesson for next time: never run a manual cargo command against a target dir a live dev process
+  owns - use an isolated `CARGO_TARGET_DIR` or just trust the dev process's own auto-rebuild.
+
+  npx tsc --noEmit and a real `vite build` both clean throughout.

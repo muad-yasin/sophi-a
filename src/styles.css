@@ -316,6 +316,105 @@ body {
   background: var(--status-problem);
 }
 
+/* --- Command palette (Cmd/Ctrl+K) --- */
+
+.command-palette {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 50;
+}
+
+.command-palette-box {
+  width: 480px;
+  max-width: 90vw;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.command-palette-search {
+  font-family: var(--font-body);
+  font-size: 15px;
+  background: var(--surface-modal);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.command-palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.command-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-chrome);
+  font-size: 13px;
+}
+
+.command-palette-item:hover {
+  background: var(--surface-modal);
+}
+
+.status-badge-sm {
+  font-size: 9px;
+  padding: 1px 6px;
+}
+
+.command-palette-empty {
+  color: var(--text-placeholder);
+  font-size: 13px;
+  padding: var(--sp-2) var(--sp-3);
+  font-style: italic;
+}
+
+.command-palette-target {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.command-palette-task-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 14px;
+  background: var(--surface-modal);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--sp-2);
+  resize: vertical;
+}
+
+.command-palette-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
 .tile-output {
   margin: 0;
   flex: 1;
@@ -1164,6 +1263,39 @@ body {
   background: color-mix(in srgb, var(--status-working) 10%, transparent);
   border-radius: 4px;
   padding: var(--sp-1) var(--sp-2);
+}
+
+/* "Plan approved" -> "code exists" (docs/security-prompt-injection.md S2 forward rule) - stays
+   visibly disabled until this seat's most recent run actually signed off (updateForwardButton in
+   src/main.ts), not hidden entirely, so the operator can see the feature exists before there's
+   anything to forward. */
+.forward-row {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.forward-select {
+  flex: 0 0 auto;
+  background: var(--surface-modal);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.forward-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.forward-select:disabled,
+.forward-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* --- cost transparency (market-positioning.md feature idea #3) - plan-N tiles' cost panel --- */

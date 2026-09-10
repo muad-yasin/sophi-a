@@ -676,3 +676,15 @@
   currently-written Sophi-A code exercises directly (Tauri's own internals may, unverified).
   Tracked, not silently dismissed: re-run `cargo update -p glib` after any future `tauri`
   version bump and check whether the ceiling has moved.
+
+- 2026-09-10 - Real mistake, found and fixed live: ran `cargo check` manually against
+  `src-tauri/target/debug` while the live `npm run tauri dev` process (the one Muad was actively
+  using) was mid-rebuild against the same target directory. Both processes tried to write the
+  same binary; Linux refused with `Text file busy` and the live dev process's own rebuild failed
+  and exited, killing Muad's window. Not a code bug - a process-hygiene mistake. Relaunched
+  `npm run tauri dev` cleanly and confirmed with Muad the window was back before continuing.
+  **Rule for future sessions**: never run a manual `cargo build`/`cargo check`/`cargo run`
+  against `src-tauri/target` while a `npm run tauri dev` process might be running (check `ps aux`
+  first) - use `CARGO_TARGET_DIR=/tmp/<something>` for a manual verification build, or just trust
+  the live dev process's own file-watcher rebuild and read its log instead of triggering a second
+  parallel build.

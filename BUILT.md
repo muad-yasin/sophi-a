@@ -208,3 +208,12 @@
   dev build: real `<script>`/`onerror`/`javascript:` payloads all neutralized (window-global
   side-channel check), safe content (headings/bold/lists/fenced code in two languages/links)
   all rendered correctly, `npx tsc --noEmit` and `vite build` both clean.
+- 2026-09-10 - Three features: forward-deliverable (plan-N -> build-N with the S2 forward rule's
+  full three-part treatment - see PROGRESS.md for detail), src/seatNotify.ts (native OS
+  notifications on working->idle/problem, tauri-plugin-notification), and a Cmd/Ctrl+K command
+  palette (src/main.ts's setupCommandPalette, token-AND seat search, single-seat dispatch). New
+  files: src/seatNotify.ts. New orchestrator exports: forwardDeliverable, PLANNER_SEAT_IDS,
+  lastDeliverable cache. New Rust plugin: tauri-plugin-notification +
+  notification:default capability. All three verified live (real WS validation-path tests against
+  the running orchestrator; real browser interaction tests for the palette and forward UI), not
+  just typechecked.

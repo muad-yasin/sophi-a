@@ -91,6 +91,42 @@
       </div>
     </div>
 
+    <!-- "Plan approved" -> "code exists" (docs/security-prompt-injection.md's S2 forward rule):
+         a Council-approved plan's deliverable can be forwarded straight into a build seat's task,
+         but only after this same explicit confirm step every claude-code-subprocess dispatch
+         through this path requires - see forwardDeliverable in src/orchestrator/index.js for the
+         backend-enforced half of this, not just the UI courtesy. -->
+    <div id="forward-confirm-modal" class="cost-confirm-modal" role="alertdialog" aria-labelledby="forward-confirm-title" hidden>
+      <div class="cost-confirm-box">
+        <p id="forward-confirm-title"></p>
+        <div class="cost-confirm-actions">
+          <button type="button" class="btn" data-role="forward-confirm-cancel">Cancel</button>
+          <button type="button" class="btn btn-send" data-role="forward-confirm-confirm">Forward and build</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Command palette (Cmd/Ctrl+K) - dispatch a task to any seat without hunting for its tile,
+         useful specifically when juggling several seats/sessions at once. Single-seat dispatch
+         only - build-1's own fan-out checkboxes are still the path for parallel-build-and-compare,
+         this isn't a second entry point for that. -->
+    <div id="command-palette" class="command-palette" role="dialog" aria-label="Dispatch a task to a seat" hidden>
+      <div class="command-palette-box">
+        <input type="text" class="command-palette-search" data-role="palette-search"
+          placeholder="Type a seat name…" autocomplete="off" />
+        <ul class="command-palette-list" data-role="palette-list"></ul>
+        <form class="command-palette-task-form" data-role="palette-task-form" hidden>
+          <p class="command-palette-target" data-role="palette-target"></p>
+          <textarea class="command-palette-task-input" data-role="palette-task-input" rows="3"
+            placeholder="Task…"></textarea>
+          <div class="command-palette-actions">
+            <button type="button" class="btn" data-role="palette-back">&larr; Back</button>
+            <button type="submit" class="btn btn-send" data-role="palette-send">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div id="connecting" class="connecting" role="status">
       <img class="brand-mark" src="/favicon.svg" alt="" aria-hidden="true" />
       <p>Connecting to orchestrator&hellip;</p>
@@ -195,6 +231,15 @@
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
         </div>
+        <div class="forward-row" data-role="forward-row">
+          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+            <option value="build-1">Build 1</option>
+            <option value="build-2">Build 2</option>
+            <option value="build-3">Build 3</option>
+          </select>
+          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+            title="Needs a Council-approved plan first">Forward to build</button>
+        </div>
       </section>
 
       <section class="tile planner" id="tile-plan-2" data-seat="plan-2">
@@ -256,6 +301,15 @@
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
         </div>
+        <div class="forward-row" data-role="forward-row">
+          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+            <option value="build-1">Build 1</option>
+            <option value="build-2">Build 2</option>
+            <option value="build-3">Build 3</option>
+          </select>
+          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+            title="Needs a Council-approved plan first">Forward to build</button>
+        </div>
       </section>
 
       <section class="tile planner" id="tile-plan-3" data-seat="plan-3">
@@ -316,6 +370,15 @@
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
           <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
+        </div>
+        <div class="forward-row" data-role="forward-row">
+          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+            <option value="build-1">Build 1</option>
+            <option value="build-2">Build 2</option>
+            <option value="build-3">Build 3</option>
+          </select>
+          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+            title="Needs a Council-approved plan first">Forward to build</button>
         </div>
       </section>
 

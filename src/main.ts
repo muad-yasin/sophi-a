@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { renderSeatOutput } from "./seatOutputRender";
+import { initNotifications, notifySeatTransition } from "./seatNotify";
 
 type SeatEventType =
   | "seat.start"
@@ -231,14 +232,22 @@ function handleSeatEvent(evt: SeatEvent) {
     case "seat.output":
       if (evt.detail) setOutput(evt.seatId, evt.detail);
       break;
-    case "seat.idle":
+    case "seat.idle": {
+      const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
       setStatus(evt.seatId, "idle");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
+      // Only a real working -> idle transition, never the initial per-seat status replay every
+      // fresh connection gets (see seatNotify.ts's own note on why that distinction matters).
+      if (wasWorking) void notifySeatTransition(evt.seatId, "idle");
       break;
-    case "seat.problem":
+    }
+    case "seat.problem": {
+      const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
       setStatus(evt.seatId, "problem");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
+      if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
       break;
+    }
   }
 }
 
@@ -393,6 +402,148 @@ function setupTaskForms() {
       });
     }
   }
+}
+
+// --- Command palette (Cmd/Ctrl+K): dispatch a task to any seat without hunting for its tile ---
+// Two-step: type to filter seats by name, pick one (click or Enter), type the task, Send. Single-
+// seat dispatch only - the same {cmd:'start'} every per-tile form already sends, just reachable
+// without scrolling to find the right tile. Useful specifically for juggling several seats/
+// sessions at once, where "find the right tile" is real friction.
+
+let paletteSelectedSeatId: string | null = null;
+
+function paletteSeatLabel(seatId: string): string {
+  const name = tileEl(seatId)?.querySelector(".tile-name")?.textContent?.trim();
+  return name || seatId;
+}
+
+function closeCommandPalette() {
+  const palette = document.getElementById("command-palette");
+  if (palette) palette.hidden = true;
+  paletteSelectedSeatId = null;
+}
+
+function openCommandPalette() {
+  const palette = document.getElementById("command-palette");
+  const search = document.querySelector<HTMLInputElement>('[data-role="palette-search"]');
+  const list = document.querySelector<HTMLUListElement>('[data-role="palette-list"]');
+  const taskForm = document.querySelector<HTMLFormElement>('[data-role="palette-task-form"]');
+  if (!palette || !search || !list || !taskForm) return;
+  paletteSelectedSeatId = null;
+  taskForm.hidden = true;
+  list.hidden = false;
+  search.value = "";
+  palette.hidden = false;
+  renderPaletteList("");
+  search.focus();
+}
+
+function renderPaletteList(filter: string) {
+  const list = document.querySelector<HTMLUListElement>('[data-role="palette-list"]');
+  if (!list) return;
+  list.innerHTML = "";
+  // Token-AND match, not one literal substring - "build 2" has to match "Builder 2" the way a
+  // person actually types it, and a single-substring match against "builder 2" (no space before
+  // the digit) or "build-2" (a hyphen, not a space) would silently reject that query.
+  const tokens = filter.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = SEAT_IDS.filter((seatId) => {
+    const haystack = `${seatId} ${paletteSeatLabel(seatId)}`.toLowerCase();
+    return tokens.every((t) => haystack.includes(t));
+  });
+  for (const seatId of matches) {
+    const li = document.createElement("li");
+    li.className = "command-palette-item";
+    li.dataset.seatId = seatId;
+    const status = (tileEl(seatId)?.dataset.status as Status) || "idle";
+    li.dataset.status = status; // matches the existing [data-status] .status-badge color rules
+    const nameEl = document.createElement("span");
+    nameEl.textContent = paletteSeatLabel(seatId);
+    const statusEl = document.createElement("span");
+    statusEl.className = "status-badge status-badge-sm";
+    statusEl.textContent = status;
+    li.append(nameEl, statusEl);
+    li.addEventListener("click", () => selectPaletteSeat(seatId));
+    list.appendChild(li);
+  }
+  if (matches.length === 0) {
+    const li = document.createElement("li");
+    li.className = "command-palette-empty";
+    li.textContent = "No seat matches.";
+    list.appendChild(li);
+  }
+}
+
+function selectPaletteSeat(seatId: string) {
+  paletteSelectedSeatId = seatId;
+  const list = document.querySelector<HTMLUListElement>('[data-role="palette-list"]');
+  const taskForm = document.querySelector<HTMLFormElement>('[data-role="palette-task-form"]');
+  const target = document.querySelector<HTMLElement>('[data-role="palette-target"]');
+  const input = document.querySelector<HTMLTextAreaElement>('[data-role="palette-task-input"]');
+  const sendBtn = document.querySelector<HTMLButtonElement>('[data-role="palette-send"]');
+  if (!list || !taskForm || !target || !input || !sendBtn) return;
+  list.hidden = true;
+  taskForm.hidden = false;
+  const status = (tileEl(seatId)?.dataset.status as Status) || "idle";
+  const working = status === "working";
+  target.textContent = working
+    ? `${paletteSeatLabel(seatId)} is currently working - wait for it to finish.`
+    : `Send to ${paletteSeatLabel(seatId)}`;
+  input.disabled = working;
+  sendBtn.disabled = working;
+  input.value = "";
+  if (!working) input.focus();
+}
+
+function setupCommandPalette() {
+  const palette = document.getElementById("command-palette");
+  const search = document.querySelector<HTMLInputElement>('[data-role="palette-search"]');
+  const taskForm = document.querySelector<HTMLFormElement>('[data-role="palette-task-form"]');
+  const backBtn = document.querySelector<HTMLButtonElement>('[data-role="palette-back"]');
+  if (!palette || !search || !taskForm || !backBtn) return;
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      if (palette.hidden) openCommandPalette();
+      else closeCommandPalette();
+    } else if (e.key === "Escape" && !palette.hidden) {
+      closeCommandPalette();
+    }
+  });
+
+  // Clicking the dimmed backdrop closes it, same as Escape - only when the click actually
+  // lands on the backdrop itself, not anything inside the box.
+  palette.addEventListener("click", (e) => {
+    if (e.target === palette) closeCommandPalette();
+  });
+
+  search.addEventListener("input", () => renderPaletteList(search.value));
+  search.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const first = document.querySelector<HTMLLIElement>(".command-palette-item");
+      if (first?.dataset.seatId) selectPaletteSeat(first.dataset.seatId);
+    }
+  });
+
+  backBtn.addEventListener("click", () => {
+    paletteSelectedSeatId = null;
+    taskForm.hidden = true;
+    document.querySelector<HTMLUListElement>('[data-role="palette-list"]')!.hidden = false;
+    search.focus();
+  });
+
+  taskForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!paletteSelectedSeatId) return;
+    const input = document.querySelector<HTMLTextAreaElement>('[data-role="palette-task-input"]');
+    if (!input) return;
+    const task = input.value.trim();
+    if (!task) return;
+    sendCommand({ cmd: "start", seatId: paletteSelectedSeatId, task });
+    echoTask(paletteSelectedSeatId, task);
+    closeCommandPalette();
+  });
 }
 
 // --- Parallel-build-and-compare: build-1's fan-out dispatch (PLAN_PARALLEL_BUILD.md §3) ---
@@ -753,6 +904,67 @@ function handleDebateReport(evt: DebateReportEvent) {
   const tile = tileEl(evt.seatId);
   const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
   if (panel && !panel.hidden) renderDebatePanel(evt.seatId); // live-update if already open
+  updateForwardButton(evt.seatId);
+}
+
+// "Plan approved" -> "code exists" (docs/security-prompt-injection.md's S2 forward rule, first
+// candidate). The Forward control only ever enables once this seat's most recent run actually
+// signed off (report.passed) - forwarding a plan the Council rejected would undercut the whole
+// product pitch ("nothing builds until the Council signs off"), so this isn't just a UX nicety,
+// it's the same guarantee the backend's own lastDeliverable cache enforces (relayChainSubprocess
+// only ever populates it on a passed run).
+let pendingForward: { fromSeatId: string; toSeatId: string } | null = null;
+
+function updateForwardButton(seatId: string) {
+  const tile = tileEl(seatId);
+  const select = tile?.querySelector<HTMLSelectElement>('[data-role="forward-select"]');
+  const btn = tile?.querySelector<HTMLButtonElement>('[data-role="forward-btn"]');
+  if (!select || !btn) return;
+  const passed = debateCache.get(seatId)?.passed === true;
+  select.disabled = !passed;
+  btn.disabled = !passed;
+  btn.title = passed ? "" : "Needs a Council-approved plan first";
+}
+
+function hideForwardConfirmModal() {
+  const modal = document.getElementById("forward-confirm-modal");
+  if (modal) modal.hidden = true;
+  pendingForward = null;
+}
+
+function setupForwardConfirmModal() {
+  document
+    .querySelector('[data-role="forward-confirm-cancel"]')
+    ?.addEventListener("click", () => hideForwardConfirmModal());
+
+  document.querySelector('[data-role="forward-confirm-confirm"]')?.addEventListener("click", () => {
+    if (!pendingForward) return;
+    const { fromSeatId, toSeatId } = pendingForward;
+    sendCommand({ cmd: "forward_deliverable", fromSeatId, toSeatId, confirmed: true });
+    echoTask(toSeatId, `> forwarded ${fromSeatId}'s Council-approved plan`);
+    hideForwardConfirmModal();
+  });
+}
+
+function setupForwardControls() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const select = tile?.querySelector<HTMLSelectElement>('[data-role="forward-select"]');
+    const btn = tile?.querySelector<HTMLButtonElement>('[data-role="forward-btn"]');
+    if (!tile || !select || !btn) continue;
+
+    btn.addEventListener("click", () => {
+      const toSeatId = select.value;
+      const modal = document.getElementById("forward-confirm-modal");
+      const title = document.getElementById("forward-confirm-title");
+      if (!modal || !title) return;
+      pendingForward = { fromSeatId: seatId, toSeatId };
+      title.textContent =
+        `This sends ${seatId}'s Council-approved plan to ${toSeatId} as its task - ${toSeatId} ` +
+        `will start writing and editing real files. Continue?`;
+      modal.hidden = false;
+    });
+  }
 }
 
 function setupDebatePanels() {
@@ -1009,6 +1221,7 @@ function setupSetupPanel() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  void initNotifications();
   showConnecting();
   setupAdvisorToggle();
   setupAdvisorActions();
@@ -1021,6 +1234,9 @@ window.addEventListener("DOMContentLoaded", () => {
   setupHistoryPanel();
   setupDebatePanels();
   setupCostPanels();
+  setupForwardConfirmModal();
+  setupForwardControls();
+  setupCommandPalette();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {
