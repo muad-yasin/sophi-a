@@ -661,3 +661,18 @@
   backstop, even though no code path in this repo currently writes any of them into the working
   tree (API keys are Tauri `<app_config_dir>`-scoped, outside the repo entirely; relay's own
   `.env` belongs to the separate relay checkout). Conclusion: clean to make public as-is.
+
+- 2026-09-10 - Dependabot alert #1 (GHSA-wrw7-89jp-8q8g / RUSTSEC-2024-0429), surfaced within
+  minutes of enabling Dependabot security updates: `glib` 0.18.5 (transitive, via Tauri's Linux
+  GTK/webkit2gtk bindings in `src-tauri/Cargo.lock`) has a soundness bug in
+  `VariantStrIter::impl_get` (an unsound out-argument pointer, undefined behavior under recent
+  rustc optimizations) - medium severity, fixed upstream in glib 0.20.0. **Not fixable directly
+  here**: `cargo update -p glib` locks 0 packages - 0.18.5 is already the ceiling every other
+  crate in the dependency graph (gtk-sys/webkit2gtk-sys, pulled in by Tauri 2.11.5 itself) allows;
+  reaching 0.20.x needs those upstream crates to bump their own `glib` requirement first, not
+  something this repo's Cargo.toml can force without either patching a git dependency (fragile,
+  its own maintenance burden) or waiting on a Tauri/gtk-rs release. Real-world exposure is narrow:
+  Linux-only, desktop-only, triggered only by iterating a GVariant string array - not a path any
+  currently-written Sophi-A code exercises directly (Tauri's own internals may, unverified).
+  Tracked, not silently dismissed: re-run `cargo update -p glib` after any future `tauri`
+  version bump and check whether the ceiling has moved.
