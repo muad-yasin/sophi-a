@@ -242,3 +242,4 @@
   honest empty state when no run has finished, byte-exact disk round-trip, a visible `TRUNCATED`
   marker on an oversized export, no truncation on a normal one. Also verified: real `npx tsc
   --noEmit`, `vite build`, and `cargo check` in `src-tauri`, all clean.
+- 8f6f550 — Phase 2 Step 3 — export a run as markdown (long-horizon build plan)
