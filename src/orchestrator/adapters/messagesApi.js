@@ -8,6 +8,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { root } from '../index.js';
 import { isAllowedProvider } from '../providers.js';
+import { recordUsage } from '../cost-tracker.js';
 
 const TIMEOUT_MS = 300_000; // 300s, per PLAN.md's status/event model table
 
@@ -184,6 +185,17 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
     if (seatConfig.chat_history) {
       histories.set(seatId, [...messages, { role: 'assistant', content: result.text }]);
     }
+    // Cost meter usage hook (Phase 2 Step 2): relay's own call() always returns a real
+    // {input, output} usage object (defaulted to 0 by relay's own adapters when a provider's
+    // response genuinely omits it, never missing outright) - priced here, not by relay, since
+    // this is a one-off direct call outside any relay chain, so relay's own chain-pricing never
+    // sees it.
+    emit('seat.usage', recordUsage({
+      provider: result.provider ?? provider,
+      model: result.model ?? seatConfig.model,
+      inputTokens: result.usage?.input,
+      outputTokens: result.usage?.output,
+    }));
     emit('seat.output', result.text);
     emit('seat.idle');
   } catch (err) {

@@ -30,7 +30,7 @@ const SEAT_IDS = ['cnc', 'advisor', 'plan-1', 'plan-2', 'plan-3', 'build-1', 'bu
 // Mirrors main.ts's own in-memory tile state, kept here instead - one persistent WS connection
 // for this MCP server's whole lifetime, updated as events arrive, so tool calls answer from
 // cache instead of each opening a fresh connection and racing the replay.
-const seatState = new Map(SEAT_IDS.map(id => [id, { status: 'idle', lastOutput: null, lastUpdated: null }]));
+const seatState = new Map(SEAT_IDS.map(id => [id, { status: 'idle', lastOutput: null, lastUpdated: null, cost: null }]));
 
 let ws = null;
 let connecting = false;
@@ -74,6 +74,10 @@ function connect() {
     if (evt.type === 'seat.working') state.status = 'working';
     else if (evt.type === 'seat.idle') state.status = 'idle';
     else if (evt.type === 'seat.problem') state.status = 'problem';
+    // Phase 2 Step 2 (cost meter): mirrors the orchestrator's own running per-seat total
+    // (index.js's makeEmit) - "expose the same numbers via get_seat" per the plan's own wording,
+    // not a re-derived figure.
+    if (evt.type === 'seat.usage') state.cost = evt.total;
     if (evt.type === 'seat.output' || (evt.detail !== undefined)) state.lastOutput = evt.detail;
     state.lastUpdated = evt.timestamp;
   });

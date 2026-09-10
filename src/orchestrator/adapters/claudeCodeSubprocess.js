@@ -11,10 +11,19 @@
 //   {"type":"assistant","message":{"content":[{"type":"tool_use",...}]}}     -> seat.working (no output)
 //   {"type":"result","subtype":"success","is_error":false,"result":"..."}    -> seat.idle
 //   {"type":"result","is_error":true,...}                                    -> seat.problem
+//
+// The "result" line also carries real cost/usage fields not shown above when this comment was
+// first written - re-verified live for Phase 2 Step 2 (cost meter), `claude -p "..."
+// --output-format stream-json --verbose`, 2026-09-10:
+//   {"type":"result",...,"total_cost_usd":0.0722352,"usage":{"input_tokens":2,"output_tokens":4,...}}
+// `total_cost_usd` is a real dollar figure computed by the CLI itself - used as-is, never
+// re-derived from pricing.json (that table is for the messages-api path only, which gets no $
+// figure from relay's call()).
 import { existsSync, mkdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { root } from '../index.js';
+import { recordUsage } from '../cost-tracker.js';
 
 const HEARTBEAT_MS = 30_000; // re-emit seat.working during long tool calls so it never looks stale
 const TIMEOUT_MS = 300_000; // 300s, per PLAN.md's status/event model table
@@ -145,6 +154,16 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
       for (const b of textBlocks) emit('seat.output', b.text);
     } else if (msg.type === 'result') {
       if (msg.session_id) sessionIds.set(seatId, msg.session_id);
+      // Usage hook (Phase 2 Step 2, cost meter): emitted regardless of success/error - a
+      // failed turn still spent real tokens, and the honesty invariant ("usage not reported",
+      // never a silent 0) applies just as much to a problem tile as an idle one.
+      emit('seat.usage', recordUsage({
+        provider: 'anthropic',
+        model: seatConfig.model,
+        inputTokens: msg.usage?.input_tokens,
+        outputTokens: msg.usage?.output_tokens,
+        usd: typeof msg.total_cost_usd === 'number' ? msg.total_cost_usd : undefined,
+      }));
       if (msg.is_error) {
         finish(detail => emit('seat.problem', detail), msg.result || 'claude-code turn ended in error');
       } else {

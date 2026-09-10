@@ -18,6 +18,7 @@ import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, curren
 import { estimateChainCost } from './costEstimate.js';
 import { checkAllSeats } from './preflight.js';
 import { listRecordedRuns, readRecordedRun, readRecordedLog } from './run-recorder.js';
+import { accumulate } from './cost-tracker.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -26,6 +27,11 @@ const seats = JSON.parse(readFileSync(join(here, 'seats.json'), 'utf8'));
 // In-memory Map<seatId, 'idle'|'working'|'problem'> - an implementation detail behind the event
 // bus below, not a second source of truth (PLAN.md "Orchestrator core").
 const status = new Map(Object.keys(seats).map(id => [id, 'idle']));
+
+// Phase 2 Step 2 (cost meter): running per-seat session total, folded via cost-tracker.js's own
+// `accumulate` so the "never fabricate" invariant lives in one place. Session-only, like
+// `status` above - cleared on orchestrator restart, never a second persistent source of truth.
+const costTotals = new Map();
 
 const adapters = {
   'claude-code-subprocess': { start: startClaudeCodeSeat, stop: stopClaudeCodeSeat },
@@ -50,6 +56,16 @@ function makeEmit(wss, seatId) {
     else if (type === 'seat.problem') status.set(seatId, 'problem');
     if (type === 'seat.idle' && typeof detail === 'string' && PLANNER_SEAT_IDS.includes(seatId)) {
       lastDeliverable.set(seatId, detail);
+    }
+    if (type === 'seat.usage') {
+      // `detail` here is one turn's normalized usage record (cost-tracker.js's recordUsage/
+      // usageFromReport shape) - folded into this seat's running session total and broadcast
+      // as both the per-turn record and the new total, so the header ticker (src/main.ts) can
+      // show a cumulative figure without re-deriving it client-side.
+      const total = accumulate(costTotals.get(seatId), detail);
+      costTotals.set(seatId, total);
+      broadcast(wss, { type, seatId, timestamp: Date.now(), detail, total });
+      return;
     }
     const event = { type, seatId, timestamp: Date.now(), ...(detail !== undefined ? { detail } : {}) };
     broadcast(wss, event);
@@ -582,6 +598,11 @@ function main() {
           // correctly even if it connected mid-session.
           for (const [seatId, st] of status) {
             ws.send(JSON.stringify({ type: `seat.${st}`, seatId, timestamp: Date.now() }));
+          }
+          // Same replay for the cost meter's running totals (Phase 2 Step 2), so a client that
+          // connects mid-session sees real accumulated numbers, not a reset-looking blank ticker.
+          for (const [seatId, total] of costTotals) {
+            ws.send(JSON.stringify({ type: 'seat.usage', seatId, timestamp: Date.now(), total }));
           }
         } else {
           ws.close(1008, 'unauthenticated');

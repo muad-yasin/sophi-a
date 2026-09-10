@@ -897,3 +897,57 @@ button; verified via a clean relaunch with zero parse/error lines in the dev log
 because "committed and pushed" isn't the same claim as "verified running" - this one only surfaced
 on the next real `npm run tauri dev`, after the commit, which is exactly the gap `CLAUDE.md`'s own
 "run it, don't just trust it compiles" rule exists for.
+
+## 2026-09-10: Phase 2 Step 2 - cost meter, real numbers only
+
+Built `src/orchestrator/cost-tracker.js` (one normalization layer: `recordUsage`,
+`usageFromReport`/`stageUsageFromReport`, `accumulate`, `formatUsage`) plus `src/orchestrator/
+pricing.json`, and a usage hook in all three adapters, per the plan. Ground truth carried
+forward from Phase 0 (verify-assumptions.js/this file): `report.json` has NO top-level `usage`
+field - `relayChainSubprocess.js`'s hook reads `report.totals` (aggregated) and
+`report.stages[].usage` (per-critic), never a flat `report.usage`.
+
+Real findings from live verification (not assumed):
+- Re-ran `claude -p "..." --output-format stream-json --verbose` live (2026-09-10) to check the
+  claude-code-subprocess adapter's own real "result" message shape, since the file's own header
+  comment (written during Phase 1's Step 4) didn't document a usage field on that line. It does:
+  `total_cost_usd` (a real dollar figure, used as-is) and `usage: {input_tokens, output_tokens,
+  ...}`. `claudeCodeSubprocess.js`'s usage hook uses these directly rather than re-pricing via
+  pricing.json - that table exists only for the messages-api path, which gets raw token counts
+  with no cost attached from relay's `call()`.
+- A relay chain's `report.totals.usd` only sums *priced* stages - if `report.totals.unpriced` is
+  non-empty, that `usd` figure is real but partial. Showing a partial $ total under one "total"
+  label would itself be the fabrication GLM-2's invariant exists to prevent, so `usageFromReport`
+  forces `priced: false` (renders `~N tokens`) whenever any stage came back unpriced, rather than
+  showing a misleadingly-precise partial dollar figure.
+- `src/orchestrator/pricing.json` is a manually-maintained snapshot of relay/src/pricing.json's
+  entries for the default/most-likely model per allowed provider (not a live proxy to relay's own
+  file) - the plan calls for this file to exist in this repo specifically ("unwind-cost item").
+  Any model not listed (including any free-text model id a user types into cnc/advisor's model
+  picker) is honestly unpriced. Verified live: `claude-fable-5-1` (advisor's real model) is not in
+  this table (no public price for Fable) - a real advisor call showed `~2456 tokens`, never a
+  guessed $ figure.
+- "EUR" in the plan's own acceptance-test wording is read as "a money figure," not a literal
+  currency requirement - `costEstimate.js`'s pre-existing `formatCostPanel`/`formatUsd` already
+  render `$` (USD, matching relay's own pricing.json currency) everywhere else in this app;
+  SHOP.md's EUR is a separate Stripe storefront currency, unrelated to relay/pricing.json's token
+  pricing. The cost meter's `formatUsage` follows the existing `$` convention for consistency.
+- The header ticker's formatting logic (`formatUsageTotal` in `src/main.ts`) duplicates
+  `cost-tracker.js`'s `formatUsage` rather than importing it - `cost-tracker.js` is a Node-only
+  module (reads `pricing.json` off disk via `node:fs`), and `main.ts` is a browser (Vite) bundle;
+  there is no shared-module setup between them yet (same situation as `providers.js`'s
+  `ALLOWED_PROVIDERS` vs. `main.ts`'s own copy, noted there already).
+- Verified end-to-end with a real, free relay `mock` chain (no API cost): a standalone
+  orchestrator process, driven over a real WebSocket client, dispatching a real `plan-1` seat
+  whose `default_chain` was temporarily pointed at `mock` (seats.json restored immediately after,
+  never committed with that override) - confirmed `seat.usage`'s `total.inputTokens`/
+  `outputTokens` matched relay's own printed `tokens: N in, M out` line exactly, and that an
+  unpriced mock chain renders `~N tokens`. Also ran one real, paid `advisor` call
+  (`claude-fable-5-1`, a few cents) to verify the messages-api path's real token counts end to
+  end, not just against a mock.
+- `relayChainSubprocess.js`'s and `messagesApi.js`'s "usage not reported" path is currently
+  unreachable through relay's own `call()`/adapters, since relay's own provider code defaults a
+  missing `usage` field to `{input: 0, output: 0}` rather than omitting it (relay code, out of
+  this step's scope to change) - `cost-tracker.js`'s `recordUsage` still implements the "absent
+  field -> not reported" contract generically, for any future/other caller that might not default
+  that way.

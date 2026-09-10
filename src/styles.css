@@ -295,6 +295,19 @@ body {
   color: var(--text-primary);
 }
 
+/* Phase 2 Step 2 (cost meter) - a small running-total ticker in each tile's own header, next to
+   its status badge. Muted, not a status carrier itself (color is never load-bearing here either -
+   this is plain text, "usage not reported"/"~N tokens"/"N tokens — $X", never a bare number that
+   could be mistaken for a status). */
+.cost-ticker {
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* color is never the sole carrier of status - a text badge always accompanies the glow ring */
 .status-badge {
   font-family: var(--font-chrome);

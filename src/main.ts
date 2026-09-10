@@ -134,6 +134,26 @@ interface ReplayResultEvent {
   error?: string;
 }
 
+// Seat cost meter, real numbers only (Phase 2 Step 2 of the long-horizon plan). Pushed after
+// every real seat turn (src/orchestrator/cost-tracker.js's `recordUsage`/`usageFromReport`,
+// folded into a running per-seat total by index.js's makeEmit) - `total` is what the header
+// ticker renders; `detail` is that one turn's own record, kept for a future per-turn/per-critic
+// line but not rendered by this step's header ticker itself.
+interface UsageTotal {
+  inputTokens: number;
+  outputTokens: number;
+  usd: number;
+  reported: boolean;
+  priced: boolean;
+}
+interface SeatUsageEvent {
+  type: "seat.usage";
+  seatId: string;
+  timestamp: number;
+  detail?: { reported: boolean; inputTokens?: number; outputTokens?: number; priced?: boolean; usd?: number | null };
+  total: UsageTotal;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -388,6 +408,27 @@ function handleSeatEvent(evt: SeatEvent) {
   }
 }
 
+// Seat cost meter, real numbers only (Phase 2 Step 2). Mirrors cost-tracker.js's own
+// formatUsage exactly - the binding invariant (GLM-2): a seat this app has no real token counts
+// for shows "usage not reported", never a bare 0; a model with no price on file shows
+// `~N tokens`, never a fabricated $ figure. Duplicated here (not imported) because this is a
+// browser bundle and cost-tracker.js is a Node-only module (reads pricing.json off disk) - see
+// DECISIONS.md.
+function formatUsageTotal(total: UsageTotal): string {
+  if (!total || !total.reported) return "usage not reported";
+  const tokens = total.inputTokens + total.outputTokens;
+  if (!total.priced) return `~${tokens} tokens`;
+  return `${tokens} tokens — $${total.usd.toFixed(total.usd < 0.01 && total.usd > 0 ? 4 : 2)}`;
+}
+
+function handleSeatUsage(evt: SeatUsageEvent) {
+  const tile = tileEl(evt.seatId);
+  const ticker = tile?.querySelector<HTMLElement>('[data-role="cost-ticker"]');
+  if (!ticker) return;
+  ticker.textContent = formatUsageTotal(evt.total);
+  ticker.hidden = false;
+}
+
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 8000, 8000];
 
 function showConnected() {
@@ -458,7 +499,8 @@ async function connect() {
         | CostEstimateEvent
         | PreflightResultEvent
         | RunHistoryEvent
-        | ReplayResultEvent;
+        | ReplayResultEvent
+        | SeatUsageEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
@@ -468,6 +510,7 @@ async function connect() {
       else if (evt.type === "preflight.result") handlePreflightResult(evt);
       else if (evt.type === "run.history") handleRunHistory(evt);
       else if (evt.type === "replay.result") handleReplayResult(evt);
+      else if (evt.type === "seat.usage") handleSeatUsage(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message

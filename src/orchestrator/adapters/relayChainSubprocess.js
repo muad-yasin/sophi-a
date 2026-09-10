@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { root } from '../index.js';
 import { recordRun } from '../run-recorder.js';
+import { usageFromReport, stageUsageFromReport } from '../cost-tracker.js';
 
 const RUN_DISCOVERY_POLL_MS = 250;
 const RUN_DISCOVERY_MAX_ATTEMPTS = 20; // ~5s, matching relay's own start_run tool
@@ -170,6 +171,15 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
         scoreboard: report.scoreboard || null,
         failures: report.lastCritique?.failures || null,
       });
+      // Cost meter usage hook (Phase 2 Step 2): ground truth per Phase 0's
+      // verify-assumptions.js/DECISIONS.md - report.json has NO top-level `usage` field; real
+      // usage lives at report.totals (aggregated, read here) and report.stages[].usage
+      // (per-critic, read into `stages` for a future per-critic UI line - this step's own
+      // acceptance note: "per-critic lines where report.json has them"). relay already prices
+      // every stage from its own pricing.json, so this never re-derives a dollar figure - only
+      // whether at least one stage came back unpriced (report.totals.unpriced non-empty), which
+      // makes the whole run's total honestly unpriced too rather than a silently-partial $ figure.
+      emit('seat.usage', { ...usageFromReport(report), stages: stageUsageFromReport(report) });
       if (report.passed === true) {
         const deliverablePath = join(runDir, 'deliverable.md');
         const deliverable = existsSync(deliverablePath)
