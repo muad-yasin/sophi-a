@@ -244,3 +244,4 @@
   --noEmit`, `vite build`, and `cargo check` in `src-tauri`, all clean.
 - 8f6f550 — Phase 2 Step 3 — export a run as markdown (long-horizon build plan)
 - c8bd59f — Phase 1 Step 3 — smoke run button on cnc/advisor, readiness-gated, never auto-clicked
+- 2020e10 — Phase 2 Step 2 — cost-tracker.js + pricing.json + usage hooks in all three adapters + header ticker (long-horizon build plan)
