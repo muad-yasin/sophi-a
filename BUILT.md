@@ -243,3 +243,4 @@
   marker on an oversized export, no truncation on a normal one. Also verified: real `npx tsc
   --noEmit`, `vite build`, and `cargo check` in `src-tauri`, all clean.
 - 8f6f550 — Phase 2 Step 3 — export a run as markdown (long-horizon build plan)
+- c8bd59f — Phase 1 Step 3 — smoke run button on cnc/advisor, readiness-gated, never auto-clicked
