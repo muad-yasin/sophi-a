@@ -217,3 +217,4 @@
   notification:default capability. All three verified live (real WS validation-path tests against
   the running orchestrator; real browser interaction tests for the palette and forward UI), not
   just typechecked.
+- adc6c0d — Phase 1 Step 1 — preflight.js + seats.json requires field (long-horizon build plan)
