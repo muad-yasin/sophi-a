@@ -883,3 +883,17 @@ Not built, deliberately out of this step's scope: per-round replay/history brows
 3 Step 2, "Replay from history, honest by construction" - a different feature with its own
 mandatory `"REPLAY — not live"` banner wording, not reused here for the Recent-exports reopen
 preview to avoid conflating the two).
+
+## 2026-09-10: Phase 1 Step 3 - real bug shipped and fixed same session (HTML attribute escaping)
+
+The advisor tile's "Smoke run" button title attribute used `\"` (backslash-escaped quote) instead
+of `&quot;` - valid in a JS string literal, **not valid HTML attribute syntax**. The cnc tile's
+identical button got this right in the same commit; the advisor one didn't. Vite's own dev server
+caught it immediately on the very next `npm run tauri dev` launch (`parse5` errors, both
+`missing-whitespace-between-attributes` and `unexpected-character-in-attribute-name`) - the app
+still compiled and ran with the malformed HTML rather than failing loudly, which is itself worth
+knowing: a broken attribute here didn't hard-fail the build. Fixed to `&quot;`, matching the cnc
+button; verified via a clean relaunch with zero parse/error lines in the dev log. Named here
+because "committed and pushed" isn't the same claim as "verified running" - this one only surfaced
+on the next real `npm run tauri dev`, after the commit, which is exactly the gap `CLAUDE.md`'s own
+"run it, don't just trust it compiles" rule exists for.
