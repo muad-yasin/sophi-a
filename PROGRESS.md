@@ -288,3 +288,15 @@
   CNC Harness, EUR20,00) without submitting payment. Wired into marketing/index.html's "Get
   Sophi-A" CTA, replacing the coming-soon placeholder from the previous pass. SHOP.md updated
   with the real link and an honest note about the earlier undocumented gap.
+- 2026-09-10 - README.md and CLAUDE.md rewritten for real front-loading (critical orientation
+  in the first ~30% of each, per Muad's explicit ask), CLAUDE.md copied verbatim to AGENTS.md so
+  any agent tooling that looks for that filename instead gets the same orientation. Also wired
+  CLAUDE.md's content into the actual advisor/cnc system prompts (messagesApi.js) for real, not
+  just documentation: a real `claude` CLI subprocess gets CLAUDE.md automatically via its own
+  project-file walk-up, but advisor/cnc running on any other provider (OpenAI, Gemini, etc.) got
+  none of that context before this - now both get it appended to their system prompt, read once
+  and cached. Left the advisor's compare-mode prompt (ADVISOR_COMPARE_SYSTEM) untouched on
+  purpose - its exact wording was already bisected against a real API refusal once, and adding
+  untested content there risked a regression nobody would catch without re-testing live.
+  Verified: the actual root-resolved CLAUDE.md path loads correctly (5745 chars, confirmed via a
+  direct module import, not just read-and-assume), npx tsc --noEmit and node --check both clean.

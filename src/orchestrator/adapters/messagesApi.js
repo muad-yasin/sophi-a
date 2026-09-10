@@ -87,6 +87,30 @@ function loadRelayEnv() {
   }
 }
 
+// CLAUDE.md (also served verbatim as AGENTS.md) is the orientation a real `claude` CLI
+// subprocess gets automatically via its own project-file walk-up - a seat running here on any
+// other provider gets none of that unless this adapter hands it over explicitly. Read once and
+// cached (the file doesn't change mid-session); appended to advisor's and cnc's system prompts
+// below, not to ADVISOR_COMPARE_SYSTEM - that one's exact wording was bisected against a real
+// API refusal already (see its own comment), and comparison mode's job is one narrow line, not
+// full project awareness, so it stays untouched rather than risking a prompt-shape regression
+// nobody re-tested live.
+let projectContextCache;
+function loadProjectContext() {
+  if (projectContextCache !== undefined) return projectContextCache;
+  const claudeMdPath = path.join(root, 'CLAUDE.md');
+  projectContextCache = existsSync(claudeMdPath) ? readFileSync(claudeMdPath, 'utf8').trim() : '';
+  return projectContextCache;
+}
+
+function withProjectContext(system) {
+  const context = loadProjectContext();
+  if (!context) return system;
+  return `${system}\n\n---\n\nProject context (this repo's own CLAUDE.md/AGENTS.md - the same ` +
+    `orientation a real Claude Code subprocess gets automatically in this repo; you're seeing ` +
+    `it explicitly because you're running here on a non-Claude-Code path):\n\n${context}`;
+}
+
 let providersModulePromise = null;
 function loadProviders() {
   if (!providersModulePromise) {
@@ -124,7 +148,9 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
     emit('seat.working');
 
     const isAdvisor = seatId === 'advisor';
-    const system = isAdvisor && mode === 'compare' ? ADVISOR_COMPARE_SYSTEM : isAdvisor ? ADVISOR_SYSTEM : CNC_CHAT_SYSTEM;
+    const system = isAdvisor && mode === 'compare' ? ADVISOR_COMPARE_SYSTEM
+      : isAdvisor ? withProjectContext(ADVISOR_SYSTEM)
+      : withProjectContext(CNC_CHAT_SYSTEM);
     // The compare-mode call is a one-off aside, not part of advisor's own ongoing conversation
     // with the human - it never reads or appends to `histories`, so it can't leak into or get
     // derailed by whatever advisor and the human were already discussing.

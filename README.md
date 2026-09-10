@@ -2,26 +2,21 @@
 
 # Sophi-A
 
-A Tauri desktop shell that drives eight real Claude/Fable/relay agent "seats" at once - one
-Command & Control chat, one Advisor, three planning modules, three building modules (real Claude
-Code subprocesses) - so a vibecoder gets more out of the models and subscriptions they already
-pay for. Open source (Apache-2.0); bring your own Claude Code/API credentials, nothing is resold.
+**Five other labs review your plan before a line of code gets written.** Sophi-A is a Tauri
+desktop shell that runs eight real agent seats at once - one Command & Control chat, one Advisor,
+three planning seats, three building seats (real Claude Code subprocesses) - so a vibecoder gets
+more out of the models and subscriptions they already pay for. Open source (Apache-2.0); bring
+your own Claude Code/API credentials, nothing is resold.
 
-What makes it different from a parallel-session manager like conductor.build or Nimbalyst: the
-three planning seats don't run more copies of the same agent. Each one spawns a real relay
-chain (`RELAY_PATH`, see `PLAN.md`; `plan-cheap` by default) where one model
-drafts a plan and critic seats from five other labs (Qwen, GLM, Cohere, Gemini, Llama - never
-Grok) grade it blind, the draft is revised against their objections, and the run ends either with
-their sign-off or with a `report.json` naming exactly which lab refused and why. That cross-lab
-argument happens *before* any building seat writes code, and the receipts stay in the run folder.
-(Repo-level comparison and what's still unverified: `docs/market-positioning.md`.)
-
-`cnc`/`advisor` can also run on any of several other frontier providers (OpenAI, Google Gemini,
-Mistral, DeepSeek, Groq, Cohere, OpenRouter, Together, Z.ai) instead of Anthropic - see PLAN.md's
-"Addendum (2026-09-09, second)". Grok/xAI is deliberately never offered, by standing policy.
-
-Read `PLAN.md` in full before touching anything; `HANDOFF.md`, `PROGRESS.md`, `DECISIONS.md`, and
-`BUILT.md` track what's actually shipped and why.
+What makes this different from a parallel-session manager like conductor.build or Nimbalyst: the
+three planning seats don't run more copies of the same agent racing to the same answer. Each one
+spawns a real `relay` chain (`RELAY_PATH`, see `PLAN.md`) where one model drafts a plan and
+critic seats from five *other* labs - Qwen, GLM, Cohere, Gemini, Llama, never Grok - grade it
+blind, the draft gets revised against their objections, and the run ends either with unanimous
+sign-off or a `report.json` naming exactly which lab refused and why. That cross-lab argument -
+**"The High Council,"** see `brand/HIGH_COUNCIL.md` - happens *before* any building seat writes
+code, and the receipts stay in the run folder. Full comparison against what else exists in this
+category: `docs/market-positioning.md`.
 
 ## Running it
 
@@ -30,10 +25,23 @@ npm install
 npm run tauri dev
 ```
 
-A packaged build now exists: `v0.1.0` (Windows NSIS installer, Linux AppImage) - both built for
-real by GitHub Actions, see `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md` for the plan and
-`DECISIONS.md` for what's actually been verified vs. not (real-VM acceptance testing is still
-open).
+Or skip the setup: a packaged build exists (`v0.1.0` - Windows NSIS installer, Linux AppImage,
+built for real by GitHub Actions) for **€20 one-time**, no subscription - buy it, run it, bring
+your own provider keys. [Get it here.](https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03) Source
+stays free either way; paying buys convenience, not the code.
+
+Read `PLAN.md` in full before touching architecture; `CLAUDE.md` is the fuller orientation doc
+(also served as `AGENTS.md`) for any agent - human or model - picking up work in this repo.
+`PROGRESS.md`, `BUILT.md`, and `DECISIONS.md` track what's actually shipped and why, dated.
+
+## The Council, in the product itself
+
+Every `plan-N` seat's Debate panel renders a live Council seal - five sigils, one per critic lab,
+lit when that lab signed off and dimmed when it objected - driven directly from that run's real
+`report.json`, not a mockup. `cnc`/`advisor` can also run on several other frontier providers
+(OpenAI, Google Gemini, Mistral, DeepSeek, Groq, Cohere, OpenRouter, Together, Z.ai) instead of
+Anthropic, chat-only, no tool use - see `PLAN.md`'s provider-selection addendum. Grok/xAI is
+deliberately never offered.
 
 ## Introspection
 
@@ -44,7 +52,7 @@ useful for debugging without a native window's non-existent console:
 claude mcp add sophia -- node /path/to/cnc-harness/src/mcp/server.js
 ```
 
-Then a Claude Code session gets `list_seats`, `get_seat`, `start_seat`, `stop_seat`,
+Then an MCP-capable session gets `list_seats`, `get_seat`, `start_seat`, `stop_seat`,
 `configure_seat`, and `wait_for_idle` against whatever Sophi-A instance is actually running.
 
 ## Platform support
@@ -57,5 +65,10 @@ chains), and mobile OS sandboxes forbid that entirely - there's no way to run th
 architecture on a phone as-is. A thin mobile client that talks over the network to a desktop
 orchestrator is a real, named future direction (not ruled out), but it's a genuine rewrite, not a
 recompile, and nothing is scheduled against it yet. iOS carries an extra constraint even a thin
-client wouldn't escape (App Store Review Guideline 2.5.2). Full reasoning, independently argued for
-each platform: `PLAN_PACKAGING.md` §3 (Android) and §3.1 (iOS).
+client wouldn't escape (App Store Review Guideline 2.5.2). Full reasoning, independently argued
+for each platform: `PLAN_PACKAGING.md` §3 (Android) and §3.1 (iOS).
+
+## License
+
+Apache-2.0 (`LICENSE`). The source is the product's own advertisement, not a teaser for the paid
+build - read it, run it, fork it.
