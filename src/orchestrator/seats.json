@@ -7,7 +7,8 @@
     "session": "continued via --resume",
     "chat_history": true,
     "workdir": ".workdirs/cnc",
-    "requires": [{ "type": "binary", "name": "claude" }]
+    "requires": [{ "type": "binary", "name": "claude" }],
+    "timeout_ms": 120000
   },
   "advisor": {
     "role": "Advisor",
@@ -16,28 +17,32 @@
     "invocation_mode": "messages-api",
     "session": "stateless",
     "chat_history": false,
-    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
+    "timeout_ms": 120000
   },
   "plan-1": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
-    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
+    "timeout_ms": 600000
   },
   "plan-2": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
-    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
+    "timeout_ms": 600000
   },
   "plan-3": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
-    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
+    "timeout_ms": 600000
   },
   "build-1": {
     "role": "Building module",
@@ -45,7 +50,8 @@
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
     "workdir": ".workdirs/build-1",
-    "requires": [{ "type": "binary", "name": "claude" }]
+    "requires": [{ "type": "binary", "name": "claude" }],
+    "timeout_ms": 300000
   },
   "build-2": {
     "role": "Building module",
@@ -53,7 +59,8 @@
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
     "workdir": ".workdirs/build-2",
-    "requires": [{ "type": "binary", "name": "claude" }]
+    "requires": [{ "type": "binary", "name": "claude" }],
+    "timeout_ms": 300000
   },
   "build-3": {
     "role": "Building module",
@@ -61,6 +68,7 @@
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
     "workdir": ".workdirs/build-3",
-    "requires": [{ "type": "binary", "name": "claude" }]
+    "requires": [{ "type": "binary", "name": "claude" }],
+    "timeout_ms": 300000
   }
 }

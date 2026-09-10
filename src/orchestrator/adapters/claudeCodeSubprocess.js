@@ -26,7 +26,17 @@ import { root } from '../index.js';
 import { recordUsage } from '../cost-tracker.js';
 
 const HEARTBEAT_MS = 30_000; // re-emit seat.working during long tool calls so it never looks stale
-const TIMEOUT_MS = 300_000; // 300s, per PLAN.md's status/event model table
+const DEFAULT_TIMEOUT_MS = 300_000; // fallback only - every real seat in seats.json sets its own
+// timeout_ms now (Phase 2 Step 1's per-seat-type defaults: 120000 chat, 600000 plan, 300000
+// build - see DECISIONS.md); this constant exists so a hand-built seatConfig missing the field
+// (e.g. an older on-disk seats.json, or a test fixture) still gets a sane watchdog instead of none.
+
+// Phase 2 Step 1 (Stop-All + watchdog): once a process is asked to stop - by the watchdog below
+// or by an operator's Stop/Stop-All click - it gets 5s to exit cleanly from SIGTERM before this
+// escalates. Windows has no real SIGTERM/SIGKILL distinction (node's child.kill() always
+// terminates immediately there), so the escalation path there is `taskkill /F` instead of a
+// second signal - named explicitly in the plan for this reason.
+const KILL_ESCALATION_MS = 5_000;
 
 // docs/security-prompt-injection.md S1/P0: a claude-code-subprocess seat (cnc, build-1..3) must
 // never inherit process.env wholesale. The orchestrator's own env accumulates every saved
@@ -115,7 +125,37 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
   const dir = workdirFor(seatConfig);
 
   const child = spawn('claude', args, { cwd: dir || root, env: safeEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
-  runningChildren.set(seatId, child);
+
+  // Per-seat watchdog timeout (seats.json's `timeout_ms` - the unwind-cost item decided in
+  // DECISIONS.md ahead of this step): how long this seat may go completely silent (no stdout/
+  // stderr at all) before it's treated as stuck and auto-stopped. Read once per turn - a live
+  // `configure` change to a running seat's timeout isn't a thing this product does.
+  const timeoutMs = seatConfig.timeout_ms ?? DEFAULT_TIMEOUT_MS;
+
+  let exited = false; // set true the instant the OS process actually exits - independent of
+  // `finished` below, which tracks the *seat's* lifecycle (a stop can be requested, and finish()
+  // called, slightly before the OS actually reaps the process).
+
+  // SIGTERM first, escalate to SIGKILL (or `taskkill /F` on Windows, which has no real SIGTERM/
+  // SIGKILL distinction - node's child.kill() there always terminates immediately) after
+  // KILL_ESCALATION_MS if the process is still alive. Used by both the watchdog firing below and
+  // stopClaudeCodeSeat (an operator's Stop/Stop-All click).
+  function killEscalating() {
+    if (exited) return;
+    if (process.platform === 'win32') {
+      child.kill();
+      setTimeout(() => {
+        if (!exited) spawn('taskkill', ['/pid', String(child.pid), '/f', '/t']);
+      }, KILL_ESCALATION_MS);
+    } else {
+      child.kill('SIGTERM');
+      setTimeout(() => {
+        if (!exited) child.kill('SIGKILL');
+      }, KILL_ESCALATION_MS);
+    }
+  }
+
+  runningChildren.set(seatId, { child, killEscalating, stopSeat: stopThisSeat });
 
   let buffer = '';
   let finished = false;
@@ -135,10 +175,27 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
     fn(detail);
   }
 
-  timeoutTimer = setTimeout(() => {
-    finish(detail => emit('seat.problem', detail), `seat ${seatId}: no result after ${TIMEOUT_MS / 1000}s, killing`);
-    child.kill();
-  }, TIMEOUT_MS);
+  // Resets on every stdout/stderr event (armed below, and again inside both data handlers) -
+  // silence past timeoutMs, not merely a fixed deadline from spawn, is what "stuck" means here.
+  // Verified live without waiting a real 120s: seatConfig.timeout_ms set to 5000 against a fake
+  // `claude` that never writes stdout fires this at ~5s (scripts/test-stopall-watchdog.mjs).
+  function armWatchdog() {
+    if (timeoutTimer) clearTimeout(timeoutTimer);
+    timeoutTimer = setTimeout(() => {
+      finish(detail => emit('seat.timeout', detail),
+        `seat ${seatId}: no output for ${timeoutMs / 1000}s, stopped automatically`);
+      killEscalating();
+    }, timeoutMs);
+  }
+
+  // An operator's Stop (or Stop-All) click: this is a deliberate, requested stop, not a crash -
+  // the seat resets to idle, honestly, rather than reading as a "problem" it didn't have.
+  function stopThisSeat() {
+    finish(detail => emit('seat.idle', detail));
+    killEscalating();
+  }
+
+  armWatchdog();
 
   function handleLine(line) {
     if (!line.trim()) return;
@@ -174,6 +231,7 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
   }
 
   child.stdout.on('data', chunk => {
+    armWatchdog();
     buffer += chunk.toString();
     const lines = buffer.split('\n');
     buffer = lines.pop(); // last element may be a partial line - keep buffering it
@@ -181,9 +239,10 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
   });
 
   let stderrOutput = '';
-  child.stderr.on('data', chunk => { stderrOutput += chunk.toString(); });
+  child.stderr.on('data', chunk => { armWatchdog(); stderrOutput += chunk.toString(); });
 
   child.on('exit', code => {
+    exited = true;
     if (finished) return;
     if (buffer.trim()) handleLine(buffer);
     if (!finished) {
@@ -198,10 +257,11 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
   });
 }
 
+// An operator's Stop click (or Stop-All, index.js's stopAll iterating every running seat) - the
+// process gets a clean SIGTERM/SIGKILL(or taskkill /F) escalation, same as the watchdog's own
+// auto-stop path, but resolves the seat to idle rather than "timed out" or "problem": this was
+// asked for, not a failure.
 export function stopClaudeCodeSeat(seatId) {
-  const child = runningChildren.get(seatId);
-  if (child) {
-    child.kill();
-    runningChildren.delete(seatId);
-  }
+  const entry = runningChildren.get(seatId);
+  if (entry) entry.stopSeat();
 }

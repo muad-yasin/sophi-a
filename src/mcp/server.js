@@ -74,6 +74,11 @@ function connect() {
     if (evt.type === 'seat.working') state.status = 'working';
     else if (evt.type === 'seat.idle') state.status = 'idle';
     else if (evt.type === 'seat.problem') state.status = 'problem';
+    // Phase 2 Step 1: the per-seat watchdog's auto-stop, distinct from 'problem' (the seat's own
+    // process reporting a real error) - without this branch a timed-out seat would stay stuck
+    // reading 'working' here forever, and wait_for_idle below would spin past its own timeout
+    // waiting for a transition that already happened.
+    else if (evt.type === 'seat.timeout') state.status = 'timeout';
     // Phase 2 Step 2 (cost meter): mirrors the orchestrator's own running per-seat total
     // (index.js's makeEmit) - "expose the same numbers via get_seat" per the plan's own wording,
     // not a re-derived figure.

@@ -951,3 +951,65 @@ Real findings from live verification (not assumed):
   this step's scope to change) - `cost-tracker.js`'s `recordUsage` still implements the "absent
   field -> not reported" contract generically, for any future/other caller that might not default
   that way.
+
+## 2026-09-10: Phase 2 Step 1 - Stop-All + watchdog, unwind-cost item 2 decided, scope drawn at claude-code-subprocess
+
+**Unwind-cost item 2** (`seats.json`'s `timeout_ms` field shape, listed as "before Phase 2 Step
+1" and not yet decided by any earlier step - checked `DECISIONS.md` and `PROGRESS.md` first,
+genuinely nothing there): a flat per-seat integer in milliseconds, one key (`timeout_ms`) added to
+every one of the 8 seat entries already in `seats.json`, using revise-1.md's own literal tiers -
+120000 (`cnc`, `advisor` - chat), 600000 (`plan-1..3`), 300000 (`build-1..3`). Decided now,
+recorded here, before this step's code reads it - the unwind-cost list's own rule.
+
+**Where the watchdog actually lives, and why it's not in `index.js`'s `makeEmit`**: the plan's own
+text assigns "a per-seat watchdog resets on every stdout/stderr event" to "Modify
+`src/orchestrator/index.js`", which read at first like the watchdog itself should live there,
+generic across all three adapter kinds. Rejected after actually tracing the event flow: `emit()`
+already funnels through `index.js`'s `makeEmit`, but only `claudeCodeSubprocess.js` (`cnc`,
+`build-1..3`) has a real OS child process behind it - `messagesApi.js` (`advisor`) is a single
+non-cancelable `fetch`-equivalent call, and `relayChainSubprocess.js` (`plan-1..3`) has no
+`stop` in the `adapters` table at all (`stop: null`, pre-existing, unchanged by this step). A
+generic index.js-level watchdog that calls `stopSeat()` on silence would, for those two adapter
+kinds, emit `seat.timeout` and flip the tile to "timed out" while the real call keeps running
+completely unaffected in the background - a fake reset, not a real one, against this project's
+own repeated honesty rule ("usage not reported, never 0"; "TRUNCATED, never silent"). So the
+watchdog is implemented self-contained inside `claudeCodeSubprocess.js` itself, reading
+`seatConfig.timeout_ms` directly (already passed to every adapter's `start` call) - the one
+adapter kind where "auto-stopped" is literally true. `index.js` still changes, but narrowly: it
+recognizes the new `seat.timeout` event type for its own status Map (added a 4th value,
+`'timeout'`, distinct from `'problem'` - a real watchdog stop, not a process-reported error), and
+adds `stopAll()` + the `stop_all` WS command. `src/mcp/server.js` got the same one-line
+`seat.timeout` recognition (not in the plan's named file list, but a real consistency gap
+otherwise: without it, `get_seat`/`wait_for_idle` would read a timed-out seat as stuck "working"
+forever, since they consume the identical event stream `main.ts` does).
+
+**Stop-All's real scope**: `stopAll()` (index.js) iterates every seat currently in `working`
+status and calls the existing per-seat `stopSeat()` - the same path a single seat's own Stop
+button already used before this step, so it inherits whatever that adapter can actually do.
+Concretely today that means real SIGTERM/SIGKILL-escalation for `cnc`/`build-1..3` only;
+`advisor`/`plan-1..3` are no-ops under Stop-All, exactly as they already were under a single
+seat's own Stop (both adapters' `stop` was `null` before this step - not touched). Extending real
+cancellation to those two is real, separate future work, not silently implied as done here.
+
+**A real, pre-existing bug fixed as part of this step, not scope creep**: before this change,
+`stopClaudeCodeSeat` (`child.kill()`, no escalation) relied on the child's own `exit` handler to
+decide the outcome, and that handler had no way to tell "operator asked for this" apart from "the
+process crashed" - so clicking Stop already resolved every seat to `seat.problem` ("exited with
+code null before a result line arrived"), never `seat.idle`. The acceptance test's literal "all
+UIs reset to idle" is not satisfiable without fixing this, so `stopThisSeat()` now calls `finish()`
+(→ `seat.idle`) synchronously at the moment Stop is requested, independent of when the OS process
+actually finishes dying - the seat genuinely isn't doing anything further for the operator the
+instant Stop is clicked, whether or not the kill has fully landed yet. Verified this resolves to
+`seat.idle` and not `seat.problem` for both the immediate-SIGTERM-response case and the
+SIGTERM-ignored-forcing-SIGKILL case (`scripts/test-stopall-watchdog.mjs`, Tests B and C).
+
+**Acceptance test approach**: real `node:child_process` spawns and real timers throughout, no
+mocking - a temp-PATH fake `claude` binary (ignores or honors SIGTERM per test, writes its own
+real pid to a file so the harness can poll actual OS liveness) stands in for the real CLI, so the
+test costs nothing and needs no API access, while still exercising the exact same spawn/kill/
+watchdog code the real seats use. `timeout_ms: 5000` proves the mechanism at 5s per the plan's own
+explicit request ("a watchdog test that doesn't require actually waiting 120 seconds") - the real
+120000/300000/600000 constants are just the same code path with a bigger number. Test C spins up
+the real orchestrator process end-to-end (real WebSocket, real auth handshake, real `stop_all`
+command) rather than only unit-testing the adapter, to prove Stop-All's "more than one seat at
+once" behavior for real, not just per-seat in isolation.

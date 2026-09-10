@@ -270,6 +270,14 @@ body {
   animation: problem-pulse 900ms ease-out 2;
 }
 
+/* Phase 2 Step 1: the per-seat watchdog auto-stopped this seat for going silent - same red as
+   "problem" (still a bad outcome, still needs the operator's attention), same finite pulse so it
+   never becomes a nagging animation, but a distinct status word on the badge below. */
+.tile[data-status="timeout"] {
+  box-shadow: inset 0 0 0 2px var(--status-problem);
+  animation: problem-pulse 900ms ease-out 2;
+}
+
 /* a finite pulse (2 iterations, then settles) on entering the problem state only - enough to
    be noticeable without becoming a nagging, infinitely-looping animation */
 @keyframes problem-pulse {
@@ -326,6 +334,10 @@ body {
 }
 
 [data-status="problem"] .status-badge {
+  background: var(--status-problem);
+}
+
+[data-status="timeout"] .status-badge {
   background: var(--status-problem);
 }
 
@@ -833,6 +845,14 @@ body {
 
 .btn-stop {
   border-color: var(--status-problem);
+}
+
+/* Phase 2 Step 1: header "Stop All" - same .setup-toggle chrome as Run history/Setup, but a red
+   accent (matching --status-problem, the same color a stopped/timed-out tile's badge uses) so it
+   reads as the one button in that row with a real, immediate effect on running seats. */
+.stop-all-btn {
+  border-color: var(--status-problem);
+  color: var(--status-problem);
 }
 
 /* --- cnc/advisor: provider + model picker, chat-only disclosure --- */

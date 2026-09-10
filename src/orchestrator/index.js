@@ -24,8 +24,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
 const seats = JSON.parse(readFileSync(join(here, 'seats.json'), 'utf8'));
 
-// In-memory Map<seatId, 'idle'|'working'|'problem'> - an implementation detail behind the event
-// bus below, not a second source of truth (PLAN.md "Orchestrator core").
+// In-memory Map<seatId, 'idle'|'working'|'problem'|'timeout'> - an implementation detail behind
+// the event bus below, not a second source of truth (PLAN.md "Orchestrator core"). 'timeout'
+// added by Phase 2 Step 1: a seat the per-seat watchdog auto-stopped for going silent past its
+// timeout_ms, distinct from 'problem' (the seat's own process reported a real error) so the UI
+// can say "timed out" rather than a generic failure it didn't actually have.
 const status = new Map(Object.keys(seats).map(id => [id, 'idle']));
 
 // Phase 2 Step 2 (cost meter): running per-seat session total, folded via cost-tracker.js's own
@@ -54,6 +57,7 @@ function makeEmit(wss, seatId) {
     if (type === 'seat.working') status.set(seatId, 'working');
     else if (type === 'seat.idle') status.set(seatId, 'idle');
     else if (type === 'seat.problem') status.set(seatId, 'problem');
+    else if (type === 'seat.timeout') status.set(seatId, 'timeout');
     if (type === 'seat.idle' && typeof detail === 'string' && PLANNER_SEAT_IDS.includes(seatId)) {
       lastDeliverable.set(seatId, detail);
     }
@@ -140,6 +144,22 @@ export function stopSeat(seatId) {
   const seat = seats[seatId];
   const adapter = seat && adapters[effectiveInvocationMode(seat)];
   if (adapter?.stop) adapter.stop(seatId);
+}
+
+// Phase 2 Step 1 (Stop-All + watchdog): the toolbar "Stop All" button, main.ts's `stop_all`
+// command below. Stops every currently-running seat, not just one - reuses the exact same
+// per-adapter `stop` path (and therefore the same SIGTERM/SIGKILL escalation and "resolves to
+// idle, not problem" honesty fix) a single seat's own Stop button already goes through.
+//
+// Only claude-code-subprocess seats (cnc, build-1..3) have a real killable OS process today -
+// messages-api (advisor) and relay-chain-subprocess (plan-1..3) both declare `stop: null` in the
+// adapters table above, unchanged by this step (see DECISIONS.md: extending real cancellation to
+// those two is future scope, not silently faked here as an instant "idle" this call can't
+// actually back up).
+export function stopAll() {
+  for (const seatId of Object.keys(seats)) {
+    if (status.get(seatId) === 'working') stopSeat(seatId);
+  }
 }
 
 // Parallel-build-and-compare (PLAN_PARALLEL_BUILD.md §3, build order item 1): a fan-out dispatch
@@ -618,6 +638,7 @@ function main() {
       // confirmation, a size cap.
       if (msg.cmd === 'start') startSeat(wss, msg.seatId, msg.task);
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
+      else if (msg.cmd === 'stop_all') stopAll();
       else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
       else if (msg.cmd === 'start_many') startMany(wss, msg.seatIds, msg.task, msg.confirmed);
       else if (msg.cmd === 'inspect_changes') handleInspectChanges(ws, msg.seatId);

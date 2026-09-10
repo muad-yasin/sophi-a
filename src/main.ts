@@ -8,7 +8,8 @@ type SeatEventType =
   | "seat.working"
   | "seat.output"
   | "seat.idle"
-  | "seat.problem";
+  | "seat.problem"
+  | "seat.timeout";
 
 interface SeatEvent {
   type: SeatEventType;
@@ -154,7 +155,7 @@ interface SeatUsageEvent {
   total: UsageTotal;
 }
 
-type Status = "idle" | "working" | "problem";
+type Status = "idle" | "working" | "problem" | "timeout";
 
 const SEAT_IDS = [
   "advisor",
@@ -224,12 +225,21 @@ function sendCommand(cmd: Record<string, unknown>) {
   }
 }
 
+// "timeout" reads as "timed out" on the badge - everywhere else (dataset.status, the CSS
+// selectors, Status itself) keeps the plain "timeout" token; this is display text only.
+const STATUS_LABELS: Record<Status, string> = {
+  idle: "idle",
+  working: "working",
+  problem: "problem",
+  timeout: "timed out",
+};
+
 function setStatus(seatId: string, status: Status) {
   const tile = tileEl(seatId);
   if (!tile) return;
   tile.dataset.status = status;
   const badge = tile.querySelector('[data-role="badge"]');
-  if (badge) badge.textContent = status;
+  if (badge) badge.textContent = STATUS_LABELS[status];
   setControlsEnabled(tile, status);
 }
 
@@ -401,6 +411,16 @@ function handleSeatEvent(evt: SeatEvent) {
     case "seat.problem": {
       const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
       setStatus(evt.seatId, "problem");
+      if (evt.detail) setOutput(evt.seatId, evt.detail);
+      if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
+      break;
+    }
+    // Phase 2 Step 1: the per-seat watchdog auto-stopped this seat for going silent past its
+    // timeout_ms - a distinct red state from "problem" (a real error the seat's own process
+    // reported) so the badge reads "timed out" rather than a generic failure it didn't have.
+    case "seat.timeout": {
+      const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
+      setStatus(evt.seatId, "timeout");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
       if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
       break;
@@ -604,6 +624,17 @@ function setupTaskForms() {
       });
     }
   }
+}
+
+// Phase 2 Step 1: one toolbar button that SIGTERMs (escalating to SIGKILL after 5s if still
+// alive) every currently-running seat's process at once, via {cmd:'stop_all'} - the same
+// per-seat stop path each tile's own Stop button already uses
+// (src/orchestrator/index.js's stopAll()), just applied to all eight in one click.
+function setupStopAllButton() {
+  const btn = document.getElementById("stop-all-btn");
+  btn?.addEventListener("click", () => {
+    sendCommand({ cmd: "stop_all" });
+  });
 }
 
 // --- Command palette (Cmd/Ctrl+K): dispatch a task to any seat without hunting for its tile ---
@@ -1682,6 +1713,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupAdvisorToggle();
   setupAdvisorActions();
   setupTaskForms();
+  setupStopAllButton();
   setupSeatConfig();
   setupSetupPanel();
   setupBuild1CompareDispatch();
