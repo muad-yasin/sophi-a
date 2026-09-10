@@ -278,3 +278,13 @@
   and the three in-app copies (stroke-width 10-12, ~1.5x larger shapes) - verified legible by
   rendering at 80px with nearest-neighbor upscaling (no smoothing to hide the problem) and by
   screenshotting a real running dev build. npx tsc --noEmit clean.
+- 2026-09-10 - Real Stripe payment link recorded and wired in for the first time. The
+  2026-09-09 SHOP.md/DECISIONS.md entries said a link was created but never recorded the URL - a
+  real gap (nothing in the repo could actually point buyers anywhere). Guided Muad to the Stripe
+  payment-link creation page via remote-control browser navigation (no payment/business fields
+  touched by the session - Muad's own click, per the standing dashboard-only rule); the
+  pre-existing "Sophi-A" product got a real link, https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03,
+  status Aktiv. Verified live by loading the actual checkout page (Sower Industries / Sophi-A /
+  CNC Harness, EUR20,00) without submitting payment. Wired into marketing/index.html's "Get
+  Sophi-A" CTA, replacing the coming-soon placeholder from the previous pass. SHOP.md updated
+  with the real link and an honest note about the earlier undocumented gap.

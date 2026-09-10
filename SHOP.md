@@ -73,10 +73,18 @@ outcome this section argued for, just anchored to a different number.
   Germany-only**, matching `PlanShop_Legal.md`'s own stopgap ("either sell only to Germany or hold
   off"), until OSS registration is actually done. This is a real legal gate, not a formality - don't
   sell cross-border before it clears.
-- **The Stripe payment link itself: done, 2026-09-09.** Created by Muad's own dashboard click
-  ("Sophi-A", €20) - this workspace's established rule (`sower-industries/CLAUDE.md`: "Stripe
-  payment links are created by the author in the dashboard, never by a session") held; nothing
-  here created or simulated one.
+- **The Stripe payment link itself: done, 2026-09-10 (link recorded for the first time).** The
+  2026-09-09 entry above said a link was created by Muad's dashboard click, but no session ever
+  recorded the URL itself - a real gap, not just an omission (nothing in this repo could actually
+  point at it). 2026-09-10: Muad created the link live in the dashboard (guided there via
+  remote-control browser navigation, no payment/business fields touched by the session, per the
+  standing rule that Stripe links are the author's own dashboard action) - the pre-existing
+  "Sophi-A" product (20,00 €, present in the catalog since 2026-09-09) got its payment link:
+  `https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03` (`plink_1UE7ypFQRVJYIrwWGRvohB8g`, status
+  Aktiv). Verified live by loading the checkout page directly (Sower Industries / Sophi-A /
+  CNC Harness, €20,00, no payment submitted) - not just read back from the dashboard list. Now
+  wired into `marketing/index.html`'s "Get Sophi-A" CTA, replacing the honestly-inert
+  coming-soon placeholder from the previous pass.
 - **Delivery mechanism: built, one real gap flagged.** Packaging now exists for real (`v0.1.0`,
   `PLAN_PACKAGING.md`) - real Windows/Linux installers exist as GitHub Release assets. Fulfillment
   mails and the copy-pasteable runbook are written: `docs/fulfillment-mails.md`,
