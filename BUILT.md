@@ -221,6 +221,8 @@
 - 68816f7 — Phase 1 Step 2 — wizard panel + preflight WS command + Send-button readiness gating
 - 2f297e2 — Phase 3 Step 1 — run-recorder.js: copy report.json/run.log to runs/<seatId>/<runId>/, evict past 50
 - 2f297e2 — Phase 3 Step 2 — list_runs/replay_run/get_seat_logs (index.js + mcp/server.js) and main.ts's read-only history-dropdown replay of the Debate panel with a REPLAY banner
+- e30b25e — Phase 3 Step 3 — chain presets (plan-fast/plan-thorough dropdown on plan-1..3, backed by relay commit abc101d)
+- e30b25e — Phase 3 Step 4 — seat keyboard shortcuts (Ctrl+1..8 focus, Enter sends, Esc stops)
 - 2026-09-10 - Phase 2 Step 3, export a run as markdown. New `src/exportMarkdown.ts`: pure,
   DOM-free `buildSeatMarkdown`/`buildDebateMarkdown`/`applyExportTruncation`/`exportFilename` -
   a plain seat's export reuses the exact source text already fed to `renderSeatOutput`
