@@ -833,3 +833,53 @@ example string ("Anthropic key: 401") verbatim - it renders "Key rejected (HTTP 
 extracting the same real information (which check, what code) without hardcoding a provider-name
 lookup the frontend doesn't otherwise need. Judged as meeting the acceptance test's real intent,
 named here rather than silently claimed as a literal string match.
+
+## 2026-09-10: Phase 2 Step 3 - export markdown, three wording gaps resolved against real data
+
+The plan's own text ("each critic as a heading with grade + objections, revision rounds, final
+verdict") does not name real fields anywhere in this codebase - `DebateReportDetail` (main.ts,
+fed by `relayChainSubprocess.js`'s `debate.report` event, itself read straight off relay's
+`report.json`) only ever has `signoff`/`scoreboard`/`failures`. Three mappings decided here rather
+than left ambiguous, all traceable to real data the Debate panel itself already renders
+(`renderDebatePanel`), never invented:
+- "grade" -> `signoff[].signedOff` (signed off / objected / abstained) - the same tri-state
+  `renderDebatePanel` already shows via ✓/✗/?.
+- "objections" -> `failures[]`, attributed to a critic by matching `failures[].lab` against
+  `signoff[].provider` (the same string relay itself writes - see `renderDebatePanel`'s own
+  `data-provider` comment on why this is a direct match, not a lookup table).
+- "revision rounds" -> `scoreboard.labs[]` (accepted/proposed per lab) - this app has no
+  round-by-round transcript surfaced anywhere; scoreboard is the only per-lab activity data that
+  exists. Fabricating a round history to match the plan's literal wording would violate this same
+  step's own honesty rule (never a silent truncation - also never a silent invention), so the
+  export sticks to exactly what `renderDebatePanel` renders, matching it exactly rather than the
+  plan's wording as a spec for new backend work relay itself doesn't expose. If relay's
+  `report.json` ever adds a real per-round record, this is the first place that should change.
+
+`src/exportMarkdown.ts` is deliberately pure (no DOM, no Tauri `invoke`) specifically so
+`scripts/verify-phase2-step3.mjs` can run the acceptance test directly with Node (esbuild-compiled
+on the fly, same pattern `package.json`'s `package:orchestrator` script already uses) - this
+environment has no live Tauri window to click through, and PLAN.md's own bookkeeping rule wants a
+real, re-runnable command in PROGRESS.md, not "looked correct."
+
+**Export location, unwind-cost-adjacent decision**: exports always land in
+`<app_data_dir>/exports/`, never a user-chosen path - `list_recent_exports`
+(`src-tauri/src/lib.rs`) needs one fixed place to browse, and `read_export_file` refuses to read
+anything outside it (canonicalized-path containment check) even though today the frontend only
+ever passes back a path it just listed. "Via Tauri's dialog" (the plan's own wording) is
+implemented as a native `dialog().message()` confirmation after a successful write, not a
+save-location picker - a picker would make "Recent exports" browse an unpredictable set of
+locations instead of one directory, and the plan's own "Recent exports reopens one" line only
+makes sense against a single, known directory. Best-effort only: a failed/blocked dialog (e.g. no
+display) never undoes a write that already succeeded on disk.
+
+**Truncation cap**: `EXPORT_MAX_CHARS = 100_000` in `exportMarkdown.ts`, chosen as "generous"
+matching `src/orchestrator/index.js`'s existing `FORWARD_MAX_CHARS = 16_000` precedent
+("the largest real deliverable seen so far is ~11KB") scaled up because a debate export carries
+every critic's objections, not just one deliverable. Any cut appends a literal `**TRUNCATED**`
+line naming the cap and pointing at relay's own `runs/` directory for the untruncated original -
+never a silently shortened file, verified by `scripts/verify-phase2-step3.mjs`.
+
+Not built, deliberately out of this step's scope: per-round replay/history browsing (that's Phase
+3 Step 2, "Replay from history, honest by construction" - a different feature with its own
+mandatory `"REPLAY — not live"` banner wording, not reused here for the Recent-exports reopen
+preview to avoid conflating the two).

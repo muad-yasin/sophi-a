@@ -34,6 +34,9 @@
         <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
           Run history
         </button>
+        <button type="button" id="exports-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="exports-panel">
+          Recent exports
+        </button>
         <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
           Setup
         </button>
@@ -47,6 +50,27 @@
       </div>
       <p class="setup-hint">Past parallel-build-and-compare picks, winners only.</p>
       <ul id="history-list" class="history-list"></ul>
+    </div>
+
+    <!-- Phase 2 Step 3 of the long-horizon build plan ("Export a run as markdown"): every
+         "Export" click (a seat's output or a planner seat's Debate panel) lands in this one
+         app-owned <appdata>/exports/ directory (src-tauri/src/lib.rs's export_run_markdown) -
+         this panel is the "Recent exports" browse/reopen surface for that directory, never a
+         second source of truth for what got exported. -->
+    <div id="exports-panel" class="setup-panel history-panel" role="dialog" aria-labelledby="exports-panel-title" hidden>
+      <div class="setup-panel-header">
+        <h2 id="exports-panel-title">Recent exports</h2>
+        <button type="button" id="exports-close" class="setup-close" aria-label="Close recent exports">&times;</button>
+      </div>
+      <p class="setup-hint">Markdown exports from any seat or Debate panel, newest first.</p>
+      <ul id="exports-list" class="history-list"></ul>
+      <div id="exports-preview" class="exports-preview" hidden>
+        <div class="exports-preview-header">
+          <span id="exports-preview-name" class="exports-preview-name"></span>
+          <span class="exports-preview-banner">Reopened from disk</span>
+        </div>
+        <div id="exports-preview-body" class="tile-output"></div>
+      </div>
     </div>
 
     <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>

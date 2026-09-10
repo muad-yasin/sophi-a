@@ -221,3 +221,24 @@
 - 68816f7 — Phase 1 Step 2 — wizard panel + preflight WS command + Send-button readiness gating
 - 2f297e2 — Phase 3 Step 1 — run-recorder.js: copy report.json/run.log to runs/<seatId>/<runId>/, evict past 50
 - 2f297e2 — Phase 3 Step 2 — list_runs/replay_run/get_seat_logs (index.js + mcp/server.js) and main.ts's read-only history-dropdown replay of the Debate panel with a REPLAY banner
+- 2026-09-10 - Phase 2 Step 3, export a run as markdown. New `src/exportMarkdown.ts`: pure,
+  DOM-free `buildSeatMarkdown`/`buildDebateMarkdown`/`applyExportTruncation`/`exportFilename` -
+  a plain seat's export reuses the exact source text already fed to `renderSeatOutput`
+  (`seatOutputRender.ts`), never a re-serialization of the sanitized DOM; a planner seat's Debate
+  panel export maps the plan's "grade + objections, revision rounds, final verdict" wording onto
+  the real fields this app has (`signoff`/`failures`/`scoreboard` - see DECISIONS.md's entry for
+  why, and for what was deliberately not invented to match the plan's literal wording). `src/
+  main.ts`: a "Copy as Markdown"/"Export" row injected next to every seat's output pane and
+  inside each planner seat's Debate panel (`setupSeatExportControls`), plus a header "Recent
+  exports" toggle/panel (`setupExportsPanel`) that lists and reopens files via two new Rust
+  commands. `src-tauri/src/lib.rs`: `export_run_markdown` (writes to `<app_data_dir>/exports/`,
+  filename sanitized to its bare file-name component, a native `dialog().message()` confirmation
+  after a successful write), `list_recent_exports` (newest-30, by mtime), `read_export_file`
+  (canonicalized-path containment check - refuses anything outside the exports dir). `index.html`/
+  `src/styles.css`: the export-row controls and the exports panel's reopen preview. New
+  `scripts/verify-phase2-step3.mjs` - the acceptance test, exercising the real shipped module via
+  an esbuild-compiled temp import (same pattern `package.json`'s `package:orchestrator` script
+  uses), 5/5 checks passing: every `DebateReportDetail` field present verbatim in the export, an
+  honest empty state when no run has finished, byte-exact disk round-trip, a visible `TRUNCATED`
+  marker on an oversized export, no truncation on a normal one. Also verified: real `npx tsc
+  --noEmit`, `vite build`, and `cargo check` in `src-tauri`, all clean.

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { renderSeatOutput } from "./seatOutputRender";
 import { initNotifications, notifySeatTransition } from "./seatNotify";
+import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
 
 type SeatEventType =
   | "seat.start"
@@ -320,7 +321,15 @@ function setupWizardPanel() {
   });
 }
 
+// Phase 2 Step 3 ("Export a run as markdown"): the raw source text last fed to a seat's output
+// pane and the operator's own last prompt to it - kept here, separately from the DOM, so
+// "Copy as Markdown"/"Export" can reuse the exact already-sanitized text (never re-serialize
+// the rendered HTML back into markdown) and so an export can include the prompt it answered.
+const seatOutputCache = new Map<string, string>();
+const seatPromptCache = new Map<string, string>();
+
 function setOutput(seatId: string, text: string) {
+  seatOutputCache.set(seatId, text);
   const tile = tileEl(seatId);
   if (!tile) return;
   const output = tile.querySelector<HTMLElement>('[data-role="output"]');
@@ -335,6 +344,7 @@ function setOutput(seatId: string, text: string) {
 // persistent transcript (that would need restructuring the output model into an append log,
 // which is more than this pass needs - see DECISIONS.md).
 function echoTask(seatId: string, task: string) {
+  seatPromptCache.set(seatId, task);
   const tile = tileEl(seatId);
   if (!tile) return;
   const output = tile.querySelector('[data-role="output"]');
@@ -1199,6 +1209,175 @@ function setupDebatePanels() {
   }
 }
 
+// --- Phase 2 Step 3 of the long-horizon build plan ("Export a run as markdown") ---
+// "Copy as Markdown" and "Export" on every seat and on each planner seat's Debate panel.
+// Building the markdown string is pure (exportMarkdown.ts); this section is only the DOM
+// wiring - one small row of controls injected next to each seat's output, and a second one
+// inside each Debate panel, since a planner seat's plain output and its Debate panel are two
+// different things worth exporting separately.
+
+function seatDisplayLabel(seatId: string): string {
+  return tileEl(seatId)?.querySelector(".tile-name")?.textContent?.trim() || seatId;
+}
+
+async function copyMarkdownToClipboard(markdown: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(markdown);
+    return true;
+  } catch (err) {
+    debugLog(`copy-as-markdown failed: ${String(err)}`);
+    return false;
+  }
+}
+
+async function exportMarkdownToDisk(seatId: string, kind: "seat" | "debate", markdown: string): Promise<string> {
+  return invoke<string>("export_run_markdown", { filename: exportFilename(seatId, kind), content: markdown });
+}
+
+function buildExportRow(seatId: string, kind: "seat" | "debate", getMarkdown: () => string): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "export-row";
+  row.dataset.role = kind === "seat" ? "seat-export-row" : "debate-export-row";
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "btn";
+  copyBtn.textContent = "Copy as Markdown";
+
+  const exportBtn = document.createElement("button");
+  exportBtn.type = "button";
+  exportBtn.className = "btn";
+  exportBtn.textContent = "Export";
+
+  const status = document.createElement("span");
+  status.className = "export-status";
+  status.setAttribute("aria-live", "polite");
+
+  copyBtn.addEventListener("click", async () => {
+    const ok = await copyMarkdownToClipboard(getMarkdown());
+    status.textContent = ok ? "Copied!" : "Copy failed";
+    setTimeout(() => {
+      if (status.textContent === "Copied!" || status.textContent === "Copy failed") status.textContent = "";
+    }, 2000);
+  });
+
+  exportBtn.addEventListener("click", async () => {
+    status.textContent = "Exporting…";
+    try {
+      const path = await exportMarkdownToDisk(seatId, kind, getMarkdown());
+      status.textContent = `Exported to ${path}`;
+      await refreshRecentExports();
+    } catch (err) {
+      status.textContent = `Export failed: ${String(err)}`;
+      debugLog(`export failed for ${seatId} (${kind}): ${String(err)}`);
+    }
+  });
+
+  row.append(copyBtn, exportBtn, status);
+  return row;
+}
+
+function setupSeatExportControls() {
+  for (const seatId of SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const output = tile?.querySelector<HTMLElement>('[data-role="output"]');
+    if (!tile || !output) continue;
+    const row = buildExportRow(seatId, "seat", () =>
+      buildSeatMarkdown(
+        seatDisplayLabel(seatId),
+        seatPromptCache.get(seatId) ?? null,
+        seatOutputCache.get(seatId) ?? output.textContent ?? "",
+      ),
+    );
+    output.insertAdjacentElement("afterend", row);
+  }
+
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const panel = tileEl(seatId)?.querySelector<HTMLElement>('[data-role="debate-panel"]');
+    if (!panel) continue;
+    const row = buildExportRow(seatId, "debate", () =>
+      buildDebateMarkdown(seatDisplayLabel(seatId), seatPromptCache.get(seatId) ?? null, debateCache.get(seatId) ?? null),
+    );
+    panel.appendChild(row);
+  }
+}
+
+// --- "Recent exports" (reopens a file Export just wrote to <appdata>/exports/) ---
+
+interface RecentExportEntry {
+  name: string;
+  path: string;
+  modified_ms: number;
+}
+
+async function refreshRecentExports() {
+  const list = document.getElementById("exports-list");
+  if (!list) return; // panel never opened yet in this session - nothing to refresh
+  let entries: RecentExportEntry[];
+  try {
+    entries = await invoke<RecentExportEntry[]>("list_recent_exports");
+  } catch (err) {
+    debugLog(`list_recent_exports failed: ${String(err)}`);
+    return;
+  }
+  list.innerHTML = "";
+  if (entries.length === 0) {
+    const li = document.createElement("li");
+    li.className = "history-empty";
+    li.textContent = "No exports yet.";
+    list.appendChild(li);
+    return;
+  }
+  for (const entry of entries) {
+    const li = document.createElement("li");
+    li.className = "history-row";
+    const when = new Date(entry.modified_ms).toLocaleString();
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn";
+    btn.textContent = `${when} — ${entry.name}`;
+    btn.addEventListener("click", () => void openRecentExport(entry));
+    li.appendChild(btn);
+    list.appendChild(li);
+  }
+}
+
+async function openRecentExport(entry: RecentExportEntry) {
+  const preview = document.getElementById("exports-preview");
+  const nameEl = document.getElementById("exports-preview-name");
+  const bodyEl = document.getElementById("exports-preview-body");
+  if (!preview || !nameEl || !bodyEl) return;
+  try {
+    const content = await invoke<string>("read_export_file", { path: entry.path });
+    nameEl.textContent = entry.name;
+    renderSeatOutput(bodyEl, content);
+    preview.hidden = false;
+  } catch (err) {
+    nameEl.textContent = entry.name;
+    bodyEl.textContent = `Could not reopen this export: ${String(err)}`;
+    preview.hidden = false;
+  }
+}
+
+function setupExportsPanel() {
+  const toggle = document.getElementById("exports-toggle");
+  const panel = document.getElementById("exports-panel");
+  const close = document.getElementById("exports-close");
+  if (!toggle || !panel) return;
+
+  const open = () => {
+    panel.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    void refreshRecentExports();
+  };
+  const closePanel = () => {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+  toggle.addEventListener("click", () => (panel.hidden ? open() : closePanel()));
+  close?.addEventListener("click", closePanel);
+}
+
 // Priced once per session per seat (a chain's own token assumptions don't change task-to-task,
 // and there is no runtime chain-swap UI for plan-N seats), so the toggle only ever sends
 // estimate_cost the first time it opens - reopening renders the cached reply instantly.
@@ -1450,6 +1629,8 @@ window.addEventListener("DOMContentLoaded", () => {
   setupHistoryPanel();
   setupDebatePanels();
   setupDebateHistory();
+  setupSeatExportControls();
+  setupExportsPanel();
   setupCostPanels();
   setupForwardConfirmModal();
   setupForwardControls();
