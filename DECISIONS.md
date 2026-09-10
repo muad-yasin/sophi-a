@@ -1013,3 +1013,54 @@ explicit request ("a watchdog test that doesn't require actually waiting 120 sec
 the real orchestrator process end-to-end (real WebSocket, real auth handshake, real `stop_all`
 command) rather than only unit-testing the adapter, to prove Stop-All's "more than one seat at
 once" behavior for real, not just per-seat in isolation.
+
+## 2026-09-11: Read-only bug audit of Phases 0-3 (correctness pass, no new scope) - two real bugs found, not yet fixed
+
+Requested by Muad/cnc-harness-88 as a third parallel lane ("bug-hunting existing, already-approved
+code - no new scope"), run via `sower-review:bug-audit` against everything shipped in Phases 0-3.
+Recording findings here per the repo's own bookkeeping convention rather than leaving them only in
+the audit's own output - neither fix applied yet, both need an owner decision on approach before
+code changes, and this session did not want to edit shared files unilaterally while cnc-harness-88
+is concurrently mid-build on Phase 3 Steps 3-4 + the restart-reconnect fix.
+
+**Confirmed, High severity - `messagesApi.js`'s 300s timeout is decorative, not enforced.**
+`src/orchestrator/adapters/messagesApi.js:147-184`: `TIMEOUT_MS`'s timer only sets a local
+`timedOut` flag; it never races or aborts the underlying `await call(...)` (no `Promise.race`, no
+`AbortController`) - confirmed relay's own `src/providers.js` has no timeout/abort logic either
+(grepped, zero matches). A hung provider response (TCP connects, server never replies) strands the
+seat in `working` forever - `stop: null` for `messages-api` (a pre-existing, accepted gap for
+*cancellation*, not for a false timeout claim) means there is no recovery short of restarting the
+app. This contradicts `PLAN.md:210`'s documented behavior ("...or a 300s timeout -> seat.problem").
+Affects `advisor` always, and `cnc` whenever its provider isn't `anthropic`. Fix direction (not
+applied): either wire a real `AbortController`/timeout into relay's `call()` and race it, or drop
+PLAN.md's false 300s-timeout claim and let Stop-All/a seat's own Stop discard the stale promise
+reference instead.
+
+**Confirmed, Medium severity - "Delete workdir" isn't blocked on the winning tile after a pick,
+contradicting the documented disposition rule.** `index.js:354-367` (`handleDeleteWorkdir`) never
+checks whether `seatId` is the recorded winner in `compareGroups`; `main.ts:985-1000`
+(`handleComparePick`) only hides the winner's **Pick** button, never its Delete button (same
+`inspect-pick-actions` block shown to every participant, `index.html:530-533,558-561,586-589`).
+Net effect: picking a winner, then clicking Delete on that same now-winning tile, permanently
+`rmSync`s the winning code after a generic confirm dialog that never mentions it's the winner -
+directly contradicting `PLAN_PARALLEL_BUILD.md`'s "unanimous board reversal of every auto-delete
+proposal" and PROGRESS.md's own "winner untouched" claim (which tested deleting the *retained*
+seat, not this sequence). Fix direction (not applied): reject `handleDeleteWorkdir` server-side
+when `seatId` matches a persisted `compare.pick` record's winner, and hide/disable the button
+client-side in the same branch that already hides Pick.
+
+**Lower-confidence backlog, not pursued further this pass** (full detail in the audit's own
+output, not reproduced here): the claude-code-subprocess watchdog only resets on stdout/stderr
+data, so a real long-silent tool call inside one turn could in theory hit `timeout_ms` without an
+actual hang (plausible, unconfirmed - the only watchdog test uses a fake CLI that never writes
+stdout at all); `configureSeat` doesn't invalidate the client's cached seat-readiness badge
+(UX staleness only, the eventual failure still surfaces honestly); a raw `forward_deliverable` WS
+command could reuse a stale cached deliverable after a later failed run (only reachable by a
+same-trust-tier client bypassing the UI's own disable logic, not a UI-triggerable path);
+`restart_orchestrator` doesn't await the old child's exit before spawning the new one (already
+covered by "last-writer-wins, fine for a debugging aid" reasoning on the tmp port/token files).
+
+Neither confirmed bug has an owner or a scheduled fix yet - flagging here rather than fixing
+unilaterally, both because a fix needs a real design call (finding 1 especially: relay-side change
+vs. PLAN.md wording change) and because this session doesn't want to touch shared files while
+Phase 3 Steps 3-4 are landing concurrently.
