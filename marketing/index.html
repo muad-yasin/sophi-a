@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sophi-A — The High Council</title>
+<meta name="description" content="Sophi-A: a Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<link rel="icon" type="image/svg+xml" href="../public/favicon.svg" />
+<style>
+  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-Regular.ttf") format("truetype"); font-weight: 400; }
+  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-Bold.ttf") format("truetype"); font-weight: 700; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("../src/fonts/IBMPlexSans/IBMPlexSans-Regular.ttf") format("truetype"); font-weight: 400; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("../src/fonts/IBMPlexSans/IBMPlexSans-Medium.ttf") format("truetype"); font-weight: 500; }
+
+  :root {
+    --bg: #0a0908;
+    --surface: #161511;
+    --surface-raised: #1b1815;
+    --border: #2a2620;
+    --text: #ece7db;
+    --text-secondary: #b3ac9c;
+    --gold: #c9a24d;
+    --gold-bright: #e9c97f;
+    --font-chrome: "Space Grotesk", -apple-system, "Segoe UI", sans-serif;
+    --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    padding: 96px 0 64px;
+    text-align: center;
+    position: relative;
+  }
+  .seal {
+    width: 260px;
+    height: 260px;
+    margin: 0 auto 12px;
+  }
+  h1.wordmark {
+    font-family: var(--font-chrome);
+    font-weight: 700;
+    font-size: 56px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .tagline {
+    font-size: 20px;
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin: 0 auto 28px;
+  }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    font-family: var(--font-chrome);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    border: 1px solid var(--border);
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    color: #1a1206;
+    border: none;
+  }
+  .btn-secondary { color: var(--text); background: var(--surface); }
+
+  section { padding: 64px 0; border-top: 1px solid var(--border); }
+  h2 {
+    font-family: var(--font-chrome);
+    font-weight: 600;
+    font-size: 30px;
+    margin: 0 0 12px;
+  }
+  .lede { color: var(--text-secondary); max-width: 660px; margin: 0 0 40px; font-size: 17px; }
+
+  .council-table {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .seat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .seat-card .sigil {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-chrome);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .seat-card .lab { font-family: var(--font-chrome); font-weight: 600; font-size: 15px; }
+  .seat-card .role { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .compare .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .compare .card h3 { font-family: var(--font-chrome); font-size: 16px; margin: 0 0 8px; }
+  .compare .card.theirs { opacity: 0.7; }
+  .compare .card.ours { border-color: var(--gold); }
+
+  .verdict-sample {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    font-family: "Space Grotesk", monospace;
+    font-size: 14px;
+  }
+  .verdict-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .verdict-row:last-child { border-bottom: none; }
+  .verdict-row .signoff-yes { color: #8fbf7a; }
+  .verdict-row .signoff-no { color: #d98a6b; }
+
+  footer { padding: 40px 0 80px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+  footer a { color: var(--gold-bright); }
+
+  @media (max-width: 640px) {
+    h1.wordmark { font-size: 38px; }
+    .compare { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="seal" src="../brand/council-seal.svg" alt="The Sophi-A High Council seal — five critic-lab seats ringed around the Sophi-A mark" />
+    <h1 class="wordmark">Sophi-A</h1>
+    <p class="tagline">Five labs review your plan before a line of code exists. Nothing builds until the Council signs off — or tells you exactly why it won't.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#council">Meet the Council</a>
+      <!-- TODO before deploy: github.com/muad-yasin/sophi-a is private today (DECISIONS.md,
+           2026-09-09) - point this at the real public URL once/if the repo goes public. -->
+      <a class="btn btn-secondary" href="#" rel="noopener">Read the source</a>
+    </div>
+  </div>
+</header>
+
+<section id="council">
+  <div class="wrap">
+    <h2>The High Council</h2>
+    <p class="lede">
+      Every <code>plan-N</code> seat drafts with one model (the Advocate — Claude, Anthropic) and
+      submits the draft to five critic seats from five other labs. Each one reviews it blind,
+      independently, on the record. The draft only ships once the Council signs off — or the run
+      records exactly who objected and why.
+    </p>
+    <div class="council-table">
+      <div class="seat-card">
+        <div class="sigil" style="background:#7a8fa622;color:#a9bacb;border:1px solid #7a8fa6">Qw</div>
+        <div class="lab">Qwen — Alibaba</div>
+        <div class="role">Council seat I · critic</div>
+      </div>
+      <div class="seat-card">
+        <div class="sigil" style="background:#8a9a7a22;color:#b3c2a8;border:1px solid #8a9a7a">GLM</div>
+        <div class="lab">GLM — Z.ai</div>
+        <div class="role">Council seat II · critic</div>
+      </div>
+      <div class="seat-card">
+        <div class="sigil" style="background:#a68a6b22;color:#c4ab8e;border:1px solid #a68a6b">Co</div>
+        <div class="lab">Command — Cohere</div>
+        <div class="role">Council seat III · critic</div>
+      </div>
+      <div class="seat-card">
+        <div class="sigil" style="background:#7a90a622;color:#a9bfd6;border:1px solid #7a90a6">Ge</div>
+        <div class="lab">Gemini — Google</div>
+        <div class="role">Council seat IV · critic</div>
+      </div>
+      <div class="seat-card">
+        <div class="sigil" style="background:#9a8a6b22;color:#c2b294;border:1px solid #9a8a6b">Ll</div>
+        <div class="lab">Llama — Meta</div>
+        <div class="role">Council seat V · critic</div>
+      </div>
+      <div class="seat-card" style="border-color:var(--gold)">
+        <div class="sigil" style="background:#c9a24d22;color:var(--gold-bright);border:1px solid var(--gold)">A</div>
+        <div class="lab">Claude — Anthropic</div>
+        <div class="role">the Advocate · presents to the Council</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What the run folder actually proves</h2>
+    <p class="lede">
+      This isn't a metaphor drawn over a chat completion — it's a real, structured verdict from
+      relay's own <code>report.json</code>, the same data the in-app Debate panel renders. A
+      sample shape from a real run:
+    </p>
+    <div class="verdict-sample">
+      <div class="verdict-row"><span>Qwen (Alibaba)</span><span class="signoff-yes">✓ signed off</span></div>
+      <div class="verdict-row"><span>GLM (Z.ai)</span><span class="signoff-yes">✓ signed off</span></div>
+      <div class="verdict-row"><span>Command (Cohere)</span><span class="signoff-no">✗ objected — missing rollback plan for migration step 3</span></div>
+      <div class="verdict-row"><span>Gemini (Google)</span><span class="signoff-yes">✓ signed off</span></div>
+      <div class="verdict-row"><span>Llama (Meta)</span><span class="signoff-yes">✓ signed off</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Not another parallel-session manager</h2>
+    <p class="lede">Conductor and Nimbalyst run several copies of the same agent and let a human pick the best result afterward. That's redundancy, not review.</p>
+    <div class="compare">
+      <div class="card theirs">
+        <h3>Parallel-session managers</h3>
+        <p>N copies of one agent, same lab, racing to the same answer. You review the output after it's already built.</p>
+      </div>
+      <div class="card ours">
+        <h3>Sophi-A's Council</h3>
+        <p>One proposer, five other labs' models cross-examining the plan before anything is built. Every objection is on the record.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Get Sophi-A</h2>
+    <p class="lede">Source is free and open (Apache-2.0). A packaged, ready-to-run build is €20, one-time — you bring your own provider keys.</p>
+    <!-- TODO before deploy: SHOP.md records the €20 price and that the real Stripe payment link
+         was created by hand in Muad's own dashboard, but does not record the link itself - this
+         page needs the real link pasted in before it ships anywhere real. -->
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#" rel="noopener">Get the packaged build — €20</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Sophi-A is built by Sower Industries. Apache-2.0 licensed.
+    See <a href="../brand/HIGH_COUNCIL.md">brand/HIGH_COUNCIL.md</a> for the full identity spec.
+  </div>
+</footer>
+
+</body>
+</html>

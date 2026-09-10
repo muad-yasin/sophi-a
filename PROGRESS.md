@@ -243,3 +243,19 @@
   hex values. Horizontal lockup now wired into the top of `README.md`; square lockup generated
   for a future Stripe product image / landing page but not wired anywhere yet (`SHOP.md`'s flow
   is still a bare payment link). See `brand/BRAND.md` for the full record.
+- 2026-09-10 - "The High Council" visual/marketing identity, at Muad's request. Names and gives a
+  face to `plan-N`'s real mechanism (one Advocate/Anthropic proposer, five critic seats from five
+  other labs - `relay/chains/plan-cheap.json`, already the "actual differentiator" identified in
+  `docs/market-positioning.md`), not a new feature. `brand/HIGH_COUNCIL.md`: the full spec -
+  who's really at the table, why sigils not logos (trademark risk, flagged not blocked per the
+  standing "move fast, flag later" call), five seat accent hues + geometric sigils, the Council
+  Seal composition, copy voice ("reviewed/objected/signed off," not "judged/decreed"). Built
+  `brand/council-seal.svg` (five-sigil ring around the untouched existing mark - GLM's sigil was
+  redesigned mid-pass from two overlapping triangles after it rendered as a Star of David
+  hexagram at preview size, an unintended resemblance worth catching before ship) and a first
+  landing page, `marketing/index.html` (static, self-contained, reuses the app's own fonts/
+  palette verbatim). Rendered and checked in a real browser end to end. Two placeholder links left
+  honestly marked in the HTML (source-code URL - the GitHub repo is private per DECISIONS.md
+  2026-09-09 - and the Stripe payment link, which SHOP.md records was created by hand but never
+  records the link itself) - both need a real URL pasted in before this deploys anywhere, not
+  invented here per the standing "don't guess URLs" rule.
