@@ -300,3 +300,19 @@
   untested content there risked a regression nobody would catch without re-testing live.
   Verified: the actual root-resolved CLAUDE.md path loads correctly (5745 chars, confirmed via a
   direct module import, not just read-and-assume), npx tsc --noEmit and node --check both clean.
+- 2026-09-10 - Safe markdown + syntax-highlighted rendering for seat output, closing the gap
+  named while answering "how does a GUI beat a terminal": every seat's output previously rendered
+  via flat `textContent` - a deliberate security choice (no HTML execution from untrusted model
+  text - docs/security-prompt-injection.md), but it also meant the GUI's own output panes read
+  worse than a themed terminal. New `src/seatOutputRender.ts`: marked (parse) -> DOMPurify
+  (sanitize, strict tag/attribute allowlist, http(s)/mailto-only links, forced
+  target=_blank/rel=noopener noreferrer nofollow, href shown as title) -> safe innerHTML, then
+  highlight.js (trimmed to highlight.js/lib/core + ~10 registered languages, not the ~1MB
+  full-language default - cut the bundle from 1009KB to 150KB). No `<img>` in the allowlist on
+  purpose - a model tricked into emitting an image URL with embedded data is a real zero-click
+  exfiltration vector, not a hypothetical one, given this UI's own threat model. Verified for
+  real: injected an actual `<script>`, an `onerror` image, and a `javascript:` link through the
+  real render path in a running dev build - all three neutralized (confirmed via a window-global
+  side-channel check, not just eyeballing markup) - while headings/bold/lists/code/safe links
+  and syntax highlighting (Python + JS, cross-checked) all rendered correctly. npx tsc --noEmit
+  and a real `vite build` both clean.

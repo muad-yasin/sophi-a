@@ -329,6 +329,79 @@ body {
   line-height: 1.4;
 }
 
+/* Rendered seat output (src/seatOutputRender.ts) - markdown -> DOMPurify-sanitized HTML, replacing
+   the old flat textContent. Kept inside the same clamped box as before (a seat pane is a live
+   status glance, not a transcript reader - see DECISIONS.md on the output model being
+   single-slot, not an append log); headings/lists/code just read better within that same space
+   now instead of arriving as unbroken prose. */
+.tile-output :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 var(--sp-1);
+  font-family: var(--font-chrome);
+  font-weight: var(--font-chrome-weight);
+  color: var(--text-primary);
+}
+.tile-output p,
+.tile-output ul,
+.tile-output ol,
+.tile-output blockquote,
+.tile-output table {
+  margin: 0 0 var(--sp-2);
+}
+.tile-output ul,
+.tile-output ol {
+  padding-left: var(--sp-4);
+}
+.tile-output blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: var(--sp-2);
+  color: var(--text-placeholder);
+}
+.tile-output code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--surface-modal);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.tile-output pre {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-2);
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+.tile-output pre code {
+  background: none;
+  padding: 0;
+}
+.tile-output table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.tile-output th,
+.tile-output td {
+  border: 1px solid var(--border);
+  padding: 2px var(--sp-2);
+  text-align: left;
+}
+.tile-output a {
+  color: var(--accent-bright);
+}
+
+/* highlight.js token colors, hand-mapped to the existing palette instead of importing an
+   external theme file - a handful of hue-distinct roles (keyword/string/comment/number/title),
+   not a full port of any one hljs theme, kept small on purpose. */
+.tile-output .hljs-keyword,
+.tile-output .hljs-built_in { color: var(--accent-bright); }
+.tile-output .hljs-string,
+.tile-output .hljs-attr { color: var(--status-idle); }
+.tile-output .hljs-comment { color: var(--text-placeholder); font-style: italic; }
+.tile-output .hljs-number,
+.tile-output .hljs-literal { color: var(--gold-bright); }
+.tile-output .hljs-title,
+.tile-output .hljs-section { color: var(--gold); }
+
 .tile-output.placeholder {
   color: var(--text-placeholder);
   font-style: italic;

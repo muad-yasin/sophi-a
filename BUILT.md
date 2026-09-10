@@ -193,3 +193,18 @@
   five seat hues (pairwise sRGB distance) plus an 80px render-and-upscale check - both documented
   with real numbers in brand/HIGH_COUNCIL.md. Second near-identical hue pair found (Cohere/Llama)
   beyond the already-known Qwen/Gemini one. Verified in a running dev build in Chrome.
+- 2026-09-10 - Safe markdown + syntax highlighting for seat output. New
+  `src/seatOutputRender.ts` (`renderSeatOutput`): marked -> DOMPurify (ALLOWED_TAGS/ALLOWED_ATTR
+  allowlist, an `afterSanitizeAttributes` hook restricting `<a href>` to http(s)/mailto and
+  forcing target/rel/title) -> innerHTML, then `highlight.js/lib/core` with ~10 explicitly
+  registered languages (js/ts/python/rust/bash/json/yaml/css/html/markdown, not the full
+  1MB-plus default language set). `src/main.ts`'s `setOutput` now calls this instead of
+  `output.textContent = text` - the single call site every `seat.output`/`seat.idle`/
+  `seat.problem` event already funneled through, per PLAN.md's status/event model.
+  `src/styles.css`: markdown element styles (headings/lists/code/tables/blockquote) plus a small
+  hand-mapped set of `.hljs-*` token colors keyed to the existing palette, not an imported theme
+  file. `echoTask` (the operator's own text, not model output) deliberately left on
+  `textContent` - no reason to markdown-render your own typed task. Verified live in a running
+  dev build: real `<script>`/`onerror`/`javascript:` payloads all neutralized (window-global
+  side-channel check), safe content (headings/bold/lists/fenced code in two languages/links)
+  all rendered correctly, `npx tsc --noEmit` and `vite build` both clean.

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { renderSeatOutput } from "./seatOutputRender";
 
 type SeatEventType =
   | "seat.start"
@@ -199,9 +200,9 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
 function setOutput(seatId: string, text: string) {
   const tile = tileEl(seatId);
   if (!tile) return;
-  const output = tile.querySelector('[data-role="output"]');
+  const output = tile.querySelector<HTMLElement>('[data-role="output"]');
   if (!output) return;
-  output.textContent = text;
+  renderSeatOutput(output, text);
   output.classList.remove("placeholder");
 }
 
