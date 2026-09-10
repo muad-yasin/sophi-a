@@ -68,6 +68,17 @@ recompile, and nothing is scheduled against it yet. iOS carries an extra constra
 client wouldn't escape (App Store Review Guideline 2.5.2). Full reasoning, independently argued
 for each platform: `PLAN_PACKAGING.md` §3 (Android) and §3.1 (iOS).
 
+## How this was built
+
+Vibecoded end-to-end with Claude Code, with each of Sophi-A's own three planning seats' plans
+critiqued blind by the same kind of multi-lab relay chain the product ships (see "The Council,
+in the product itself" above) before a building seat wrote code. `PROGRESS.md`, `BUILT.md`, and
+`DECISIONS.md` are the dated, unedited build log - not a summary written after the fact.
+
+One concrete decision from that log: xai/Grok is deliberately absent from the allowed-provider
+list in `src/orchestrator/providers.js`, on the author's own explicit instruction, and is checked
+before any API call rather than merely omitted from a UI dropdown (`DECISIONS.md`, 2026-09-09).
+
 ## License
 
 Apache-2.0 (`LICENSE`). The source is the product's own advertisement, not a teaser for the paid
