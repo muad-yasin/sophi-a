@@ -103,13 +103,23 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
     return fresh;
   }
 
+  // docs/security-prompt-injection.md S3/P2: a critic's problem/criterion text is entirely
+  // that lab's own, unfiltered - truncated and framed as quoted third-party speech ("X said:")
+  // rather than left to read as plain product prose, and capped so one long objection can't
+  // fill the whole tile.
+  const FAILURE_PREVIEW_CHARS = 240;
+  function quoteFailure(f) {
+    const text = f.problem || f.criterion || '(no reason recorded)';
+    const truncated = text.length > FAILURE_PREVIEW_CHARS ? `${text.slice(0, FAILURE_PREVIEW_CHARS)}…` : text;
+    return f.lab ? `${f.lab} said: "${truncated}"` : `"${truncated}"`;
+  }
+
   // A short, human-readable summary of report.json's open objections, for the operator
   // to read via the advisor pane or the C&C chat (PLAN.md's seat.problem detail).
   function summarizeFailures(report) {
     const failures = report.lastCritique?.failures;
     if (Array.isArray(failures) && failures.length) {
-      return `relay run ${runId} finished without sign-off: ` +
-        failures.map(f => `${f.lab ? `${f.lab}: ` : ''}${f.problem || f.criterion}`).join('; ');
+      return `relay run ${runId} finished without sign-off: ${failures.map(quoteFailure).join('; ')}`;
     }
     return `relay run ${runId} finished without sign-off (report.json passed: false), no specific objections recorded`;
   }
@@ -122,7 +132,10 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
     }
     for (const line of readNewLogLines()) {
       emit('seat.working');
-      emit('seat.output', line);
+      // docs/security-prompt-injection.md S3/P2: relay writes critic verdict lines into its own
+      // run.log (relay/src/chain.js), so this line can be a critic's own text, unlabelled,
+      // reaching the tile live. Prefix it so it never passes for this product's own output.
+      emit('seat.output', `relay: ${line}`);
     }
     const reportPath = join(runDir, 'report.json');
     if (existsSync(reportPath)) {

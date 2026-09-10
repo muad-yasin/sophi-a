@@ -156,3 +156,20 @@
   tile, fetched once per seat per session and cached. Verified the parser byte-for-byte against
   relay's real `plan-cheap` CLI output ($1.75/run, 11 rows) and the full WS round-trip against a
   standalone orchestrator instance. See DECISIONS.md for full detail.
+- 2026-09-09 - Security hardening (`docs/security-prompt-injection.md`). `index.js`: `AUTH_TOKEN`
+  (random per-launch, `randomBytes(32)`) + `ALLOWED_ORIGINS` gate every WS connection before any
+  `cmd` is dispatched; `broadcast` only sends to authenticated clients; port/token files in
+  `tmpdir()` now mode `0o600`; `sensitivePathsSweep` hashes `CLAUDE.md`/`.claude`/`.mcp.json`
+  per builder workdir across turns and emits a `seat.output` warning on change;
+  `handleAdvisorRecommend` wraps builder/operator text in `<builder trust="...">`/
+  `<operator-task trust="...">` tags with quote/whitespace escaping; `configureSeat` calls the
+  new `clearHistory` (messagesApi.js) on a provider swap. `lib.rs`: `get_orchestrator_token`
+  command, token read from the child's `TOKEN:` stdout line alongside the existing `PORT:` line.
+  `main.ts`: sends `{cmd:'auth', token}` as the first frame on every connect, before anything
+  else. `src/mcp/server.js`: reads the token file and auths the same way. Also rendered
+  `debate.report`'s scoreboard data (per-lab accepted/proposed bar), which reached the event
+  type earlier but was never actually drawn, and truncated/hover-expandable failure text in the
+  same panel (critic text is third-party speech, not product copy). Verified: `npx tsc --noEmit`
+  and `cargo check` both clean; no live-window run this pass (same port-1420 constraint noted
+  elsewhere in this file for concurrent-session UI work) - token/handshake path hand-verified
+  end to end across all four files instead.

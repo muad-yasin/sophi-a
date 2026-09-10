@@ -9,13 +9,20 @@
   </head>
 
   <body>
-    <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
-      Setup
-    </button>
-
-    <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
-      Run history
-    </button>
+    <header class="app-header">
+      <div class="app-brand" aria-hidden="true">
+        <img class="app-brand-mark" src="/favicon.svg" alt="" />
+        <span class="app-brand-name">Sophi-A</span>
+      </div>
+      <div class="app-header-actions">
+        <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
+          Run history
+        </button>
+        <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
+          Setup
+        </button>
+      </div>
+    </header>
 
     <div id="history-panel" class="setup-panel history-panel" role="dialog" aria-labelledby="history-panel-title" hidden>
       <div class="setup-panel-header">
@@ -34,11 +41,15 @@
 
       <section class="setup-section">
         <h3>Claude Code CLI</h3>
-        <p class="setup-hint">Needed for <code>cnc</code>/<code>build-1..3</code> on Anthropic - Sophi-A runs your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
+        <p class="setup-hint">This is the recommended path, not just one option among many: <code>cnc</code> and all three building seats are built specifically to run real Claude Code - your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
         <div class="setup-cli-row">
           <button type="button" id="setup-check-cli" class="btn">Check</button>
           <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">Not checked yet</span>
         </div>
+        <p id="setup-cli-install-hint" class="setup-hint setup-cli-install-hint" hidden>
+          Don't have it yet? It installs in one line -
+          <a href="https://code.claude.com/docs/en/quickstart" target="_blank" rel="noopener noreferrer">the real quickstart, no detour</a>.
+        </p>
       </section>
 
       <section class="setup-section">
@@ -132,6 +143,7 @@
         <div class="debate-panel" data-role="debate-panel" hidden>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
         </div>
       </section>
@@ -159,6 +171,7 @@
         <div class="debate-panel" data-role="debate-panel" hidden>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
         </div>
       </section>
@@ -186,6 +199,7 @@
         <div class="debate-panel" data-role="debate-panel" hidden>
           <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
           <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
           <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
         </div>
       </section>

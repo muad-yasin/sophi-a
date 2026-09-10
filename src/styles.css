@@ -130,6 +130,11 @@ body {
   font-weight: var(--font-body-weight);
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+}
+
 #root,
 body {
   height: 100%;
@@ -187,7 +192,8 @@ body {
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-rows: auto 1fr;
   gap: var(--sp-4);
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   padding: var(--sp-4);
 }
 
@@ -519,13 +525,55 @@ body {
   white-space: nowrap;
 }
 
+/* --- app header: brand + setup/history actions, one real row in normal flow - previously two
+   separate `position: fixed` floaters (the brand badge added 2026-09-10, the setup/history
+   buttons from before) that both overlapped the advisor tile's own top edge, found live via a
+   static-fixture screenshot before this ever reached the real app. A real header row, not a
+   floating badge, is the actual fix - `.grid` below gives up its old `height: 100vh` for
+   `flex: 1` so this row gets real space instead of being drawn over. `position: relative` +
+   z-index keeps it visible above the fixed `#connecting` overlay (z-index 10) during startup,
+   matching the setup/history buttons' pre-existing "usable even while connecting" behavior. */
+.app-header {
+  position: relative;
+  z-index: 20;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+
+.app-brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.app-brand-name {
+  font-family: var(--font-chrome);
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
 /* --- setup panel: onboarding (API keys, claude CLI check) --- */
 
 .setup-toggle {
-  position: fixed;
-  top: var(--sp-3);
-  right: var(--sp-3);
-  z-index: 30;
   font-family: var(--font-chrome);
   font-size: var(--font-chrome-size);
   font-weight: var(--font-chrome-weight);
@@ -597,6 +645,14 @@ body {
 .setup-hint code {
   font-family: var(--font-chrome);
   color: var(--text-primary);
+}
+
+.setup-cli-install-hint {
+  margin-top: var(--sp-2);
+}
+
+.setup-hint a {
+  color: var(--gold-bright);
 }
 
 .setup-cli-row {
@@ -892,12 +948,8 @@ body {
 }
 
 /* --- run history panel (reuses .setup-panel's positioning/box, own content) --- */
-
-.history-toggle {
-  /* sits left of the Setup button - wider text ("Run history" vs "Setup"), so a generous offset
-     rather than a measured one, since this can't be checked visually in this sandbox */
-  right: 140px;
-}
+/* .history-toggle's own fixed-offset positioning is gone - both buttons now sit in
+   .app-header-actions, a normal flexbox row, so their order/gap is real layout, not math. */
 
 .history-list {
   list-style: none;
@@ -938,6 +990,7 @@ body {
 }
 
 .debate-signoff-list,
+.debate-scoreboard-list,
 .debate-failure-list {
   list-style: none;
   margin: 0;
@@ -945,6 +998,42 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
+}
+
+.debate-scoreboard-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 40px;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.debate-scoreboard-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debate-scoreboard-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-modal);
+  overflow: hidden;
+}
+
+.debate-scoreboard-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+}
+
+.debate-scoreboard-count {
+  font-family: var(--font-chrome);
+  text-align: right;
+  color: var(--text-primary);
 }
 
 .debate-signoff-row {

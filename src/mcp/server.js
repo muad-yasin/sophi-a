@@ -21,6 +21,10 @@ import { join } from 'node:path';
 import WebSocket from 'ws';
 
 const PORT_FILE = join(tmpdir(), 'sophia-orchestrator-port');
+// docs/security-prompt-injection.md S0/P0: the orchestrator now requires an auth handshake
+// before it dispatches anything - this file is mode 0o600 (index.js writes both with that mode),
+// unlike the port number, since this one actually is the secret.
+const TOKEN_FILE = join(tmpdir(), 'sophia-orchestrator-token');
 const SEAT_IDS = ['cnc', 'advisor', 'plan-1', 'plan-2', 'plan-3', 'build-1', 'build-2', 'build-3'];
 
 // Mirrors main.ts's own in-memory tile state, kept here instead - one persistent WS connection
@@ -41,15 +45,26 @@ function readPort() {
   }
 }
 
+function readToken() {
+  try {
+    const raw = readFileSync(TOKEN_FILE, 'utf8').trim();
+    return raw || null;
+  } catch {
+    return null;
+  }
+}
+
 function connect() {
   if (connecting || (ws && ws.readyState === WebSocket.OPEN)) return;
   const port = readPort();
-  if (!port) return; // no orchestrator running (or not yet written its port file)
+  const token = readToken();
+  if (!port || !token) return; // no orchestrator running (or not yet written its port/token files)
   connecting = true;
   const socket = new WebSocket(`ws://127.0.0.1:${port}`);
   socket.on('open', () => {
     connecting = false;
     ws = socket;
+    ws.send(JSON.stringify({ cmd: 'auth', token }));
   });
   socket.on('message', raw => {
     let evt;

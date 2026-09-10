@@ -4,13 +4,14 @@
 // port to stdout as `PORT:<port>` so the shell can read it and hand it to the frontend, then
 // dispatches seat start/stop commands to the invocation-mode-specific adapter and rebroadcasts
 // every seat event (PLAN.md "Status/event model": seat.start/working/output/idle/problem).
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSubprocess.js';
-import { startMessagesApiSeat } from './adapters/messagesApi.js';
+import { startMessagesApiSeat, clearHistory } from './adapters/messagesApi.js';
 import { startRelayChainSeat, resolveRelayPath } from './adapters/relayChainSubprocess.js';
 import { isAllowedProvider } from './providers.js';
 import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash } from './compareSnapshot.js';
@@ -30,10 +31,13 @@ const adapters = {
   'relay-chain-subprocess': { start: startRelayChainSeat, stop: null },
 };
 
+// docs/security-prompt-injection.md S0/P0: only ever broadcast to a client that has completed
+// the auth handshake in main()'s connection handler below - an unauthenticated socket sitting in
+// wss.clients during its (short) auth window must never receive real seat data either.
 function broadcast(wss, event) {
   const msg = JSON.stringify(event);
   for (const client of wss.clients) {
-    if (client.readyState === client.OPEN) client.send(msg);
+    if (client.readyState === client.OPEN && client.authenticated) client.send(msg);
   }
 }
 
@@ -59,12 +63,55 @@ function effectiveInvocationMode(seat) {
   return seat.invocation_mode;
 }
 
+// docs/security-prompt-injection.md S1/P1 persistence sweep: a builder (or cnc) can write
+// CLAUDE.md/.claude/.mcp.json into its own workdir - .workdirs/ is gitignored, so this never
+// shows up in a diff, and CLAUDE.md/.claude/settings.json are auto-loaded by the CLI on every
+// later turn, including across --resume. That's a real way for an injected instruction to
+// outlive the turn that planted it. This does not block the start (a real task can legitimately
+// ask a seat to write one of these) - it surfaces a visible warning on the tile instead, which is
+// the point: today this would happen completely silently.
+const SENSITIVE_PATHS = ['CLAUDE.md', '.claude', '.mcp.json'];
+const lastSensitiveFingerprint = new Map(); // seatId -> JSON string, previous turn's snapshot
+
+function hashPath(full) {
+  if (!existsSync(full)) return null;
+  const stat = statSync(full);
+  if (stat.isDirectory()) {
+    const parts = readdirSync(full, { recursive: true }).sort().map(name => {
+      const entryPath = join(full, name);
+      try {
+        return `${name}:${statSync(entryPath).isFile() ? createHash('sha256').update(readFileSync(entryPath)).digest('hex') : 'dir'}`;
+      } catch {
+        return `${name}:unreadable`;
+      }
+    });
+    return parts.join('|');
+  }
+  return createHash('sha256').update(readFileSync(full)).digest('hex');
+}
+
+function sensitivePathsSweep(seatId, workdir, emit) {
+  const fingerprint = {};
+  for (const relPath of SENSITIVE_PATHS) fingerprint[relPath] = hashPath(join(workdir, relPath));
+  const current = JSON.stringify(fingerprint);
+  const previous = lastSensitiveFingerprint.get(seatId);
+  lastSensitiveFingerprint.set(seatId, current);
+  if (previous === undefined || previous === current) return; // first-ever start, or no change
+  const changed = SENSITIVE_PATHS.filter(p => JSON.parse(previous)[p] !== fingerprint[p]);
+  emit('seat.output', `⚠ persistence check: ${changed.join(', ')} changed inside this seat's ` +
+    `workdir since its last turn - these are auto-loaded on every future turn, including across ` +
+    `--resume. Verify this was intentional before continuing.`);
+}
+
 export function startSeat(wss, seatId, task) {
   const seat = seats[seatId];
   if (!seat) throw new Error(`Unknown seat: ${seatId}`);
   const mode = effectiveInvocationMode(seat);
   const adapter = adapters[mode];
   if (!adapter) throw new Error(`No adapter for invocation_mode: ${mode}`);
+  if (mode === 'claude-code-subprocess' && seat.workdir) {
+    sensitivePathsSweep(seatId, join(root, seat.workdir), makeEmit(wss, seatId));
+  }
   return adapter.start(seatId, seat, task, makeEmit(wss, seatId));
 }
 
@@ -174,10 +221,12 @@ function handleGetDiff(ws, seatId, path) {
 const COMPARE_RECORDS_DIR = join(root, '.workdirs', '.compare');
 
 // §5 is explicit: "the select_winner write path rejects any call that did not originate from a
-// frontend human click event" - humanClick is that flag. Every WS command in this file is
-// already only ever sent from a real UI action today, so this is defense-in-depth against a
-// future caller (another tool, a script, a later automation) picking a winner without a human -
-// not a defense against anything that can reach this code path right now.
+// frontend human click event" - humanClick is that flag. Updated per
+// docs/security-prompt-injection.md's P0 fix: this used to be honestly documented as
+// defense-in-depth against nothing, since any caller could set humanClick: true itself - now
+// that main()'s connection handler requires a real per-launch token before any command (including
+// this one) is even dispatched, humanClick is a genuine audit field (did the UI mean to send
+// this?) layered on top of a real access-control check, not a substitute for one.
 function handleSelectWinner(wss, seatId, humanClick) {
   if (humanClick !== true) {
     console.error('select_winner rejected: missing human-click origin flag');
@@ -206,7 +255,7 @@ function handleSelectWinner(wss, seatId, humanClick) {
 
 // Disposition (§5): retained in place, unconditionally, until a human explicitly deletes it -
 // never moved, renamed, or auto-deleted by anything else in this file. Same human-click guard as
-// select_winner, for the same reason.
+// select_winner, same updated reasoning: an audit field now, not the access control - see there.
 function handleDeleteWorkdir(seatId, humanClick) {
   if (humanClick !== true) {
     console.error('delete_workdir rejected: missing human-click origin flag');
@@ -262,6 +311,12 @@ function handleAdvisorRecommend(wss, seatId) {
   // "added impl.py") even when their content is completely different - found by actually running
   // this and watching advisor correctly decline to guess, rather than assumed up front.
   const PREVIEW_CHARS = 200;
+  // docs/security-prompt-injection.md S2/P1: this text is what the *builder's own* Claude Code
+  // wrote - model output, possibly itself downstream of an injected task - spliced raw into
+  // advisor's prompt with no delimiter or "untrusted" framing before this fix. Escaping `"` and
+  // collapsing whitespace (including newlines) keeps a stray quote or line break in file content
+  // from reading as if it closes the block early or starts a fresh, unquoted section.
+  const escapePreview = text => text.replace(/\s+/g, ' ').replace(/"/g, '”').trim();
   const summaries = unique.map(seatId => {
     const workdir = seats[seatId]?.workdir;
     const result = workdir ? changedSinceSnapshot(join(root, workdir)) : null;
@@ -271,19 +326,21 @@ function handleAdvisorRecommend(wss, seatId) {
       try {
         const full = join(root, workdir, c.path);
         const text = readFileSync(full, 'utf8').slice(0, PREVIEW_CHARS);
-        preview = ` -> "${text.replace(/\s+/g, ' ').trim()}${text.length === PREVIEW_CHARS ? '...' : ''}"`;
+        preview = ` -> "${escapePreview(text)}${text.length === PREVIEW_CHARS ? '...' : ''}"`;
       } catch {
         // binary or unreadable - status/path alone is still better than nothing
       }
       return `${c.status} ${c.path}${preview}`;
     }).join('; ') || '(no changes recorded)';
-    return `${seatId} changed: ${files}`;
+    return `<builder seatId="${seatId}" trust="untrusted-model-output">${seatId} changed: ${files}</builder>`;
   });
   // Found by actually running this and reading the reply: without the original task text,
   // advisor correctly refused to guess which result was "right" rather than fabricate a
-  // preference - honest, but not useful. Including it is the fix, not a design change.
-  const task = `The task given to each builder was: "${group.task}"\n\nCompare what each one ` +
-    `actually did and give your one-line recommendation.\n\n${summaries.join('\n')}`;
+  // preference - honest, but not useful. Including it is the fix, not a design change. It's
+  // wrapped the same way as the builder blocks above (S2/P1) - the operator's own text, but it
+  // arrived over the same socket as everything else, so it gets the same explicit framing.
+  const task = `<operator-task trust="operator-text">${escapePreview(group.task)}</operator-task>\n\n` +
+    `Compare what each builder actually did and give your one-line recommendation.\n\n${summaries.join('\n')}`;
   startMessagesApiSeat('advisor', seats.advisor, task, makeEmit(wss, 'advisor'), 'compare');
 }
 
@@ -323,6 +380,9 @@ export function configureSeat(seatId, { provider, model } = {}) {
       console.error(`configure rejected: provider "${provider}" is not in cnc-harness's allowed-provider list`);
       return;
     }
+    // docs/security-prompt-injection.md S2/P2: a provider swap must not replay one provider's
+    // turns as standing context to a different provider.
+    if (provider !== seat.provider) clearHistory(seatId);
     seat.provider = provider;
   }
   if (model !== undefined && model !== '') {
@@ -334,17 +394,71 @@ export function getStatus(seatId) {
   return status.get(seatId);
 }
 
+// docs/security-prompt-injection.md S0/P0: before this, the WebSocket had no Origin check and no
+// token, so any local process (the port file was world-readable, precisely so a legitimate
+// client - src/mcp/server.js - could find it) or any web page in any browser (browsers allow
+// `new WebSocket("ws://127.0.0.1:<port>")` from any origin) could send `{cmd:'start', ...}` and
+// run a real claude subprocess, or spend real money on a relay chain, on the operator's machine.
+// A random per-launch token closes both: only a process that can read the token file (mode
+// 0o600, unlike the port file) or the Tauri frontend (which receives it over the app's own IPC,
+// never the network) can ever complete the handshake below.
+const AUTH_TOKEN = randomBytes(32).toString('hex');
+const AUTH_TIMEOUT_MS = 5_000;
+
+// Origin check is a second, independent layer for the browser-page vector specifically - a
+// non-browser client (a plain WebSocket from a script or from src/mcp/server.js) sends no Origin
+// header at all, so origin alone could never be the real gate; the token above is that gate for
+// every client. `tauri://localhost` is the packaged app's own webview origin; the dev-server
+// origin covers `npm run tauri dev`.
+const ALLOWED_ORIGINS = new Set(['tauri://localhost', 'http://localhost:1420']);
+
 function main() {
   const wss = new WebSocketServer({ host: '127.0.0.1', port: 0 });
 
-  wss.on('connection', ws => {
-    // Replay current status of every seat so a client connecting mid-session renders correctly.
-    for (const [seatId, st] of status) {
-      ws.send(JSON.stringify({ type: `seat.${st}`, seatId, timestamp: Date.now() }));
+  wss.on('connection', (ws, req) => {
+    const origin = req.headers.origin;
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+      ws.close(1008, 'origin not allowed');
+      return;
     }
+
+    ws.authenticated = false;
+    const authTimer = setTimeout(() => {
+      if (!ws.authenticated) ws.close(1008, 'auth timeout');
+    }, AUTH_TIMEOUT_MS);
+
     ws.on('message', raw => {
       let msg;
       try { msg = JSON.parse(raw.toString()); } catch { return; }
+
+      if (!ws.authenticated) {
+        if (msg.cmd === 'auth' && msg.token === AUTH_TOKEN) {
+          ws.authenticated = true;
+          clearTimeout(authTimer);
+          // Replay current status of every seat now that this client is real, so it renders
+          // correctly even if it connected mid-session.
+          for (const [seatId, st] of status) {
+            ws.send(JSON.stringify({ type: `seat.${st}`, seatId, timestamp: Date.now() }));
+          }
+        } else {
+          ws.close(1008, 'unauthenticated');
+        }
+        return; // the first frame is always the auth handshake, never a real command too
+      }
+
+      // docs/security-prompt-injection.md S2 "forward" rule - read this before adding any new
+      // `cmd` here that feeds one seat's output into another seat's `task` or system prompt
+      // (the first candidates: a plan-N deliverable into build-N, or advisor's reply into cnc).
+      // Seat output is real model text, possibly downstream of an injected instruction three
+      // hops back (a relay critic, a builder, another provider). Before wiring that kind of
+      // command: (a) wrap the source text in a delimiter + role marker naming it as untrusted
+      // model output from a named seat (see handleAdvisorRecommend's <builder trust="..."> tags
+      // above for the pattern), (b) require a human confirmation step, backend-enforced like
+      // start_many's `confirmed` flag below - not a UI courtesy - for anything that ends in a
+      // claude-code-subprocess seat (the only kind that can act on it), and (c) cap the size of
+      // what gets concatenated in. Skipping any of the three turns this dispatcher into the
+      // single easiest place in the product for a "please also update the orchestrator" line to
+      // hide.
       if (msg.cmd === 'start') startSeat(wss, msg.seatId, msg.task);
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
       else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
@@ -361,16 +475,20 @@ function main() {
 
   wss.on('listening', () => {
     const { port } = wss.address();
-    // The Tauri shell reads this exact line from stdout to discover the ephemeral port.
+    // The Tauri shell reads these exact lines from stdout to discover the ephemeral port/token.
     console.log(`PORT:${port}`);
-    // Also drop it in a well-known file so src/mcp/server.js (a separate process, not spawned by
-    // Tauri) can find the same running orchestrator without the user copying a port number by
-    // hand. Last-writer-wins if more than one instance is running - fine for a debugging aid, not
+    console.log(`TOKEN:${AUTH_TOKEN}`);
+    // Also drop them in well-known files so src/mcp/server.js (a separate process, not spawned by
+    // Tauri) can find the same running orchestrator without the user copying anything by hand.
+    // The token file is mode 0o600 (owner-only) - unlike the port number, it's the actual secret,
+    // so it does not get the port file's "world-readable, it's just a number" treatment.
+    // Last-writer-wins if more than one instance is running - fine for a debugging aid, not
     // meant to arbitrate between concurrent instances.
     try {
-      writeFileSync(join(tmpdir(), 'sophia-orchestrator-port'), String(port));
+      writeFileSync(join(tmpdir(), 'sophia-orchestrator-port'), String(port), { mode: 0o600 });
+      writeFileSync(join(tmpdir(), 'sophia-orchestrator-token'), AUTH_TOKEN, { mode: 0o600 });
     } catch {
-      // non-fatal - the MCP server just won't find a port to connect to
+      // non-fatal - the MCP server just won't find a port/token to connect with
     }
   });
 }

@@ -267,10 +267,12 @@ let everConnected = false;
 
 async function connect() {
   let port: number;
+  let token: string;
   try {
     port = await invoke<number>("get_orchestrator_port");
+    token = await invoke<string>("get_orchestrator_token");
   } catch (err) {
-    debugLog(`invoke(get_orchestrator_port) failed: ${String(err)}`);
+    debugLog(`invoke(get_orchestrator_port/token) failed: ${String(err)}`);
     scheduleReconnect();
     return;
   }
@@ -285,6 +287,9 @@ async function connect() {
 
   ws.addEventListener("open", () => {
     clearTimeout(watchdog);
+    // docs/security-prompt-injection.md S0/P0: the orchestrator drops every frame until this
+    // exact handshake succeeds - always send it first, before anything else on this socket.
+    ws.send(JSON.stringify({ cmd: "auth", token }));
     attempt = 0;
     everConnected = true;
     currentWs = ws;
@@ -661,11 +666,13 @@ function renderDebatePanel(seatId: string) {
   const tile = tileEl(seatId);
   const empty = tile?.querySelector<HTMLElement>('[data-role="debate-empty"]');
   const signoffList = tile?.querySelector<HTMLUListElement>('[data-role="debate-signoff-list"]');
+  const scoreboardList = tile?.querySelector<HTMLUListElement>('[data-role="debate-scoreboard-list"]');
   const failureList = tile?.querySelector<HTMLUListElement>('[data-role="debate-failure-list"]');
-  if (!tile || !empty || !signoffList || !failureList) return;
+  if (!tile || !empty || !signoffList || !scoreboardList || !failureList) return;
 
   const report = debateCache.get(seatId);
   signoffList.innerHTML = "";
+  scoreboardList.innerHTML = "";
   failureList.innerHTML = "";
 
   if (!report) {
@@ -688,10 +695,41 @@ function renderDebatePanel(seatId: string) {
     signoffList.appendChild(li);
   }
 
+  // relayChainSubprocess.js's own comment: report.json already has the scoreboard data a real
+  // "who objected, what got overruled" UI needs - it reached this event's type definition but
+  // was never actually rendered until now. A bar (accepted/proposed), not just a fraction, since
+  // "3/5" alone doesn't show at a glance whether that's a strong or weak lab performance.
+  for (const l of report.scoreboard?.labs ?? []) {
+    const li = document.createElement("li");
+    li.className = "debate-scoreboard-row";
+    const labelEl = document.createElement("span");
+    labelEl.className = "debate-scoreboard-label";
+    labelEl.textContent = l.lab;
+    const barEl = document.createElement("span");
+    barEl.className = "debate-scoreboard-bar";
+    const fillEl = document.createElement("span");
+    fillEl.className = "debate-scoreboard-fill";
+    const pct = l.proposed > 0 ? Math.round((l.accepted / l.proposed) * 100) : 0;
+    fillEl.style.width = `${pct}%`;
+    barEl.appendChild(fillEl);
+    const countEl = document.createElement("span");
+    countEl.className = "debate-scoreboard-count";
+    countEl.textContent = `${l.accepted}/${l.proposed}`;
+    li.append(labelEl, barEl, countEl);
+    scoreboardList.appendChild(li);
+  }
+
+  // docs/security-prompt-injection.md S3/P2: problem/criterion is a critic's own, unfiltered
+  // text - quoted and truncated so it reads as third-party speech, not this product's own UI
+  // copy; the full text is still one hover away via `title` rather than silently dropped.
+  const FAILURE_PREVIEW_CHARS = 240;
   for (const f of report.failures ?? []) {
     const li = document.createElement("li");
     li.className = "debate-failure-row";
-    li.textContent = `${f.lab ? `${f.lab}: ` : ""}${f.problem ?? f.criterion ?? "(no reason recorded)"}`;
+    const text = f.problem ?? f.criterion ?? "(no reason recorded)";
+    const truncated = text.length > FAILURE_PREVIEW_CHARS ? `${text.slice(0, FAILURE_PREVIEW_CHARS)}…` : text;
+    li.textContent = f.lab ? `${f.lab} said: "${truncated}"` : `"${truncated}"`;
+    if (text.length > FAILURE_PREVIEW_CHARS) li.title = text;
     failureList.appendChild(li);
   }
 }
@@ -907,6 +945,7 @@ function setupSetupPanel() {
   const closeBtn = document.getElementById("setup-close");
   const checkCliBtn = document.getElementById("setup-check-cli");
   const cliStatus = document.getElementById("setup-cli-status");
+  const cliInstallHint = document.getElementById("setup-cli-install-hint");
   const restartBtn = document.getElementById("setup-restart");
   const restartStatus = document.getElementById("setup-restart-status");
   if (!toggle || !panel) return;
@@ -932,9 +971,14 @@ function setupSetupPanel() {
       const version = await invoke<string>("check_claude_cli");
       cliStatus.textContent = `Found: ${version}`;
       cliStatus.dataset.state = "ok";
+      if (cliInstallHint) cliInstallHint.hidden = true;
     } catch (err) {
       cliStatus.textContent = String(err);
       cliStatus.dataset.state = "problem";
+      // A newcomer seeing a raw "could not run \"claude\" - is it installed and on PATH?" error
+      // has no next step from that sentence alone - this is the one place in Setup that's their
+      // literal first contact with Claude Code, so it gets an actual link, not just a diagnosis.
+      if (cliInstallHint) cliInstallHint.hidden = false;
     }
   });
 

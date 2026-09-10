@@ -30,6 +30,12 @@ use tauri_plugin_dialog::DialogExt;
 
 struct OrchestratorState {
     port: Arc<Mutex<Option<u16>>>,
+    // docs/security-prompt-injection.md S0/P0: the orchestrator generates a random per-launch
+    // token and prints it to stdout the same way it prints its port (`TOKEN:<hex>` next to
+    // `PORT:<n>`); this only ever reaches the frontend over Tauri's own IPC (get_orchestrator_token
+    // below), never the network, so a page or process that can merely open a WebSocket to the
+    // orchestrator's port can no longer complete its auth handshake.
+    token: Arc<Mutex<Option<String>>>,
     child: Mutex<Option<Child>>,
 }
 
@@ -319,6 +325,7 @@ fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
 
     let stdout = child.stdout.take().expect("orchestrator stdout should be piped");
     let port_handle = Arc::clone(&state.port);
+    let token_handle = Arc::clone(&state.token);
     std::thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
@@ -327,6 +334,8 @@ fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
                 if let Ok(port) = rest.trim().parse::<u16>() {
                     *port_handle.lock().unwrap() = Some(port);
                 }
+            } else if let Some(rest) = line.strip_prefix("TOKEN:") {
+                *token_handle.lock().unwrap() = Some(rest.trim().to_string());
             } else {
                 // Anything else the orchestrator prints to stdout - forward to this process's
                 // own stderr so it shows up in `npm run tauri dev`'s console during development.
@@ -373,6 +382,16 @@ fn get_orchestrator_port(state: tauri::State<OrchestratorState>) -> Result<u16, 
         .ok_or_else(|| "orchestrator not ready yet".to_string())
 }
 
+#[tauri::command]
+fn get_orchestrator_token(state: tauri::State<OrchestratorState>) -> Result<String, String> {
+    state
+        .token
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "orchestrator not ready yet".to_string())
+}
+
 /// Lets a saved API key take effect without quitting the whole app - kills the current
 /// orchestrator child and spawns a fresh one, which re-reads api-keys.json from scratch. The
 /// frontend's own WebSocket client already retries with backoff on a closed connection
@@ -380,6 +399,7 @@ fn get_orchestrator_port(state: tauri::State<OrchestratorState>) -> Result<u16, 
 #[tauri::command]
 fn restart_orchestrator(app: tauri::AppHandle, state: tauri::State<OrchestratorState>) {
     *state.port.lock().unwrap() = None;
+    *state.token.lock().unwrap() = None;
     let taken = state.child.lock().unwrap().take();
     if let Some(mut child) = taken {
         let _ = child.kill();
@@ -391,6 +411,7 @@ fn restart_orchestrator(app: tauri::AppHandle, state: tauri::State<OrchestratorS
 pub fn run() {
     let state = OrchestratorState {
         port: Arc::new(Mutex::new(None)),
+        token: Arc::new(Mutex::new(None)),
         child: Mutex::new(None),
     };
 
@@ -406,6 +427,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_orchestrator_port,
+            get_orchestrator_token,
             debug_log,
             list_api_key_providers,
             set_api_key,

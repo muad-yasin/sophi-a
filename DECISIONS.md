@@ -519,11 +519,14 @@
   exactly which task and which other seats were part of the same comparison run.
   Two new mutating WS commands (`select_winner`, `delete_workdir`) both require an explicit
   `humanClick: true` flag, rejected server-side if absent or false - PLAN_PARALLEL_BUILD.md §5 is
-  explicit this must be enforced, not a UI courtesy. Named honestly: every WS command in this
-  file is already only ever sent from a real UI action today, so this flag is defense-in-depth
-  against a *future* caller (another tool, a script, later automation) picking a winner or
-  deleting real file output without a human - not a defense against anything that can reach this
-  code path right now. `select_winner` broadcasts `compare.pick` (unlike item 3's query commands,
+  explicit this must be enforced, not a UI courtesy. **Updated 2026-09-09** (`docs/security-
+  prompt-injection.md`'s P0 fix): this entry used to say the flag was "defense-in-depth against
+  nothing that can reach this code path right now," honestly, because any caller could set
+  `humanClick: true` itself and the WebSocket had no real access control at all. It now sits
+  behind a real one - a random per-launch token the connection handler requires before any
+  command is dispatched (`src/orchestrator/index.js`'s `AUTH_TOKEN`/`main()`) - so `humanClick` is
+  a genuine audit field layered on a real check, not a stand-in for one. `select_winner` broadcasts
+  `compare.pick` (unlike item 3's query commands,
   this is shared state - every participating tile's badge needs to update, not just the
   requester's). One new read-only query, `list_compare_runs`, for the run-history strip.
   **Disposition matches §5 exactly**: `delete_workdir` is the *only* code path that removes a

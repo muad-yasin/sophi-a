@@ -220,3 +220,26 @@
   the real CLI output (byte-for-byte match) and the full WS request/response path against a
   standalone orchestrator instance. All three items of "build all of it, in that order" (the
   rest of parallel-build-and-compare, surface the debate, cost transparency) are now done.
+- 2026-09-09 - Security hardening from a read-only prompt-injection/trust-boundary pass
+  (`docs/security-prompt-injection.md`, written first, nothing executed until the pass was done).
+  Closed the P0: the orchestrator's WebSocket had no auth at all, so any local process or any
+  open browser tab could drive it (spawn real `claude` subprocesses, spend real relay money,
+  delete a builder's workdir) - now gated behind a random per-launch token, handed to the Tauri
+  frontend over IPC only, plus an Origin allowlist as a second layer for the browser-tab vector.
+  Also: seat-output text spliced into advisor's/cnc's prompts now carries explicit untrusted-
+  content framing and escaping (a stray quote/newline in model output could previously read as
+  closing the block early); a workdir persistence sweep warns on the tile if `CLAUDE.md`/
+  `.claude`/`.mcp.json` change inside a seat's workdir between turns (auto-loaded on every future
+  turn, including `--resume` - a real way for an injected instruction to outlive its turn);
+  switching a seat's provider now clears its conversation history so a new provider never replays
+  another provider's turns as standing context. Verified: `npx tsc --noEmit` and `cargo check`
+  both clean, token flows end to end (`index.js` stdout -> `lib.rs` IPC -> `main.ts` auth
+  handshake -> `src/mcp/server.js`'s own reconnect path). Next: the doc's own S2 "forward" rule
+  flags real future work (plan-N deliverable -> build-N, advisor reply -> cnc) as the next place
+  this needs the same untrusted-framing + human-confirm treatment before it gets wired.
+- 2026-09-09 - Wordmark lockups (brand pass, second pass on top of the mark/icon work).
+  `brand/generate-lockups.py` composites the transparent mark with "Sophi-A" in Space Grotesk
+  Bold + a tagline in IBM Plex Sans, using the app's own `--bg`/`--gold-bright`/`--text-secondary`
+  hex values. Horizontal lockup now wired into the top of `README.md`; square lockup generated
+  for a future Stripe product image / landing page but not wired anywhere yet (`SHOP.md`'s flow
+  is still a bare payment link). See `brand/BRAND.md` for the full record.
