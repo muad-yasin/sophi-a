@@ -122,9 +122,33 @@ Working taglines (pick one per surface, don't run all three on the same page):
 
 ## What this pass did NOT do (real gaps, not oversights)
 
-- No per-seat sigil has been checked against a colorblind simulation yet - five close, desaturated
-  hues is exactly the kind of palette that can collapse under deuteranopia. Check before this
-  goes on a real ad or storefront image, not before a first landing-page draft.
+- **Checked and fixed, 2026-09-10, third pass.** Ran a real protanopia/deuteranopia/tritanopia
+  simulation (Viénot-style linear-RGB matrices) over the five seat hues, pairwise Euclidean
+  distance in sRGB as the closeness proxy. Two real findings, one already known and one not:
+  - Qwen (`#7a8fa6`) vs. Gemini (`#7a90a6`) - already flagged above as deliberately close - measure
+    at 0.004 (normal vision, near-identical) and stay near-identical under all three simulated
+    conditions. Confirms the existing "shape disambiguates, hue doesn't" call was correct, not
+    just cautious.
+  - **Not previously flagged:** Cohere (`#a68a6b`) vs. Llama (`#9a8a6b`) measure 0.047 normal,
+    0.040-0.047 simulated - just as close as the Qwen/Gemini pair the doc already called out, and
+    this one wasn't named anywhere. Every seat pair loses 25-45% of its already-small hue distance
+    under protanopia/deuteranopia specifically (GLM vs. Cohere: 0.139 normal down to 0.079
+    protan). **Conclusion: hue is not a reliable disambiguator for any pair in this palette,
+    colorblind or not** - every seat sigil has to carry the actual distinction. That made the
+    second finding below load-bearing, not decorative.
+  - **Also found while checking this, and the more serious issue:** the sigils were never actually
+    checked at the size they render in the shipped product. `index.html`'s in-app `.council-seal`
+    renders at 80x80 against a 512 viewBox (a 0.156 scale factor) - the original sigil
+    stroke-width of ~2.5-3 units rendered at **under half a pixel**, i.e. not merely "hard to
+    read," genuinely not visibly present. Confirmed by rendering the real seal at 80px and
+    upscaling with nearest-neighbor (no smoothing to hide the problem) - the sigils were
+    invisible; only the wedge color patches were doing any work, and per the finding above, color
+    alone can't disambiguate several of these pairs. **Fixed**: sigil stroke-width raised to
+    10-12 units and shape radii roughly 1.5x larger in both `brand/council-seal.svg` and the
+    three in-app copies in `index.html` (kept in sync by hand, same discipline as the
+    `favicon.svg`/`sophi-a-mark.svg` pair) - renders at ~1.9px at 80px, confirmed legible by the
+    same render-and-upscale check, and still reads cleanly at the landing page's full 512px size.
+    In-app screenshot-verified in a running dev build, not just re-rendered offline.
 - `plan-debate`'s "labs propose blind, then argue" mechanism has no identity here on purpose - see
   the roster note above. A second seal for that chain is a real follow-up, not scoped into this
   pass.

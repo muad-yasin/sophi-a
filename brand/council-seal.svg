@@ -48,37 +48,42 @@
       d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
   </g>
 
-  <!-- Sigils, one per seat, at each wedge's outer midpoint (196px from center). -->
-  <g id="council-sigils" stroke-linecap="round">
+  <!-- Sigils, one per seat, at each wedge's outer midpoint (196px from center). Stroke-width 12
+       and ~22px shape radii (2026-09-10 revision - see HIGH_COUNCIL.md's colorblind/legibility
+       finding): the original stroke-width ~2.5-3 rendered at well under half a pixel on the
+       80x80 in-app seal (index.html's .council-seal), i.e. invisible - not just "thin," actually
+       not there. This size renders at ~1.9px at 80px, the minimum that reads as a deliberate
+       mark rather than a rendering artifact; still reads cleanly at 512px full size. -->
+  <g id="council-sigils" stroke-linecap="round" stroke-linejoin="round">
     <!-- Seat I - Qwen: a bar through a ring, top (0deg) -->
     <g transform="translate(256 60)">
-      <circle r="14" fill="none" stroke="#a9bacb" stroke-width="3"/>
-      <line x1="0" y1="-20" x2="0" y2="20" stroke="#a9bacb" stroke-width="3"/>
+      <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
+      <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
     </g>
     <!-- Seat II - GLM: a balance scale (a beam, two pans) - a scale, not a hexagram; two
          same-orientation triangles were tried first and rejected here for reading as a Star of
          David at small sizes, an unintended resemblance worth avoiding outright. -->
     <g transform="rotate(72 256 256) translate(256 60) rotate(-72)"
-      fill="none" stroke="#b3c2a8" stroke-width="2.5">
-      <line x1="-13" y1="-3" x2="13" y2="-3"/>
-      <line x1="0" y1="-3" x2="0" y2="12"/>
-      <path d="M -13 -3 A 5 6 0 0 0 -3 -3" transform="translate(0 5)"/>
-      <path d="M 3 -3 A 5 6 0 0 0 13 -3" transform="translate(0 5)"/>
+      fill="none" stroke="#b3c2a8" stroke-width="10">
+      <line x1="-20" y1="-4" x2="20" y2="-4"/>
+      <line x1="0" y1="-4" x2="0" y2="19"/>
+      <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
+      <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
     </g>
     <!-- Seat III - Cohere: a hexagon, 144deg -->
     <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
-      <path d="M 0 -15 L 13 -7.5 L 13 7.5 L 0 15 L -13 7.5 L -13 -7.5 Z"
-        fill="none" stroke="#c4ab8e" stroke-width="2.5"/>
+      <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z"
+        fill="none" stroke="#c4ab8e" stroke-width="10"/>
     </g>
     <!-- Seat IV - Gemini: two opposed arcs (twin lenses), 216deg -->
     <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
-      <path d="M -13 0 A 13 13 0 0 1 0 -13" fill="none" stroke="#a9bfd6" stroke-width="3"/>
-      <path d="M 13 0 A 13 13 0 0 1 0 13" fill="none" stroke="#a9bfd6" stroke-width="3"/>
+      <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+      <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
     </g>
     <!-- Seat V - Llama: a triangle inside a circle (mountain seat), 288deg -->
     <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
-      <circle r="14" fill="none" stroke="#c2b294" stroke-width="2.5"/>
-      <path d="M 0 -8 L 8 8 L -8 8 Z" fill="none" stroke="#c2b294" stroke-width="2.5"/>
+      <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
+      <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
     </g>
   </g>
 

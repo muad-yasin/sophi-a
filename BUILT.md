@@ -186,3 +186,10 @@
   rule. Verified for real: loaded a running dev build in Chrome, injected each of the three
   states via the console, screenshotted and confirmed the wedges actually change - not a
   code-reading check.
+- 2026-09-10 - Council sigil legibility fix. brand/council-seal.svg and the three in-app
+  `.council-seal` copies in index.html: sigil stroke-width raised from ~2.5-3 to 10-12 units,
+  shape radii scaled ~1.5x, so they render at ~1.9px (not <0.5px) at the 80x80 size the Debate
+  panel actually uses. Found via a real protanopia/deuteranopia/tritanopia simulation over the
+  five seat hues (pairwise sRGB distance) plus an 80px render-and-upscale check - both documented
+  with real numbers in brand/HIGH_COUNCIL.md. Second near-identical hue pair found (Cohere/Llama)
+  beyond the already-known Qwen/Gemini one. Verified in a running dev build in Chrome.

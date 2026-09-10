@@ -267,3 +267,14 @@
   table, so it can't drift out of sync with a chain-config change. Verified in a real running dev
   build in Chrome, not just read back from the code - injected real signoff states and confirmed
   each wedge's opacity actually moves. npx tsc --noEmit clean.
+- 2026-09-10 - Colorblind + small-size legibility check on the Council sigils (the open gap
+  brand/HIGH_COUNCIL.md flagged from the first identity pass). Real protanopia/deuteranopia/
+  tritanopia simulation found a second near-identical hue pair (Cohere/Llama) that hadn't been
+  named, on top of the already-known Qwen/Gemini one - confirming hue can't disambiguate several
+  pairs in this palette at all, colorblind or not. Bigger finding: the sigils were never actually
+  checked at the 80x80 size index.html renders them in-app - stroke-width there rendered under
+  half a pixel, genuinely invisible, not just hard to read; only wedge color was doing any work,
+  which the hue finding above means wasn't enough on its own. Fixed both brand/council-seal.svg
+  and the three in-app copies (stroke-width 10-12, ~1.5x larger shapes) - verified legible by
+  rendering at 80px with nearest-neighbor upscaling (no smoothing to hide the problem) and by
+  screenshotting a real running dev build. npx tsc --noEmit clean.
