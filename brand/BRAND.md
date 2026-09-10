@@ -52,7 +52,7 @@ around.
 | ember/rim | `#a8763a` → `#6b4420` | new - desaturated-to-sRGB read of SMO's HDR corona anchors (`SophiACoronaGenerator.cs`'s anchor list runs `(1.75,1.50,1.05)` bright bloom down to `(0.62,0.32,0.16)` deep ember; those are >1.0 bloom floats made for Unity's HDR pipeline, not paste-able hex - these are a by-eye sRGB match, not a literal conversion) |
 | backdrop | `#0a0908` | `--bg` - already the app's own background |
 
-## What's shipped with this pass
+## What's shipped
 
 - `src-tauri/icons/*` regenerated from the mark (desktop-only - the iOS/Android sets `tauri icon`
   also generates were deleted, since mobile is explicitly deferred per `PLAN.md`/`CLAUDE.md`).
@@ -60,17 +60,27 @@ around.
 - A small breathing brand mark on the connecting screen (`.brand-mark`, `src/styles.css`) - a slow
   3.2s pulse rather than a spinner, on purpose: the mark's whole point is "approaching, never
   arriving," so it shouldn't resolve to a stock loading animation.
+- **Wordmark lockups** (2026-09-09, second pass): `brand/generate-lockups.py` composites the
+  transparent mark (`public/favicon.svg`) with "Sophi-A" set in Space Grotesk Bold (the app's own
+  `--font-chrome`) and a one-line tagline in IBM Plex Sans (`--font-body`), using the exact
+  `--bg`/`--gold-bright`/`--text-secondary` hex values - not new colors, not a new font.
+  - `sophi-a-lockup-horizontal.png` (1400x400) - README banner, now wired in at the top of
+    `README.md`. Wide-format, mark left, wordmark+tagline right.
+  - `sophi-a-lockup-square.png` (1000x1000) - stacked (mark above, wordmark+tagline below),
+    sized for a Stripe product image or a social-share card. **Not wired in anywhere yet** -
+    `SHOP.md`'s flow is a bare Stripe payment link today; attach this the day that link grows a
+    product-image field or a landing page.
+  - Regenerate either after editing `public/favicon.svg`: `python3 brand/generate-lockups.py`
+    (needs PyGObject's `Rsvg`/`cairo` bindings + Pillow - both were already present on this
+    machine; not added as an npm/project dependency since this is a by-hand marketing tool, not
+    part of the app build).
 
-## What this pass did NOT do (real gaps, not oversights)
+## What's still a real gap, not an oversight
 
-- No marketing/landing hero image (wide banner, social-share card, Stripe product image) - the
-  shop flow (`SHOP.md`) is a bare payment link today with no landing page to put one on yet.
-- No wordmark/lockup (mark + "Sophi-A" type) - `--font-chrome` (Space Grotesk) is the obvious
-  choice to pair it with, not built here.
+- No landing page to put the square lockup or a hero on - `SHOP.md`'s flow is a bare payment link.
 - No light-mode variant - the whole app is `color-scheme: dark` only (`src/styles.css`), so this
-  wasn't needed, but a white-background context (e.g. a GitHub README badge) will need the
-  transparent favicon variant checked against a light backdrop before reuse - it was only tested
-  against `--bg`.
+  wasn't needed, but a white-background context (e.g. a GitHub badge rendered on a light theme)
+  hasn't been checked against a light backdrop - only against `--bg`.
 - No animated corona/flare version (SMO's own real shader work) - this is a static SVG mark, not a
   ported shader. If Sophi-A ever gets a real animated hero (splash screen, landing page WebGL),
   that's a real follow-up project, not a small addition to this one.

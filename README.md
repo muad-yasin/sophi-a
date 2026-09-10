@@ -1,3 +1,5 @@
+![Sophi-A](brand/sophi-a-lockup-horizontal.png)
+
 # Sophi-A
 
 A Tauri desktop shell that drives eight real Claude/Fable/relay agent "seats" at once - one
