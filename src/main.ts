@@ -240,12 +240,17 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
   const compareCheckboxes = tile.querySelectorAll<HTMLInputElement>(
     '[data-role="also-build-2"], [data-role="also-build-3"]',
   );
+  const smokeRunBtn = tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
   if (taskInput) taskInput.disabled = working;
   if (sendBtn) sendBtn.disabled = working || notReady;
   if (stopBtn) stopBtn.disabled = !working;
   if (providerSelect) providerSelect.disabled = working;
   if (modelInput) modelInput.disabled = working;
   compareCheckboxes.forEach((cb) => (cb.disabled = working));
+  // Phase 1 Step 3's own acceptance test: disabled while the seat is red, enabled the instant it
+  // turns green - the same readiness gate as Send, plus the same working-state guard every other
+  // dispatch control already has (one turn at a time, no exception for this one).
+  if (smokeRunBtn) smokeRunBtn.disabled = working || notReady;
 }
 
 function reapplySeatControls(seatId: string) {
@@ -540,6 +545,19 @@ function setupTaskForms() {
     if (stopBtn) {
       stopBtn.addEventListener("click", () => {
         sendCommand({ cmd: "stop", seatId });
+      });
+    }
+
+    // Phase 1 Step 3 (long-horizon build plan) - only cnc/advisor have this button in the
+    // markup; querySelector returns null elsewhere and this block is a no-op for every other
+    // seat. Fixed ~10-token task, same dispatch path Send uses - a real live call, sent only on
+    // an actual human click (this code never calls .click() on it itself).
+    const smokeRunBtn = tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
+    if (smokeRunBtn) {
+      smokeRunBtn.addEventListener("click", () => {
+        const task = "Say hello";
+        sendCommand({ cmd: "start", seatId, task });
+        echoTask(seatId, task);
       });
     }
   }

@@ -671,6 +671,19 @@ body {
   gap: var(--sp-2);
 }
 
+/* Phase 1 Step 3 (long-horizon build plan) - "Smoke run": deliberately plain/outline, never the
+   gold btn-send treatment - this is a rare, deliberate confirmation click, not a routine action,
+   and shouldn't visually invite repeated clicking the way Send does. */
+.smoke-run-btn {
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.smoke-run-btn:disabled {
+  opacity: 0.4;
+}
+
 .btn {
   font: inherit;
   font-family: var(--font-chrome);

@@ -207,6 +207,15 @@
             </div>
           </form>
 
+          <!-- Phase 1 Step 3 (long-horizon build plan) - [HUMAN STOP]: a real live API call from
+               a new code path. This button only ever gets built and wired here, never clicked by
+               a session - the click itself is the human's own action, logged in DECISIONS.md
+               once done, not something this step's own acceptance test runs or waits on. -->
+          <button type="button" class="btn smoke-run-btn" data-role="smoke-run-btn" disabled
+            title="Sends a tiny real request (~10 tokens, \"Say hello\") to confirm this seat actually works">
+            Smoke run
+          </button>
+
           <div class="advisor-actions">
             <button class="btn btn-accept" data-action="accept" type="button">Accept</button>
             <button class="btn btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
@@ -477,6 +486,13 @@
             <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
           </div>
         </form>
+
+        <!-- Phase 1 Step 3 (long-horizon build plan) - [HUMAN STOP]: see the advisor tile's own
+             comment above, same rule, same button, never clicked by a session. -->
+        <button type="button" class="btn smoke-run-btn" data-role="smoke-run-btn" disabled
+          title="Sends a tiny real request (~10 tokens, &quot;Say hello&quot;) to confirm this seat actually works">
+          Smoke run
+        </button>
       </section>
 
       <section class="tile builder" id="tile-build-1" data-seat="build-1">
