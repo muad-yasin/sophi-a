@@ -390,3 +390,33 @@
   animation is actually applying via computed style (animationName/duration/iterationCount), not
   just present in source. prefers-reduced-motion respected on both. npx tsc --noEmit and a real
   vite build both clean.
+- 2026-09-10 - Sophi-A-as-a-paid-web-service pivot: scope-gated first (verdict NEEDS-SPEC - not
+  ranked in FOCUS.md, likely duplicating GP's intake service), the five open gaps resolved with
+  Muad directly (refund-on-SLA-miss, unified EUR 20 product covering both the desktop download
+  and one web question, output-only delivery matching /plan's mechanism-privacy rule, Germany-only
+  VAT/OSS gate carried forward), then a real Council run dispatched for the technical design.
+  Real finding correcting the scope-gate's own doc-level read: GP's intake service has no
+  Stripe/payment code at all and delivers publicly (leaderboard/forum), never privately to a
+  submitter - not the reusable "paid intake" it looked like on paper. Only lib/cap.mjs and
+  cli/relay-client.mjs's spawn-and-poll pattern were genuinely reusable; corrected with
+  sower-industries-ec before designing further.
+
+  Design run hit a real, reproducible relay bug: 3 consecutive real runs against the same task
+  all stopped at critique round 1 because Qwen3.5-9B's JSON reply had a literal unescaped " inside
+  a markdown-quoted span - confirmed with Python's own strict parser, not relay being overly
+  strict. Fixed directly in relay (chain.js's parseJson, a new string-state-aware repair pass),
+  verified against all three real broken runs plus a 26-file regression check against every other
+  already-valid critique on disk, added real test coverage (relay's own test suite, 15/15 passing
+  after the fix), committed and pushed to relay's own repo (f058acd). A 4th run with the fix
+  produced a real, clean pass - Qwen's critique parsed correctly and signed off outright.
+
+  Final Council-approved design saved to sower-industries/Docs/SophiaWebIntake_Design_2026-09-10.md
+  (not committed there - left for Muad/sower-industries-ec). Covers: pre-payment form (with a
+  stated reason Payment Link custom fields alone don't suffice), the webhook handler's real
+  request/response shape, a concrete node:sqlite schema (four tables: question_orders, run_queue,
+  review_queue, sla_checks), reuse of the proven relay-spawn-and-poll pattern, a single mandatory
+  review-queue gate modeled on /plan's own manual-fulfillment shape, output-only email delivery
+  with Council internals structurally excluded (sendAnswer() never reads report.json), a real
+  scheduled SLA-breach-and-refund checker, and an explicit human-operator-vs-agent-buildable task
+  split. Real cost across all four attempts: ~$0.59 total. Actual implementation not started -
+  this pass delivered the reviewed design only, per the session's own scope discipline.
