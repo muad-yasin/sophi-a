@@ -219,3 +219,5 @@
   just typechecked.
 - adc6c0d — Phase 1 Step 1 — preflight.js + seats.json requires field (long-horizon build plan)
 - 68816f7 — Phase 1 Step 2 — wizard panel + preflight WS command + Send-button readiness gating
+- 2f297e2 — Phase 3 Step 1 — run-recorder.js: copy report.json/run.log to runs/<seatId>/<runId>/, evict past 50
+- 2f297e2 — Phase 3 Step 2 — list_runs/replay_run/get_seat_logs (index.js + mcp/server.js) and main.ts's read-only history-dropdown replay of the Debate panel with a REPLAY banner
