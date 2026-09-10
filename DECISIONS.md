@@ -1064,3 +1064,92 @@ Neither confirmed bug has an owner or a scheduled fix yet - flagging here rather
 unilaterally, both because a fix needs a real design call (finding 1 especially: relay-side change
 vs. PLAN.md wording change) and because this session doesn't want to touch shared files while
 Phase 3 Steps 3-4 are landing concurrently.
+
+## 2026-09-10/11: Phase 3 Steps 3-4 - chain presets + seat keyboard shortcuts
+
+Built directly in the main checkout (not a worktree, unlike Steps 1-2) since no other session had
+in-progress uncommitted edits to the same files at the time of starting. Confirmed with gp-09
+before landing: its read-only bug audit (above) found two real, unrelated bugs and deliberately
+left them unfixed pending a design call; nothing in that audit touches the files this step edits.
+
+**Step 3 (chain presets), real judgment calls not fully specified by revise-1.md's text:**
+
+1. **relay's own CLI has no path argument for `--chain`** - it only ever resolves a chain by name
+   under its own `chains/` dir (`join(root, 'chains', \`${chainName}.json\`)`, `relay/src/cli.js`).
+   The plan's "`chainConfig` custom path property" therefore can't mean "hand relay an arbitrary
+   path" - it means cnc-harness reads that path itself, purely to (a) fail fast on a missing/
+   malformed file with the real error, never a silent fallback to `default_chain`, and (b)
+   recover the file's own `name` field to pass as `--chain <name>`. Zero relay code touched -
+   relay never sees a path it doesn't already resolve itself.
+2. **Two `chainConfig` value shapes, disambiguated by a `.json` suffix**: a bare name
+   (`"plan-fast"`) passes straight through to `--chain` with no file read at all - a typo'd name
+   fails fast via relay's own "No such chain" exit, already handled by this adapter's existing
+   exit-code path, so nothing new needed there. A path ending `.json` is read+parsed here, and a
+   parse/read failure surfaces as a real `seat.problem` naming the exact file and the exact
+   error - verified live (ENOENT and a hand-corrupted JSON file both produced the literal error
+   text, no relay subprocess ever spawned for either).
+3. **`configureSeat` extended, not duplicated**: `chainConfig` reuses the same runtime-only-
+   mutation contract cnc/advisor's provider/model already has (never persisted to `seats.json`,
+   an empty value resets to the on-disk default) - a second configure-shaped command for one more
+   per-seat setting would be the exact kind of needless-abstraction-avoidance this project keeps
+   choosing against.
+4. **Validation deliberately deferred to seat-start, not configure-time** - the plan's own
+   acceptance test says a malformed config "fails at seat start," and postponing the read also
+   means a config file edited after being selected (e.g. actively being iterated on) is always
+   read fresh, never a stale copy taken at configure time.
+
+New `relay/chains/plan-fast.json` (draft + Qwen/GLM critics only, `maxRounds: 1`) and
+`relay/chains/plan-thorough.json` (identical roster to `plan-cheap`, `maxRounds: 6` - one extra
+revision round). Both verified via a real `node src/cli.js --chain <name> --dry-run` (correct
+round count, correct critic roster, plan-fast's worst-case $0.35 vs. plan-cheap's $1.75 - well
+under half) and via `mcp__relay__list_chains` (both appear with their real descriptions). The
+"selects a chain, gets exactly 2 critic signoffs, faster than plan-cheap" half of the acceptance
+test was **not** exercised as a real paid run - verified instead via chain-resolution/config
+correctness plus the identical dry-run pricing table relay's own CLI would show an operator;
+spending real API money to prove `maxRounds: 1` behaves as `maxRounds` already does everywhere
+else in this codebase (Phase 2 Step 1's watchdog work already proved relay's round-cap mechanics
+generically) wasn't judged worth it. Named here rather than silently claimed as fully paid-run
+verified.
+
+**Step 4 (seat keyboard shortcuts):**
+
+- **Shortcut order deliberately isn't the tile grid's DOM order.** `SEAT_IDS`/the visual grid both
+  start with `advisor`; this step's own acceptance test is explicit that "Ctrl+1 focuses `cnc`" -
+  so a separate `SHORTCUT_SEAT_ORDER` puts `cnc` first (the seat reached for fastest), matching
+  the plan's literal test rather than the pre-existing visual ordering.
+- **Ctrl only, never Cmd, on any platform** - Cmd+<digit> is a live macOS/browser tab-switch
+  binding; fighting it was exactly the "avoid OS/Tauri default bindings" instruction this step
+  names. The existing command palette's Cmd/Ctrl+K doesn't have this collision (no OS binds that
+  combination), so it keeps its own dual-key handling unchanged.
+- **Enter-sends is scoped to "Enter without Shift" on a seat's own task-input**, not a global
+  document-level Enter handler - a blanket one would break composing a multi-line task in any
+  tile (a real, live-tested regression averted: Shift+Enter still inserts a newline, confirmed in
+  a real browser). Dispatch reuses `form.requestSubmit()` against each seat's already-existing
+  submit listener (including `build-1`'s separate fan-out/cost-confirm listener), rather than
+  duplicating any of `setupTaskForms`'/`setupBuild1CompareDispatch`'s dispatch logic.
+- **Esc scoped to "whichever seat currently has DOM focus," and only if that seat is `working`.**
+  A single free-floating "stop something" binding with no notion of *which* seat would be a
+  guess; scoping it to focus makes it exactly "stop the seat I just Ctrl+N'd into," which is the
+  only reading of the plan's one-line spec that doesn't require inventing a second piece of UI
+  state. Explicitly yields to the command palette's own Escape-closes-the-palette behavior when
+  the palette is open, rather than fighting it.
+
+**Verification method** (same class of gap as the 2026-09-10 Phase 1 Step 2 entry, named again
+because it recurs and is worth a single durable note): a plain Chrome tab pointed at the vite dev
+server has no Tauri IPC, so `invoke("get_orchestrator_port")` always fails and the app never gets
+past its own "Connecting to orchestrator..." screen. Rather than stub `window.__TAURI_INTERNALS__`
+again (that entry's technique, viable but heavier than needed here since none of this step's
+behavior depends on a live WebSocket), the grid's own `hidden` attribute was cleared directly
+(`document.getElementById('grid').hidden = false`) to reach the real, already-parsed DOM and the
+real event listeners `setupSeatKeyboardShortcuts`/`setupTaskForms` had already registered at
+`DOMContentLoaded` regardless of connection state. Confirmed live, for real, in a real Chrome tab
+against the actual running dev server (not the packaged app, and not Muad's own live session -
+this test ran entirely against local DOM state, never touched his real orchestrator or sent a
+real command over his real WebSocket): Ctrl+1 focuses `cnc`'s task-input; Ctrl+8 focuses
+`build-3`'s (confirming the full 8-item order, not just the first); Enter on a seat's own
+task-input triggers that seat's real submit handler (confirmed via the input clearing, the real
+side effect `setupTaskForms`'s listener produces); Shift+Enter inserts a newline and does *not*
+submit; Escape while the focused seat's tile is marked `working` sends exactly
+`{"cmd":"stop","seatId":"cnc"}` (read back from `sendCommand`'s own real debug-log line, not
+inferred); Escape while the same seat is `idle` sends nothing. `npx tsc --noEmit` and a real
+`vite build` both clean throughout.

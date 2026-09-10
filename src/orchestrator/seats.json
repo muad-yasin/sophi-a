@@ -23,6 +23,7 @@
   "plan-1": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
+    "chainConfig": null,
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
     "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
@@ -31,6 +32,7 @@
   "plan-2": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
+    "chainConfig": null,
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
     "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],
@@ -39,6 +41,7 @@
   "plan-3": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
+    "chainConfig": null,
     "invocation_mode": "relay-chain-subprocess",
     "session": "one relay run per task",
     "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }],

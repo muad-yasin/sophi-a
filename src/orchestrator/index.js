@@ -544,14 +544,21 @@ function handleGetSeatLogs(ws, seatId, runId) {
 // matches the ephemeral nature of an in-memory session (seats.json stays the on-disk default).
 const CONFIGURABLE_SEAT_IDS = new Set(['cnc', 'advisor']);
 
-export function configureSeat(seatId, { provider, model } = {}) {
-  if (!CONFIGURABLE_SEAT_IDS.has(seatId)) {
-    console.error(`configure rejected: seat "${seatId}" is not configurable`);
-    return;
-  }
+// Phase 3 Step 3: plan-1..3's chain-preset dropdown reuses this same `configure` command/handler
+// rather than inventing a second one - same runtime-only-mutation contract as provider/model
+// above (seats.json's `default_chain` stays the on-disk default; nothing here is persisted).
+export function configureSeat(seatId, { provider, model, chainConfig } = {}) {
   const seat = seats[seatId];
   if (!seat) {
     console.error(`configure rejected: unknown seat "${seatId}"`);
+    return;
+  }
+  if ((provider !== undefined || model !== undefined) && !CONFIGURABLE_SEAT_IDS.has(seatId)) {
+    console.error(`configure rejected: seat "${seatId}" has no configurable provider/model`);
+    return;
+  }
+  if (chainConfig !== undefined && !PLANNER_SEAT_IDS.includes(seatId)) {
+    console.error(`configure rejected: seat "${seatId}" has no configurable chain`);
     return;
   }
   if (provider !== undefined) {
@@ -566,6 +573,13 @@ export function configureSeat(seatId, { provider, model } = {}) {
   }
   if (model !== undefined && model !== '') {
     seat.model = model;
+  }
+  if (chainConfig !== undefined) {
+    // Empty string/null resets to seats.json's own `default_chain` - never a silent partial
+    // state. No JSON validation here: relayChainSubprocess.js's resolveChain() does that at seat
+    // start, so the error surfaces as a real seat.problem naming the exact broken file, not a
+    // swallowed configure-time rejection the operator might miss.
+    seat.chainConfig = chainConfig || null;
   }
 }
 
@@ -639,7 +653,7 @@ function main() {
       if (msg.cmd === 'start') startSeat(wss, msg.seatId, msg.task);
       else if (msg.cmd === 'stop') stopSeat(msg.seatId);
       else if (msg.cmd === 'stop_all') stopAll();
-      else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model });
+      else if (msg.cmd === 'configure') configureSeat(msg.seatId, { provider: msg.provider, model: msg.model, chainConfig: msg.chainConfig });
       else if (msg.cmd === 'start_many') startMany(wss, msg.seatIds, msg.task, msg.confirmed);
       else if (msg.cmd === 'inspect_changes') handleInspectChanges(ws, msg.seatId);
       else if (msg.cmd === 'get_diff') handleGetDiff(ws, msg.seatId, msg.path);

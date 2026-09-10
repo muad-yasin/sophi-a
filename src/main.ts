@@ -271,11 +271,13 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
     '[data-role="also-build-2"], [data-role="also-build-3"]',
   );
   const smokeRunBtn = tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
+  const chainSelect = tile.querySelector<HTMLSelectElement>('[data-role="chain-select"]');
   if (taskInput) taskInput.disabled = working;
   if (sendBtn) sendBtn.disabled = working || notReady;
   if (stopBtn) stopBtn.disabled = !working;
   if (providerSelect) providerSelect.disabled = working;
   if (modelInput) modelInput.disabled = working;
+  if (chainSelect) chainSelect.disabled = working;
   compareCheckboxes.forEach((cb) => (cb.disabled = working));
   // Phase 1 Step 3's own acceptance test: disabled while the seat is red, enabled the instant it
   // turns green - the same readiness gate as Send, plus the same working-state guard every other
@@ -635,6 +637,68 @@ function setupStopAllButton() {
   btn?.addEventListener("click", () => {
     sendCommand({ cmd: "stop_all" });
   });
+}
+
+// Phase 3 Step 4: Ctrl+1..8 focuses a seat's task input, Enter (without Shift, so a multi-line
+// task is still typeable) sends it, Esc stops it if running. Ctrl only, deliberately never
+// Cmd - Cmd+<digit> is a live OS/browser tab-switch binding on macOS this must not fight, and
+// nothing here needs the mixed Cmd-or-Ctrl handling the command palette's Cmd/Ctrl+K uses.
+// Order places `cnc` first, not the tile grid's own DOM order (which starts with `advisor`) -
+// it's the seat reached for fastest, matching this step's own acceptance test (Ctrl+1 -> cnc).
+const SHORTCUT_SEAT_ORDER: readonly string[] = [
+  "cnc",
+  "advisor",
+  "plan-1",
+  "plan-2",
+  "plan-3",
+  "build-1",
+  "build-2",
+  "build-3",
+];
+
+function focusedShortcutSeatId(): string | null {
+  const active = document.activeElement;
+  const tile = active instanceof HTMLElement ? active.closest<HTMLElement>(".tile[data-seat]") : null;
+  return tile?.dataset.seat ?? null;
+}
+
+function setupSeatKeyboardShortcuts() {
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && !e.metaKey && !e.altKey && /^[1-8]$/.test(e.key)) {
+      const seatId = SHORTCUT_SEAT_ORDER[Number(e.key) - 1];
+      const tile = tileEl(seatId);
+      if (!tile) return;
+      e.preventDefault();
+      const input = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+      if (input && !input.disabled) input.focus();
+      return;
+    }
+    if (e.key === "Escape") {
+      // The command palette owns Escape while it's open (setupCommandPalette's own handler
+      // closes it) - this shortcut only applies once the palette isn't in the way.
+      const palette = document.getElementById("command-palette");
+      if (palette && !palette.hidden) return;
+      const seatId = focusedShortcutSeatId();
+      if (!seatId) return;
+      if (tileEl(seatId)?.dataset.status === "working") {
+        e.preventDefault();
+        sendCommand({ cmd: "stop", seatId });
+      }
+    }
+  });
+
+  for (const seatId of SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const input = tile?.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+    const form = tile?.querySelector<HTMLFormElement>('[data-role="task-form"]');
+    if (!input || !form) continue;
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!input.disabled) form.requestSubmit();
+      }
+    });
+  }
 }
 
 // --- Command palette (Cmd/Ctrl+K): dispatch a task to any seat without hunting for its tile ---
@@ -1590,6 +1654,24 @@ function setupSeatConfig() {
   }
 }
 
+// Phase 3 Step 3: plan-1..3's chain-preset dropdown. Standard (plan-cheap, the seats.json
+// default) needs no override; Fast/Thorough send {cmd:'configure', seatId, chainConfig} with the
+// bare relay chain name - relayChainSubprocess.js's resolveChain() passes a name straight through
+// to relay's own --chain resolution (a real "No such chain" exit is relay's own fail-fast for a
+// typo, not something duplicated here); a ".json"-suffixed value there instead reads a real
+// custom chain-config file and fails fast on malformed JSON. Selecting "Standard" again sends an
+// empty chainConfig, which configureSeat treats as a reset to seats.json's own default_chain.
+function setupChainPresets() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const select = tile?.querySelector<HTMLSelectElement>('[data-role="chain-select"]');
+    if (!select) continue;
+    select.addEventListener("change", () => {
+      sendCommand({ cmd: "configure", seatId, chainConfig: select.value });
+    });
+  }
+}
+
 // --- Setup panel: onboarding (Rust commands list_api_key_providers/set_api_key/
 // check_claude_cli/restart_orchestrator) - not gating the rest of the UI, since a returning user
 // with everything already configured has no reason to see it first. Opened on demand via the
@@ -1714,7 +1796,9 @@ window.addEventListener("DOMContentLoaded", () => {
   setupAdvisorActions();
   setupTaskForms();
   setupStopAllButton();
+  setupSeatKeyboardShortcuts();
   setupSeatConfig();
+  setupChainPresets();
   setupSetupPanel();
   setupBuild1CompareDispatch();
   setupCostConfirmModal();

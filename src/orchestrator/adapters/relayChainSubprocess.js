@@ -25,10 +25,40 @@ export function resolveRelayPath() {
   return resolve(process.env.RELAY_PATH || join(root, '..', 'relay'));
 }
 
+// Phase 3 Step 3 (chain presets): `seatConfig.chainConfig`, when set, is a path to a relay
+// chain-config JSON file - normally one of relay's own `chains/plan-fast.json` /
+// `chains/plan-thorough.json`, chosen at runtime via the per-seat dropdown (index.js's
+// configureSeat), but any readable path works. relay's own CLI only ever resolves a chain by
+// *name* under its own `chains/` dir (`join(root, 'chains', \`${chainName}.json\`)` in
+// relay/src/cli.js) - it has no path argument - so this reads the file ourselves only to (a)
+// fail fast on a missing/malformed file with the real error, never a silent fallback to
+// `default_chain`, and (b) recover the chain's own declared `name` field to pass as `--chain`.
+// Zero relay code touched: this is cnc-harness reading a file relay already writes structure to,
+// the same "reuse, don't reimplement" relationship as relayChainSubprocess's run-folder polling.
+function resolveChain(seatConfig) {
+  const cc = seatConfig.chainConfig;
+  if (!cc) return { name: seatConfig.default_chain };
+  // A bare chain name (the dropdown's three presets: "plan-cheap"/"plan-fast"/"plan-thorough")
+  // passes straight through to relay's own --chain resolution - no file to read here, so a typo'd
+  // name still fails fast, just via relay's own "No such chain" exit rather than a JSON error.
+  if (!cc.endsWith('.json')) return { name: cc };
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(resolve(cc), 'utf8'));
+  } catch (err) {
+    return { error: `chainConfig "${cc}" could not be read/parsed: ${err.message}` };
+  }
+  if (!parsed.name) {
+    return { error: `chainConfig "${cc}" has no "name" field` };
+  }
+  return { name: parsed.name };
+}
+
 /**
  * Start one relay-chain-subprocess seat (plan-1..3).
  * @param {string} seatId
- * @param {object} seatConfig - this seat's entry from seats.json (has `default_chain`)
+ * @param {object} seatConfig - this seat's entry from seats.json (has `default_chain`, and
+ *   optionally a runtime `chainConfig` path set via configureSeat - see resolveChain above)
  * @param {string} task - the planning request text for this relay run
  * @param {(type: string, detail?: any) => void} emit
  */
@@ -39,12 +69,19 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
   mkdirSync(tasksDir, { recursive: true });
   mkdirSync(runsDir, { recursive: true });
 
+  emit('seat.start');
+  const resolved = resolveChain(seatConfig);
+  if (resolved.error) {
+    emit('seat.problem', `relay-chain-subprocess seat ${seatId}: ${resolved.error}`);
+    return;
+  }
+
   const timestamp = Date.now();
   const taskFileName = `cnc-harness-${seatId}-${timestamp}.md`;
   const taskRelPath = join('tasks', taskFileName);
   writeFileSync(join(tasksDir, taskFileName), task);
 
-  const chain = seatConfig.default_chain;
+  const chain = resolved.name;
   const cli = join(relayPath, 'src', 'cli.js');
   const args = [cli, '--chain', chain, '--task', taskRelPath];
 
@@ -57,8 +94,6 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
   const sideLogPath = join(relayPath, `cnc-harness-${seatId}-${timestamp}.log`);
   const fd = openSync(sideLogPath, 'a');
   const child = spawn('node', args, { cwd: relayPath, detached: true, stdio: ['ignore', fd, fd] });
-
-  emit('seat.start');
 
   let exited = false;
   let exitCode = null;

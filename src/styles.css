@@ -1596,6 +1596,21 @@ body {
   padding: var(--sp-1) var(--sp-2);
 }
 
+/* Phase 3 Step 3: plan-1..3's chain-preset dropdown, same chrome as .forward-select so it doesn't
+   introduce a new visual pattern for one more <select>. Full width, sits between the tile header
+   and the output pane. */
+.chain-select {
+  width: 100%;
+  margin-top: var(--sp-2);
+  background: var(--surface-modal);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  padding: var(--sp-1) var(--sp-2);
+}
+
 .forward-btn {
   flex: 1;
   font-size: 12px;
