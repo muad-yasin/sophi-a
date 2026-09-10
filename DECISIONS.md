@@ -1204,3 +1204,51 @@ double-connection bug, once confirming the fix): a real click on the real "Resta
 button, in a real Chrome tab, against the real shipped code the running dev server serves. Also
 verified: `npx tsc --noEmit`, a real `vite build`, and `cargo check` in `src-tauri` (after updating
 its own now-stale comment describing the old, wrong assumption) all clean.
+
+## 2026-09-11: Real Council run - "what's next" ranked backlog (lane 2 of the overnight plan)
+
+Dispatched per Muad's explicit "Yes please!" to the 3-lane overnight plan, since all 9 items of
+the original ranked backlog are now built and the standing discipline this session applies
+everywhere else (never invent unreviewed scope, per tonight's earlier spy-game correction) rules
+out just picking the next feature ourselves. Chain `idea-open-c2` (6-lab, open scope, questions ->
+proposals -> debate -> replies -> build -> panel review -> revise -> handoff), run
+`2026-09-10T23-20-49-005Z`, task `relay/tasks/sophi-a-whats-next-2026-09-11.md`.
+
+**Real cost: $0.3041** (paid API panel rounds only; the Sonnet-role stages - questions, criteria,
+skeleton, build, revise, handoff - ran as `external/claude-code-session`, i.e. this session
+answering them directly, unpriced/subscription-based, not a second cost line).
+
+**Verdict: unanimous, round 2.** Round 1 found one real, shared gap - 3 of 6 labs
+(deepseek/qwen/kimi) independently flagged that the draft's "Scope additions" section claimed "no
+additions" while its own "Scope ledger" section documented real structural additions (the ranked-
+list format, the do-not-build/human-actions/exclusions/scope-additions sections themselves, and
+the ledger's own existence - all accepted `KIMI-1..6` proposals). The critique was correct: per the
+chain's own rule, an *accepted proposal* doesn't need re-listing as an "addition," but the
+deliverable's own meta-structure sections genuinely are additions beyond the literal request's
+bare "ranked list + do-not-build + human-action statement" shape, and claiming none while listing
+them elsewhere in the same file was a real inconsistency, not a stylistic quibble. Fixed in
+`revise-1.md` by naming each structural section's real author (which `KIMI-N` proposal) and reason
+directly in "Scope additions," rather than treating "already in the ledger" as sufficient. Round 2:
+all six labs signed off outright.
+
+**The result** (full text: `relay/runs/2026-09-10T23-20-49-005Z/{deliverable,HANDOFF,BOARD}.md`) -
+an 8-item ranked backlog, scored 1-5 on usefulness and build speed each, in order: (1) automated
+post-purchase fulfillment email (webhook-confirmed, sale/refund stay human-only), (2) a first-run
+Council discoverability explainer, (3) deploy-ready `marketing/index.html` config (stops at
+deploy-ready, deploy/DNS stays a named human step), (4) the already-speced advisor-to-cnc S2
+forward flow, (5) an interactive offline Council demo (deliberately kept separate from item 2 -
+solves the "no API keys configured yet" barrier a static explainer can't), (6) per-seat cost
+breakdown + CSV export, (7) a per-seat cost budget warning (a follow-on to item 6, not
+independent), (8) a build-seat artifact inspector + context forwarder. A "Do not build" section
+names 8 rejected candidates with concrete reasons (macOS/analytics/multi-device-sync/mobile scope,
+a cost-multiplication risk in unguarded batch seat execution, redundant already-shipped scope, a
+hosted-infra-drifting thank-you page, an undemonstrated keyboard-shortcut conflict). Items 1 and 3
+are the only ones needing a human action before being scoped further (a Stripe webhook endpoint +
+email provider choice; the deploy/DNS action itself) - stated explicitly, not left implicit.
+
+**Standing per this run's own request text, honored, not just stated:** "Whatever this run ranks
+will be reviewed by the human before any of it gets built." This Council sign-off is not itself
+authorization to start building item 1 - it's a reviewed, costed, ranked candidate list waiting
+for Muad's own go/no-go/reorder, exactly like every other Council output this project produces.
+`HANDOFF.md` (written for whichever session eventually builds from this) says the same thing in
+its own first paragraph, so a future session reading it cold doesn't miss that distinction either.
