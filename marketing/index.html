@@ -79,6 +79,13 @@
     border: none;
   }
   .btn-secondary { color: var(--text); background: var(--surface); }
+  .btn-disabled {
+    background: var(--surface);
+    color: var(--text-secondary);
+    border: 1px dashed var(--border);
+    cursor: default;
+    pointer-events: none;
+  }
 
   section { padding: 64px 0; border-top: 1px solid var(--border); }
   h2 {
@@ -158,9 +165,10 @@
     <p class="tagline">Five labs review your plan before a line of code exists. Nothing builds until the Council signs off — or tells you exactly why it won't.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#council">Meet the Council</a>
-      <!-- TODO before deploy: github.com/muad-yasin/sophi-a is private today (DECISIONS.md,
-           2026-09-09) - point this at the real public URL once/if the repo goes public. -->
-      <a class="btn btn-secondary" href="#" rel="noopener">Read the source</a>
+      <!-- github.com/muad-yasin/sophi-a is private today (DECISIONS.md, 2026-09-09) - same
+           "don't ship a link that goes nowhere real" reasoning as the coming-soon CTA below.
+           Swap to a real <a href="https://github.com/..."> the day the repo goes public. -->
+      <span class="btn btn-disabled" role="button" aria-disabled="true">Source — private for now</span>
     </div>
   </div>
 </header>
@@ -248,11 +256,13 @@
   <div class="wrap">
     <h2>Get Sophi-A</h2>
     <p class="lede">Source is free and open (Apache-2.0). A packaged, ready-to-run build is €20, one-time — you bring your own provider keys.</p>
-    <!-- TODO before deploy: SHOP.md records the €20 price and that the real Stripe payment link
-         was created by hand in Muad's own dashboard, but does not record the link itself - this
-         page needs the real link pasted in before it ships anywhere real. -->
+    <!-- No real Stripe link exists for the packaged build yet (SHOP.md records the €20 price and
+         that sower-industries.de/plan's own link was created by hand in the dashboard, but
+         Sophi-A's own link hasn't been made) - a real <a href> here would either 404 or point
+         nowhere real, so this stays a visibly inert "coming soon" state on purpose until that
+         link exists. Swap to a real <a class="btn btn-primary" href="..."> the day it does. -->
     <div class="cta-row">
-      <a class="btn btn-primary" href="#" rel="noopener">Get the packaged build — €20</a>
+      <span class="btn btn-disabled" role="button" aria-disabled="true">Packaged build — coming soon</span>
     </div>
   </div>
 </section>
