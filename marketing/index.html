@@ -154,6 +154,170 @@
     h1.wordmark { font-size: 38px; }
     .compare { grid-template-columns: 1fr; }
   }
+
+  /* --- Shop card, ported from SMO's real purchase-card grammar - see the HTML comment above
+     this section for the exact source files. Real measured values throughout, not approximated:
+     ShopScreenBuilder.cs / Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html. --- */
+  .shop-card {
+    position: relative;
+    max-width: 460px;
+    margin: 0 auto;
+    background: #100f0c;
+    border: 1px solid rgba(242, 237, 227, 0.05);
+    border-radius: 28px;
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.6);
+    padding: 32px 28px;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  /* The glowing top stripe - present in SMO's original mockup, removed in SMO's own shipped
+     build later (developer's note: "reads as a detached line above the corners"), kept here on
+     Muad's explicit call to reproduce the original as asked. */
+  .shop-card-stripe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold-bright) 50%, var(--gold) 70%, transparent);
+    box-shadow: 0 0 12px 1px rgba(201, 162, 77, 0.55);
+  }
+
+  .shop-card-overline {
+    margin: 8px 0 4px;
+    font-family: var(--font-chrome);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .shop-card-price-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px 0;
+  }
+
+  .shop-card-price-halo {
+    position: absolute;
+    width: 260px;
+    height: 130px;
+    background: radial-gradient(ellipse at center, rgba(201, 162, 77, 0.20), rgba(201, 162, 77, 0) 68%);
+    pointer-events: none;
+  }
+
+  .shop-card-price {
+    position: relative;
+    margin: 0;
+    font-family: var(--font-chrome);
+    font-weight: 700;
+    font-size: 56px;
+    color: #fdf6e3;
+    text-shadow: 0 4px 24px rgba(201, 162, 77, 0.35);
+  }
+
+  .shop-card-subtext {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+    font-size: 15px;
+  }
+
+  .shop-card-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 0 20px;
+  }
+
+  .shop-card-bullet {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    text-align: left;
+    margin-bottom: 18px;
+  }
+
+  .shop-card-icon-plate {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(233, 201, 127, 0.5);
+    background: rgba(201, 162, 77, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--gold-bright);
+  }
+
+  .shop-card-bullet-title {
+    margin: 0 0 2px;
+    font-family: var(--font-chrome);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .shop-card-bullet-body {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+  }
+
+  /* The BUY button - real gradient/shadow values from ShopScreenBuilder.cs, plus a continuous
+     shine sweep (SMO's own BuyShineCycleSeconds = 2.6s, sweep holds off-screen for most of the
+     cycle rather than moving constantly). Looping here is deliberate, unlike the in-app Send
+     buttons this same treatment was also applied to (src/styles.css) - a landing-page purchase
+     button is a single rare decision, the exact case SMO's own button was built for; an in-app
+     Send button fires dozens of times a session, so that one only sweeps on hover. Same
+     component, different cadence, chosen for what the moment actually is. */
+  .shop-card-buy {
+    position: relative;
+    overflow: hidden;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    padding: 18px;
+    border-radius: 16px;
+    border: none;
+    background: linear-gradient(180deg, #f1da9b, #e9c97f 25%, #c9a24d 68%, #8f6e2b);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -3px 0 rgba(90, 60, 10, 0.5),
+      0 10px 22px rgba(0, 0, 0, 0.45),
+      0 0 20px rgba(201, 162, 77, 0.25);
+    color: #171207;
+    font-family: var(--font-chrome);
+    font-weight: 700;
+    font-size: 17px;
+    text-decoration: none;
+    text-align: center;
+  }
+
+  .shop-card-buy::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.6) 50%, transparent 60%);
+    transform: translateX(-120%);
+    animation: shop-card-shine 2.6s ease-in-out infinite;
+  }
+
+  @keyframes shop-card-shine {
+    0% { transform: translateX(-120%); }
+    22% { transform: translateX(120%); }
+    100% { transform: translateX(120%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shop-card-buy::after { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -254,11 +418,42 @@
 <section>
   <div class="wrap">
     <h2>Get Sophi-A</h2>
-    <p class="lede">Source is free and open (Apache-2.0). A packaged, ready-to-run build is €20, one-time — you bring your own provider keys.</p>
-    <!-- Real Stripe payment link, created by hand in the Sower Industries dashboard 2026-09-10
-         (Sophi-A product, 20,00 EUR, status Aktiv - plink_1UE7ypFQRVJYIrwWGRvohB8g). -->
-    <div class="cta-row">
-      <a class="btn btn-primary" href="https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03" rel="noopener">Get the packaged build — €20</a>
+    <!-- Shop-card treatment ported from SMO's real "BUY AD-PARDON" purchase card - the one place
+         in that game with the same job this section has here (a one-time real-money purchase
+         decision). Source: Assets/Scripts/Editor/Shop/ShopScreenBuilder.cs +
+         Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html in ~/Projects/SMO. Colors,
+         shadows and the shine-sweep timing below are the real measured values from that handoff,
+         not approximated. The top stripe was later removed in SMO itself (developer's own note:
+         "reads as a detached line above the corners") but kept here per Muad's explicit call -
+         reproduce the original card as asked, not SMO's own later revision. -->
+    <div class="shop-card">
+      <div class="shop-card-stripe"></div>
+      <p class="shop-card-overline">Support Sophi-A</p>
+      <div class="shop-card-price-wrap">
+        <span class="shop-card-price-halo" aria-hidden="true"></span>
+        <p class="shop-card-price">€20</p>
+      </div>
+      <p class="shop-card-subtext">One-time purchase, no subscription</p>
+      <hr class="shop-card-divider" />
+      <div class="shop-card-bullet">
+        <span class="shop-card-icon-plate" aria-hidden="true">♥</span>
+        <div>
+          <p class="shop-card-bullet-title">Support the developer</p>
+          <p class="shop-card-bullet-body">Every purchase funds continued development of Sower Industries.</p>
+        </div>
+      </div>
+      <div class="shop-card-bullet">
+        <span class="shop-card-icon-plate" aria-hidden="true">⚡</span>
+        <div>
+          <p class="shop-card-bullet-title">Skip the setup</p>
+          <p class="shop-card-bullet-body">Source stays free either way - this buys a working build, not the code.</p>
+        </div>
+      </div>
+      <!-- Real Stripe payment link, created by hand in the Sower Industries dashboard 2026-09-10
+           (Sophi-A product, 20,00 EUR, status Aktiv - plink_1UE7ypFQRVJYIrwWGRvohB8g). -->
+      <a class="shop-card-buy" href="https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03" rel="noopener">
+        Get the packaged build — €20
+      </a>
     </div>
   </div>
 </section>

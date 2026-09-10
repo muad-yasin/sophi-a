@@ -634,10 +634,69 @@ body {
 }
 
 /* Send is the primary action - SMO's Gold is reserved for buttons/overlines, so it's the one
-   place in this app that departs from the status-color set. */
+   place in this app that departs from the status-color set. Values below are the real measured
+   values from SMO's own shop "BUY AD-PARDON" button (Assets/Scripts/Editor/Shop/
+   ShopScreenBuilder.cs, Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html), not
+   approximated - see brand/HIGH_COUNCIL.md's neighbor doc, brand/BRAND.md, for the gold token
+   values this reuses verbatim. Shine sweep triggers on hover, not continuously: SMO's own button
+   loops it because it's a single rare purchase moment; a Send button here fires dozens of times
+   a session, and eight of them looping in one screen at once is the "inviting signal
+   over-animated into a nag" failure ux-design's own skill names - hover-triggered keeps the
+   "shining, alive" read without the noise.
+   */
 .btn-send {
-  border-color: var(--gold);
-  color: var(--gold-bright);
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background: linear-gradient(180deg, #f1da9b, #e9c97f 25%, #c9a24d 68%, #8f6e2b);
+  color: var(--on-gold);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -3px 0 rgba(90, 60, 10, 0.5),
+    0 6px 14px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(201, 162, 77, 0.25);
+}
+
+.btn-send:disabled {
+  background: var(--surface-raised);
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+/* The sweep itself: a diagonal light band, off-screen at rest, that crosses the button once on
+   hover - matches SMO's own ShineSweepAnimator (a pre-skewed sprite here becomes a skewed
+   ::after gradient since this is CSS, not a baked sprite). */
+.btn-send::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 60%
+  );
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.btn-send:hover:not(:disabled)::after {
+  animation: btn-send-shine 0.7s ease-in-out;
+}
+
+@keyframes btn-send-shine {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-send:hover:not(:disabled)::after {
+    animation: none;
+  }
 }
 
 .btn-stop {

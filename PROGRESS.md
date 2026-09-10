@@ -362,3 +362,31 @@
   owns - use an isolated `CARGO_TARGET_DIR` or just trust the dev process's own auto-rebuild.
 
   npx tsc --noEmit and a real `vite build` both clean throughout.
+- 2026-09-10 - Ported SMO's real shop-card visual grammar into Sophi-A, at Muad's request.
+  Researched the actual source before touching anything (visual-craft's own rule: check the real
+  reference, never memory) - found this is SMO's "Ad-Pardon" purchase card
+  (~/Projects/SMO/Assets/Scripts/Editor/Shop/ShopScreenBuilder.cs), with a full pixel-measured
+  CSS handoff at Review/ShopAdRow_2026-09-02/handoff/export/ (colors.json, state-3a.html, real
+  screenshots). Real finding surfaced before building: the mockup's glowing top stripe was later
+  removed in SMO's own shipped build ("reads as a detached line above the corners" per the
+  developer's own comment) and replaced with a gradient border - flagged to Muad, who explicitly
+  chose to keep the stripe as originally asked rather than follow SMO's later revision.
+
+  Applied in two places, both grounded in the real measured values (gradient stops, box-shadow
+  layers, the 2.6s shine cycle), not approximated:
+  - marketing/index.html's "Get Sophi-A" section rebuilt as a real hero card: glowing top stripe,
+    blurred gold price halo, ring-outlined icon-plate bullets (adapted to Sophi-A's real value
+    props, not SMO's copy), and the gold BUY button with a continuous shine-sweep loop - the
+    landing page's one purchase moment, the same shape of moment SMO's button was built for.
+  - src/styles.css's .btn-send (every in-app Send button) got the same gold gradient/glow
+    treatment, but the shine sweep triggers on hover, not continuously: a deliberate departure
+    from SMO's own always-looping button, because a Send button fires dozens of times a session
+    and eight of them looping at once in one screen is the "inviting signal over-animated into a
+    nag" failure the ux-design skill names - the landing page's rare single decision keeps the
+    loop, the frequent in-app action doesn't.
+
+  Verified against the real reference screenshot (Shop_AdReady.png), not eyeballed from memory -
+  matches the grammar (stripe, halo, icon plates, glossy button) closely. Confirmed the shine
+  animation is actually applying via computed style (animationName/duration/iterationCount), not
+  just present in source. prefers-reduced-motion respected on both. npx tsc --noEmit and a real
+  vite build both clean.
