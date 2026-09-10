@@ -422,3 +422,6 @@
   this pass delivered the reviewed design only, per the session's own scope discipline.
 
 - [Phase 0, Step 1] verify-assumptions.js — pass — `node scripts/verify-assumptions.js` — 2026-09-10T20:33:15Z
+- [Phase 4, Step 1] hosted-trial-proxy design doc — pass — file exists with HUMAN STOP marker — 2026-09-10T20:36:00Z
+- [Phase 4, Step 2] hosted-share-snapshot design doc — pass — file exists with HUMAN STOP marker — 2026-09-10T20:36:00Z
+- [Phase 4, Step 3] hosted-public-trial design doc — pass — file exists with HUMAN STOP marker — 2026-09-10T20:36:00Z
