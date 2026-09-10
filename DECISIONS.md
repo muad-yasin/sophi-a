@@ -417,6 +417,96 @@
   directory itself rather than assuming `claudeCodeSubprocess.js`'s own lazy `workdirFor()` has
   already run first - order-of-operations matters here since the snapshot is taken *before* the
   seat spawns.
+
+## 2026-09-10: Phase 3 Steps 1-2 - run recorder + replay, in worktree `phase3-run-recorder-replay`
+
+Built in a dedicated git worktree (`~/Projects/cnc-harness-worktrees/phase3-steps1-2`, branch
+`phase3-run-recorder-replay`), per the dispatching session's explicit instruction, so as not to
+disturb another concurrent worktree's in-progress uncommitted edits to `index.js`/`index.html` in
+the main checkout. This entry only covers this worktree's own two steps.
+
+- **Real-codebase correction, found before writing any code, not assumed from the plan text**:
+  `revise-1.md`'s Phase 3 Step 1 spec says the recorder "copies `events.jsonl` and `report.json`".
+  Grepped relay's actual source (`~/Projects/relay/src/*.js`) for any code that writes a file named
+  `events.jsonl` - none exists anywhere. Inspected several real run directories under
+  `~/Projects/relay/runs/` (including the very run this plan itself came from,
+  `2026-09-10T20-03-03-692Z`) - the only per-run files relay ever writes are `report.json` and
+  `run.log` (a plain-text CLI log, not JSON Lines - `relayChainSubprocess.js` already tails this
+  same file for live progress). This is the same class of mismatch Phase 0's own script caught for
+  `start<Name>Seat`/`report.totals` (plan text vs. real codebase), just for a file this plan
+  invents rather than one it names from an existing adapter - not itself covered by Phase 0's
+  verification script, since Phase 0 only checked Phase 1's foundations. Resolved myself, per this
+  plan's own unwind-cost-list mechanism (item 5 explicitly calls this run-directory layout decision
+  out as needing to be "recorded in DECISIONS.md before Step 2 depends on it" - exactly this kind
+  of call, not a HUMAN STOP item): `run-recorder.js` copies `report.json` + `run.log` under their
+  real names (not renamed to a misleading `.jsonl` extension neither file actually has).
+- **Run-directory layout** (unwind-cost item 5, decided here as required): `<repo root>/runs/
+  <seatId>/<runId>/{report.json, run.log, meta.json}`, inside this repo (not relay's own `runs/`,
+  which relay may clean up or reuse independently) - `runId` reuses relay's own run id (its own
+  sortable ISO-ish timestamp directory name) rather than a fresh `Date.now()` computed at record
+  time, so the recorded copy stays traceably linked to its source run and can't collide with a
+  same-millisecond sibling. Added `runs` to `.gitignore` (same reasoning as `.workdirs`: real,
+  runtime-generated, per-machine history, never source).
+- **Recorded even when the run failed or its report.json is corrupt**: `recordRun` is called as
+  soon as `report.json` exists on disk, before `relayChainSubprocess.js` attempts to parse it - a
+  rejected run or a corrupted report is still a real run worth a record of, and Step 2's own
+  acceptance test needs a genuinely corrupted saved report.json to replay against. Wrapped in
+  try/catch and logged to `console.error` only, non-fatal by construction: a disk-full or
+  permissions failure in the recorder must never take down an otherwise-fine live run.
+- **`meta.json` + `REPLAY_SCHEMA_VERSION`** (unwind-cost item 7, the replay parser's version tag):
+  written alongside each recorded run, currently `{schemaVersion: 1}`. `readRecordedRun` also
+  independently validates the minimal shape the replay parser actually depends on (`passed` is a
+  boolean; `signoff`/`scoreboard` are the right JS types if present at all) before ever calling a
+  saved report "readable" - belt-and-suspenders with the version tag, since a schema drift that
+  silently changes a field's *type* rather than adding a version bump would otherwise slip past a
+  version check alone.
+- **A real bug found only by direct integration testing, not by reading the code**: my first draft
+  of `run-recorder.js` computed `RUNS_DIR = join(root, 'runs')` at module top level, same as
+  `relayChainSubprocess.js`'s own file-level comment warns against - `root` is a live ES-module
+  binding from `index.js`, and `index.js`/`relayChainSubprocess.js`/`run-recorder.js` form an
+  import cycle. Spawning the real orchestrator entry point (`node src/orchestrator/index.js`) and
+  running one real seat through it threw `ReferenceError: Cannot access 'root' before
+  initialization` - a standalone unit test of `run-recorder.js` alone didn't catch this, because
+  which module happens to be the *entry point* changes which side of the cycle's TDZ window you
+  land in. Fixed by computing the path lazily inside a function (`runsDir()`), mirroring
+  `relayChainSubprocess.js`'s existing `resolveRelayPath()` pattern exactly, then re-verified with
+  the real orchestrator entry point end-to-end.
+- **Replay reuses the live Debate panel, not a second UI**: `main.ts`'s `renderDebatePanel`
+  already renders a `DebateReportDetail`-shaped object (populated live by relayChainSubprocess.js's
+  `debate.report` event) into the plan-N tile's seal/signoff/scoreboard/failure lists.
+  `index.js`'s `handleReplayRun` builds the exact same shape from a saved run's `report.json`, so
+  the same render function draws either one - a `replayView` map (keyed by seatId) is checked
+  first, falling back to the live `debateCache` when absent. Chose this over a separate replay
+  view/modal: less code, and it structurally guarantees replay can never drift from what live
+  rendering shows for the same data (there is only one renderer).
+- **A live run finishing never interrupts an open replay**: `handleDebateReport` (the live-update
+  path) now skips re-rendering the panel while `replayView` has an entry for that seat - the
+  banner/mandatory-honesty rule cuts both ways: a replay must never look live, and a live update
+  must never quietly swap out a replay the operator opened on purpose either. `debateCache` is
+  still updated in the background, so switching the history `<select>` back to "Live" shows the
+  new result immediately, without a second live request.
+- **MCP `replay_run`/`get_seat_logs` correlate on `type`+`seatId`(+`runId`), not a new request-id
+  protocol field**: every existing per-client query reply in this codebase (`compare.changes`,
+  `compare.diff`, `cost.estimate`) is already a plain `ws.send` matched by the caller on `type` +
+  `seatId` alone - extended the same pattern for these two rather than inventing request-id
+  plumbing the rest of the protocol doesn't have. `src/mcp/server.js`'s `sendAndWait` helper is
+  new (a generic reply-registers-then-resolves function local to that file) since none of the
+  MCP server's existing tools needed a real reply payload before this - `list_seats`/`start_seat`/
+  etc. all read from the MCP server's own live cache or fire-and-forget.
+- **Verified for real, not just typechecked**: (1) `run-recorder.js` unit-level against a real
+  relay report.json shape copied from `~/Projects/relay/runs/2026-09-10T20-03-03-692Z/report.json`
+  - 51 synthetic runs recorded, exactly 50 remain, oldest evicted; a corrupted report replays as
+  `unreadable report`; (2) a full real path through `startRelayChainSeat` against a fake `relay`
+  CLI (writes a real-shaped `report.json`/`run.log` after a short delay, so the adapter's own
+  discovery/poll loop runs unmodified) confirmed the live event stream is unaffected and
+  `runs/plan-1/<runId>/` is populated correctly; (3) a live WebSocket integration test against the
+  real orchestrator entry point (`node src/orchestrator/index.js`) exercised `list_runs`,
+  `replay_run` (both a real good run and a hand-corrupted one), and `get_seat_logs` end to end.
+  Not independently verified: the actual Tauri frontend render (history `<select>`, banner, error
+  state) in a real running window - no display/screenshot tool was available in this sandbox (the
+  same limitation an earlier session's UI pass in this same DECISIONS.md already named); `npx tsc
+  --noEmit` is clean and the DOM query/update logic mirrors the existing, already-verified cost-
+  panel code path exactly, but the actual pixels were not looked at.
   **Tested for real** against a standalone orchestrator: a 2-builder dispatch where `build-1` had
   a real pre-existing file and `build-3` had never been used before (no workdir on disk at all) -
   confirmed `build-1`'s manifest correctly captured that file's real mtime/sha256, `build-3`'s

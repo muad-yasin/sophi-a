@@ -24,6 +24,11 @@ dist-node
 # real gap - a stray `git add -A` could have swept a builder's real edits into a commit.
 .workdirs
 
+# Phase 3 Step 1 (run-recorder.js): recorded plan-N relay runs (report.json/run.log/meta.json
+# copies), runtime-generated per-machine history, never source - same reasoning as .workdirs
+# above.
+runs
+
 # Secrets - nothing in this repo's own code ever writes these into the working tree today (API
 # keys live in Tauri's <app_config_dir>/api-keys.json, outside the repo; relay's .env belongs to
 # the separate relay checkout) - checked via full git history/content audit before making this

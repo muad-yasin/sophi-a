@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSy
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { root } from '../index.js';
+import { recordRun } from '../run-recorder.js';
 
 const RUN_DISCOVERY_POLL_MS = 250;
 const RUN_DISCOVERY_MAX_ATTEMPTS = 20; // ~5s, matching relay's own start_run tool
@@ -139,6 +140,15 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
     }
     const reportPath = join(runDir, 'report.json');
     if (existsSync(reportPath)) {
+      // Phase 3 Step 1 (run recorder): record before parsing, not after - a corrupted report.json
+      // still gets a run record (Phase 3 Step 2 replays it as "unreadable report", not "no such
+      // run"). Non-fatal by design: a disk-full/permission failure here must never take down an
+      // otherwise-successful live run.
+      try {
+        recordRun(seatId, runDir);
+      } catch (err) {
+        console.error(`run-recorder: failed to record ${seatId}'s run ${runId}: ${err.message}`);
+      }
       let report;
       try {
         report = JSON.parse(readFileSync(reportPath, 'utf8'));

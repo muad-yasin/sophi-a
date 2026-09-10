@@ -17,6 +17,7 @@ import { isAllowedProvider } from './providers.js';
 import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash } from './compareSnapshot.js';
 import { estimateChainCost } from './costEstimate.js';
 import { checkAllSeats } from './preflight.js';
+import { listRecordedRuns, readRecordedRun, readRecordedLog } from './run-recorder.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -443,6 +444,64 @@ async function handlePreflight(ws) {
   ws.send(JSON.stringify({ type: 'preflight.result', results, isFirstRun }));
 }
 
+// Phase 3 Step 2 (replay from history, honest by construction): a history dropdown per plan-N
+// seat re-renders the same Debate panel read-only from a saved run-recorder.js run - no second
+// artifact store, just a different source for the exact DebateReportDetail shape the live
+// `debate.report` event already uses.
+function handleListRuns(ws, seatId) {
+  if (!PLANNER_SEAT_IDS.includes(seatId)) {
+    ws.send(JSON.stringify({ type: 'run.history', seatId, error: `"${seatId}" has no recorded run history` }));
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'run.history', seatId, runs: listRecordedRuns(seatId) }));
+}
+
+function handleReplayRun(ws, seatId, runId) {
+  if (!PLANNER_SEAT_IDS.includes(seatId) || typeof runId !== 'string' || !runId) {
+    ws.send(JSON.stringify({ type: 'replay.result', seatId, runId, error: 'unreadable report' }));
+    return;
+  }
+  const result = readRecordedRun(seatId, runId);
+  if (!result.ok) {
+    ws.send(JSON.stringify({ type: 'replay.result', seatId, runId, error: result.error }));
+    return;
+  }
+  const { report } = result;
+  // Same shape relayChainSubprocess.js's live `debate.report` event emits (main.ts's
+  // DebateReportDetail) - a truncated/corrupt report never reaches this line (readRecordedRun
+  // already turned that into `result.ok === false` above), so renderDebatePanel can treat replay
+  // and live data identically once it has this object.
+  ws.send(JSON.stringify({
+    type: 'replay.result',
+    seatId,
+    runId,
+    report: {
+      runId: report.runId || runId,
+      passed: report.passed,
+      signoff: report.signoff || null,
+      scoreboard: report.scoreboard || null,
+      failures: report.lastCritique?.failures || null,
+    },
+    recordedAt: result.meta?.recordedAt ?? null,
+  }));
+}
+
+// mcp/server.js's `get_seat_logs` tool (PLAN.md's "terminal surface matches" requirement,
+// Phase 3 Step 2) - the raw run.log relay itself wrote for one recorded run, so a terminal
+// session can inspect a past run's real log lines without the app open.
+function handleGetSeatLogs(ws, seatId, runId) {
+  if (!PLANNER_SEAT_IDS.includes(seatId) || typeof runId !== 'string' || !runId) {
+    ws.send(JSON.stringify({ type: 'seat.logs', seatId, runId, error: 'no run.log recorded for this run' }));
+    return;
+  }
+  const result = readRecordedLog(seatId, runId);
+  if (!result.ok) {
+    ws.send(JSON.stringify({ type: 'seat.logs', seatId, runId, error: result.error }));
+    return;
+  }
+  ws.send(JSON.stringify({ type: 'seat.logs', seatId, runId, log: result.log }));
+}
+
 // Only cnc/advisor declare a `provider` field in seats.json at all (PLAN.md's second 2026-09-09
 // addendum) - the other six seats have no configurable provider/model and this is rejected for
 // them. Runtime-only mutation of the in-memory seat entry, never written back to seats.json; that
@@ -549,6 +608,9 @@ function main() {
       else if (msg.cmd === 'estimate_cost') handleEstimateCost(ws, msg.seatId);
       else if (msg.cmd === 'forward_deliverable') forwardDeliverable(wss, msg.fromSeatId, msg.toSeatId, msg.confirmed);
       else if (msg.cmd === 'preflight') handlePreflight(ws);
+      else if (msg.cmd === 'list_runs') handleListRuns(ws, msg.seatId);
+      else if (msg.cmd === 'replay_run') handleReplayRun(ws, msg.seatId, msg.runId);
+      else if (msg.cmd === 'get_seat_logs') handleGetSeatLogs(ws, msg.seatId, msg.runId);
     });
   });
 

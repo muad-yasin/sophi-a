@@ -94,6 +94,40 @@ function send(cmd) {
   ws.send(JSON.stringify(cmd));
 }
 
+const PLANNER_SEAT_IDS = ['plan-1', 'plan-2', 'plan-3'];
+const planSeatIdSchema = z.enum(PLANNER_SEAT_IDS);
+
+// Phase 3 Step 2 ("replay_run and get_seat_logs added to src/mcp/server.js so the terminal
+// surface matches"): unlike every tool above, these two need an actual reply payload back from
+// the orchestrator, not just a fire-and-forget command - index.js answers them with a per-client
+// `ws.send` (never broadcast), matching this same connection's own socket, so correlating on
+// `type` (+ `seatId`/`runId`, since more than one of these could theoretically be in flight) is
+// enough without inventing a new request-id protocol field.
+function sendAndWait(cmd, matchType, timeoutMs = 15_000) {
+  return new Promise((resolve, reject) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      reject(new Error('not connected to a running Sophi-A orchestrator - is the app open?'));
+      return;
+    }
+    const socket = ws;
+    const timer = setTimeout(() => {
+      socket.off('message', handler);
+      reject(new Error(`timed out waiting for a ${matchType} reply`));
+    }, timeoutMs);
+    function handler(raw) {
+      let evt;
+      try { evt = JSON.parse(raw.toString()); } catch { return; }
+      if (evt.type !== matchType || evt.seatId !== cmd.seatId) return;
+      if (cmd.runId !== undefined && evt.runId !== cmd.runId) return;
+      clearTimeout(timer);
+      socket.off('message', handler);
+      resolve(evt);
+    }
+    socket.on('message', handler);
+    socket.send(JSON.stringify(cmd));
+  });
+}
+
 function seatSnapshot(seatId) {
   const state = seatState.get(seatId);
   return state ? { seatId, ...state } : null;
@@ -156,6 +190,39 @@ server.tool('wait_for_idle', 'Poll a seat until it leaves "working" (idle or pro
     await new Promise(r => setTimeout(r, 500));
   }
   return text({ ...seatSnapshot(seatId), timedOut: true });
+});
+
+server.tool('list_runs', 'List a plan-N seat\'s recorded past relay runs (Phase 3 run history), newest first - each entry has a runId (relay\'s own run timestamp) and when it was recorded.', { seatId: planSeatIdSchema }, async ({ seatId }) => {
+  try {
+    const evt = await sendAndWait({ cmd: 'list_runs', seatId }, 'run.history');
+    return text(evt.error ? { error: evt.error } : evt.runs);
+  } catch (err) {
+    return text({ error: err.message });
+  }
+});
+
+server.tool('replay_run', 'Replay one of a plan-N seat\'s saved runs, read-only - identical verdict/signoff/scoreboard data as that run\'s real report.json, never live. A corrupted or missing report.json comes back as an "unreadable report" error, never empty/partial data.', {
+  seatId: planSeatIdSchema,
+  runId: z.string(),
+}, async ({ seatId, runId }) => {
+  try {
+    const evt = await sendAndWait({ cmd: 'replay_run', seatId, runId }, 'replay.result');
+    return text(evt.error ? { error: evt.error } : { ...evt.report, recordedAt: evt.recordedAt, replay: true });
+  } catch (err) {
+    return text({ error: err.message });
+  }
+});
+
+server.tool('get_seat_logs', 'Raw run.log lines relay itself wrote for one of a plan-N seat\'s recorded past runs (Phase 3 replay) - the same log relayChainSubprocess.js tailed live during that run.', {
+  seatId: planSeatIdSchema,
+  runId: z.string(),
+}, async ({ seatId, runId }) => {
+  try {
+    const evt = await sendAndWait({ cmd: 'get_seat_logs', seatId, runId }, 'seat.logs');
+    return text(evt.error ? { error: evt.error } : { log: evt.log });
+  } catch (err) {
+    return text({ error: err.message });
+  }
 });
 
 const transport = new StdioServerTransport();

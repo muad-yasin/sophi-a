@@ -109,6 +109,30 @@ interface PreflightResultEvent {
   isFirstRun: boolean;
 }
 
+// Phase 3 Step 2 (replay from history, honest by construction) - a plan-N seat's recorded past
+// relay runs (run-recorder.js), and the read-only replay of one of them. `report` on a
+// ReplayResultEvent is the exact same shape as DebateReportDetail above (index.js's
+// handleReplayRun builds it identically to relayChainSubprocess.js's live `debate.report`) so
+// renderDebatePanel can render either one without caring which it got.
+interface RunHistoryEntry {
+  runId: string;
+  recordedAt: number | null;
+}
+interface RunHistoryEvent {
+  type: "run.history";
+  seatId: string;
+  runs?: RunHistoryEntry[];
+  error?: string;
+}
+interface ReplayResultEvent {
+  type: "replay.result";
+  seatId: string;
+  runId: string;
+  report?: DebateReportDetail;
+  recordedAt?: number | null;
+  error?: string;
+}
+
 type Status = "idle" | "working" | "problem";
 
 const SEAT_IDS = [
@@ -417,7 +441,9 @@ async function connect() {
         | CompareHistoryEvent
         | DebateReportEvent
         | CostEstimateEvent
-        | PreflightResultEvent;
+        | PreflightResultEvent
+        | RunHistoryEvent
+        | ReplayResultEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
@@ -425,6 +451,8 @@ async function connect() {
       else if (evt.type === "debate.report") handleDebateReport(evt);
       else if (evt.type === "cost.estimate") handleCostEstimate(evt);
       else if (evt.type === "preflight.result") handlePreflightResult(evt);
+      else if (evt.type === "run.history") handleRunHistory(evt);
+      else if (evt.type === "replay.result") handleReplayResult(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -917,6 +945,15 @@ function setupHistoryPanel() {
 const PLANNER_SEAT_IDS = ["plan-1", "plan-2", "plan-3"] as const;
 const debateCache = new Map<string, DebateReportDetail>();
 
+// Phase 3 Step 2: which saved run (if any) a plan-N tile's debate panel is currently showing
+// instead of its live debateCache entry. Absent = live. Set by picking a run in the history
+// <select>; cleared back to live by picking "Live" - never automatically, so a live run finishing
+// in the background never silently swaps out a replay the operator deliberately opened (the
+// "honest by construction" rule cuts both ways: replay must never look live, and a live update
+// must never quietly interrupt a replay either).
+type ReplayView = { runId: string; report: DebateReportDetail } | { runId: string; error: string };
+const replayView = new Map<string, ReplayView>();
+
 function renderDebatePanel(seatId: string) {
   const tile = tileEl(seatId);
   const empty = tile?.querySelector<HTMLElement>('[data-role="debate-empty"]');
@@ -924,9 +961,15 @@ function renderDebatePanel(seatId: string) {
   const scoreboardList = tile?.querySelector<HTMLUListElement>('[data-role="debate-scoreboard-list"]');
   const failureList = tile?.querySelector<HTMLUListElement>('[data-role="debate-failure-list"]');
   const seal = tile?.querySelector<SVGSVGElement>('[data-role="debate-seal"]');
+  const banner = tile?.querySelector<HTMLElement>('[data-role="debate-replay-banner"]');
+  const replayError = tile?.querySelector<HTMLElement>('[data-role="debate-replay-error"]');
   if (!tile || !empty || !signoffList || !scoreboardList || !failureList) return;
 
-  const report = debateCache.get(seatId);
+  const view = replayView.get(seatId);
+  const report = view ? ("report" in view ? view.report : undefined) : debateCache.get(seatId);
+  const errorText = view && "error" in view ? view.error : undefined;
+
+  if (banner) banner.hidden = !view; // "REPLAY — not live" (the honesty rule) - only ever visible while a saved run is selected
   signoffList.innerHTML = "";
   scoreboardList.innerHTML = "";
   failureList.innerHTML = "";
@@ -939,6 +982,18 @@ function renderDebatePanel(seatId: string) {
   seal?.querySelectorAll<SVGPathElement>(".seat").forEach(el => {
     el.classList.remove("debate-signed-off", "debate-objected", "debate-abstained");
   });
+
+  // A truncated/corrupt report.json shows "unreadable report", never an empty pane or a partial
+  // seal (Step 2's own acceptance test) - checked before the "no report yet" empty state below,
+  // since an explicit replay error is a different, more specific case than "nothing has run yet".
+  if (replayError) {
+    replayError.hidden = !errorText;
+    replayError.textContent = errorText ?? "";
+  }
+  if (errorText) {
+    empty.hidden = true;
+    return;
+  }
 
   if (!report) {
     empty.hidden = false;
@@ -1006,8 +1061,63 @@ function handleDebateReport(evt: DebateReportEvent) {
   debateCache.set(evt.seatId, evt.detail);
   const tile = tileEl(evt.seatId);
   const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
-  if (panel && !panel.hidden) renderDebatePanel(evt.seatId); // live-update if already open
+  // Deliberately does not re-render while a replay is showing (see replayView's own comment) - a
+  // background live run finishing must never silently swap out a saved run the operator opened on
+  // purpose. debateCache is still updated above, so switching the history select back to "Live"
+  // shows this new result immediately.
+  if (panel && !panel.hidden && !replayView.has(evt.seatId)) renderDebatePanel(evt.seatId);
   updateForwardButton(evt.seatId);
+}
+
+// Phase 3 Step 2: a history dropdown per plan-N seat, populated on demand (when the debate panel
+// opens, same lazy-load pattern as setupCostPanels below) rather than eagerly for every seat on
+// startup.
+function handleRunHistory(evt: RunHistoryEvent) {
+  const tile = tileEl(evt.seatId);
+  const select = tile?.querySelector<HTMLSelectElement>('[data-role="debate-history-select"]');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = "";
+  const liveOpt = document.createElement("option");
+  liveOpt.value = "";
+  liveOpt.textContent = "Live";
+  select.appendChild(liveOpt);
+  for (const run of evt.runs ?? []) {
+    const opt = document.createElement("option");
+    opt.value = run.runId;
+    opt.textContent = run.recordedAt ? `${run.runId} (${new Date(run.recordedAt).toLocaleString()})` : run.runId;
+    select.appendChild(opt);
+  }
+  // Preserve the current selection across a refresh, best-effort - falls back to "Live" if the
+  // previously-selected run no longer exists in the fresh list (e.g. it just got evicted).
+  select.value = [...select.options].some(o => o.value === current) ? current : "";
+}
+
+function handleReplayResult(evt: ReplayResultEvent) {
+  if (evt.error) replayView.set(evt.seatId, { runId: evt.runId, error: evt.error });
+  else if (evt.report) replayView.set(evt.seatId, { runId: evt.runId, report: evt.report });
+  else return; // malformed reply - neither report nor error; leave whatever was showing alone
+  const tile = tileEl(evt.seatId);
+  const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
+  if (panel && !panel.hidden) renderDebatePanel(evt.seatId);
+}
+
+function setupDebateHistory() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const select = tile?.querySelector<HTMLSelectElement>('[data-role="debate-history-select"]');
+    if (!tile || !select) continue;
+
+    select.addEventListener("change", () => {
+      const runId = select.value;
+      if (!runId) {
+        replayView.delete(seatId);
+        renderDebatePanel(seatId);
+        return;
+      }
+      sendCommand({ cmd: "replay_run", seatId, runId });
+    });
+  }
 }
 
 // "Plan approved" -> "code exists" (docs/security-prompt-injection.md's S2 forward rule, first
@@ -1081,7 +1191,10 @@ function setupDebatePanels() {
       const opening = panel.hidden;
       panel.hidden = !opening;
       toggle.setAttribute("aria-expanded", String(opening));
-      if (opening) renderDebatePanel(seatId);
+      if (opening) {
+        renderDebatePanel(seatId);
+        sendCommand({ cmd: "list_runs", seatId }); // Phase 3 Step 2: refresh the history dropdown each time the panel opens
+      }
     });
   }
 }
@@ -1336,6 +1449,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupInspectPanels();
   setupHistoryPanel();
   setupDebatePanels();
+  setupDebateHistory();
   setupCostPanels();
   setupForwardConfirmModal();
   setupForwardControls();
