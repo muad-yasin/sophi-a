@@ -688,3 +688,14 @@
   first) - use `CARGO_TARGET_DIR=/tmp/<something>` for a manual verification build, or just trust
   the live dev process's own file-watcher rebuild and read its log instead of triggering a second
   parallel build.
+
+- 2026-09-10 - Phase 0 of the long-horizon build plan (relay run 2026-09-10T20-03-03-692Z) ran
+  for real: `scripts/verify-assumptions.js`, `docs/phase0-stack-truth.md`. All 6 checks VERIFIED,
+  but 2 of the plan's original assumptions were wrong and corrected during the script's own
+  authoring rather than shipped to fail on day one: (1) adapters export `start<Name>Seat`
+  functions, not a generic `spawn`; (2) `report.json` has no top-level `usage` field - usage is
+  per-stage (`stages[].usage`) and aggregated in `totals`, which **Phase 2 Step 2's cost meter
+  must read from**, not a flat `report.usage` that doesn't exist. `relay/chains/plan-cheap.json`
+  also has no top-level `stages` array (critics live at `seats.critics`), corrected the same way.
+  Awaiting the human-approval line in `docs/phase0-stack-truth.md` before Phase 1 starts -
+  not typed here, that line is the author's own per the plan's own rule.
