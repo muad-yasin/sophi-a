@@ -1783,6 +1783,23 @@ function setupSetupPanel() {
     try {
       await invoke("restart_orchestrator");
       restartStatus.textContent = "Restarted - reconnecting…";
+      // Real bug (found live, never fixed until now): restart_orchestrator's own Rust-side
+      // comment assumed the old WebSocket's `close` event would fire promptly once the old
+      // process died, triggering scheduleReconnect's existing backoff - but a killed process
+      // doesn't always tear down its socket in a way the browser notices quickly, so `close`
+      // (and therefore any reconnect at all) could simply never fire. Force it deterministically
+      // instead of waiting on the OS: closing the stale connection ourselves fires the exact same
+      // `close` handler that already calls scheduleReconnect(), so this only needs to reset
+      // `attempt` first so that reconnect is fast rather than wherever the backoff had drifted to.
+      // (A tried-and-reverted first version of this fix also called connect() directly here - a
+      // real, live-tested regression: that raced the close handler's own scheduleReconnect() and
+      // opened two simultaneous WebSocket connections to the new orchestrator.)
+      attempt = 0;
+      if (currentWs) {
+        currentWs.close(); // triggers the existing close handler, which calls scheduleReconnect()
+      } else {
+        scheduleReconnect(); // already disconnected - nothing to close, so kick a fresh attempt
+      }
     } catch (err) {
       restartStatus.textContent = `Failed: ${String(err)}`;
     }

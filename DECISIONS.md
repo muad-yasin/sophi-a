@@ -1153,3 +1153,54 @@ submit; Escape while the focused seat's tile is marked `working` sends exactly
 `{"cmd":"stop","seatId":"cnc"}` (read back from `sendCommand`'s own real debug-log line, not
 inferred); Escape while the same seat is `idle` sends nothing. `npx tsc --noEmit` and a real
 `vite build` both clean throughout.
+
+## 2026-09-11: Fixed the real restart-orchestrator reconnect bug - and a real bug in the first fix
+
+The long-standing gap: clicking "Restart orchestrator" in Setup called `invoke("restart_orchestrator")`,
+set the status text to "Restarted - reconnecting…", and stopped there - it never called `connect()`
+or touched the stale WebSocket, relying entirely on `restart_orchestrator`'s own Rust-side comment
+claiming the old connection's `close` event plus `scheduleReconnect`'s existing backoff would be
+enough. In practice this session found that reconnect after a restart click could simply never
+happen: a killed process doesn't always tear down its socket in a way the browser notices
+promptly (or at all, observed live during testing below), so the one signal the whole mechanism
+depended on could just not fire.
+
+**Root cause, not just the symptom:** the fix isn't "wait longer" or "poll harder" - it's that the
+frontend shouldn't depend on the dead server telling it the connection is gone. `main.ts`'s
+Restart click handler now closes the stale `currentWs` itself (`currentWs.close()`), which
+deterministically fires the exact same `close` event handler that already calls
+`scheduleReconnect()` - no new reconnect path, just forcing the existing one to fire when we know
+it should, instead of hoping the OS-level teardown reaches the browser. `attempt` is reset to 0
+first so the retry is fast rather than wherever the backoff had drifted to. The one edge case
+worth naming: if `currentWs` is already null (restart clicked while already disconnected), there's
+nothing to close and therefore no `close` event to trigger anything - `scheduleReconnect()` is
+called directly in that branch instead, so this case doesn't silently do nothing.
+
+**A real bug in the first version of this exact fix, caught by testing it rather than trusting
+it compiled:** the first attempt also called `connect()` directly, immediately after closing the
+stale socket, reasoning that `close()`'s own handler might be too slow. Live-tested against two
+real mocked orchestrator states (see method below): this produced **two simultaneous WebSocket
+connections** to the new orchestrator's port - `currentWs.close()` synchronously fired its own
+`close` handler's `scheduleReconnect()` in parallel with the explicit `connect()` call, and both
+independently succeeded once the mocked "new" port became available. Removing the redundant
+`connect()` call and keeping only the deterministic close (plus the `scheduleReconnect()` fallback
+for the already-disconnected case) fixed it - re-tested with the identical live sequence, exactly
+one WebSocket instance existed afterward, pointed at the new port, old one properly closed.
+
+**Verification method:** `restart_orchestrator` is a real Tauri command with no meaning in a plain
+Chrome tab, and this bug is specifically about the sequencing between a stale connection's death
+and a fresh one's success - a level of behavior no static check catches. Rather than the
+`__TAURI_INTERNALS__`-stub-only technique used for Phase 1 Step 2 and Phase 3 Step 4 above, this
+test also replaced `window.WebSocket` itself with a real `EventTarget`-based fake that records
+every constructed instance and only fires `open`/`close` when told to - because the bug is about
+*how many* WebSocket objects get created and in what order, which a real WebSocket to a real
+orchestrator can't easily make visible on demand. The mocked `invoke` simulated a real
+restart's timing exactly: `get_orchestrator_port`/`get_orchestrator_token` return an "old" port/
+token, `restart_orchestrator` nulls both out immediately (matching the real Rust code) and only
+resolves them to a "new" port/token 300ms later (matching a real child process needing time to
+boot and print `PORT:`/`TOKEN:`) - so `connect()`'s own existing "orchestrator not ready yet"
+retry path was genuinely exercised, not skipped. Confirmed live, twice (once catching the
+double-connection bug, once confirming the fix): a real click on the real "Restart orchestrator"
+button, in a real Chrome tab, against the real shipped code the running dev server serves. Also
+verified: `npx tsc --noEmit`, a real `vite build`, and `cargo check` in `src-tauri` (after updating
+its own now-stale comment describing the old, wrong assumption) all clean.

@@ -393,9 +393,13 @@ fn get_orchestrator_token(state: tauri::State<OrchestratorState>) -> Result<Stri
 }
 
 /// Lets a saved API key take effect without quitting the whole app - kills the current
-/// orchestrator child and spawns a fresh one, which re-reads api-keys.json from scratch. The
-/// frontend's own WebSocket client already retries with backoff on a closed connection
-/// (src/main.ts's `scheduleReconnect`), so this doesn't need its own reconnect signal.
+/// orchestrator child and spawns a fresh one, which re-reads api-keys.json from scratch. A real,
+/// previously-shipped bug here: this command has no way to signal the frontend that a restart
+/// happened, and depending on the old WebSocket's own `close` event alone to trigger
+/// `scheduleReconnect` (src/main.ts) proved unreliable in practice. Fixed on the frontend side
+/// instead - the Restart button's own click handler now explicitly closes the stale connection
+/// and calls `connect()` itself right after this command resolves, rather than waiting on that
+/// event.
 #[tauri::command]
 fn restart_orchestrator(app: tauri::AppHandle, state: tauri::State<OrchestratorState>) {
     *state.port.lock().unwrap() = None;
