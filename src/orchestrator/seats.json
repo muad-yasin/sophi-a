@@ -6,7 +6,8 @@
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume",
     "chat_history": true,
-    "workdir": ".workdirs/cnc"
+    "workdir": ".workdirs/cnc",
+    "requires": [{ "type": "binary", "name": "claude" }]
   },
   "advisor": {
     "role": "Advisor",
@@ -14,45 +15,52 @@
     "provider": "anthropic",
     "invocation_mode": "messages-api",
     "session": "stateless",
-    "chat_history": false
+    "chat_history": false,
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
   },
   "plan-1": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
-    "session": "one relay run per task"
+    "session": "one relay run per task",
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
   },
   "plan-2": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
-    "session": "one relay run per task"
+    "session": "one relay run per task",
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
   },
   "plan-3": {
     "role": "Planning module",
     "default_chain": "plan-cheap",
     "invocation_mode": "relay-chain-subprocess",
-    "session": "one relay run per task"
+    "session": "one relay run per task",
+    "requires": [{ "type": "env", "name": "ANTHROPIC_API_KEY" }]
   },
   "build-1": {
     "role": "Building module",
     "model": "claude-sonnet-5",
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
-    "workdir": ".workdirs/build-1"
+    "workdir": ".workdirs/build-1",
+    "requires": [{ "type": "binary", "name": "claude" }]
   },
   "build-2": {
     "role": "Building module",
     "model": "claude-sonnet-5",
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
-    "workdir": ".workdirs/build-2"
+    "workdir": ".workdirs/build-2",
+    "requires": [{ "type": "binary", "name": "claude" }]
   },
   "build-3": {
     "role": "Building module",
     "model": "claude-sonnet-5",
     "invocation_mode": "claude-code-subprocess",
     "session": "continued via --resume, own working directory",
-    "workdir": ".workdirs/build-3"
+    "workdir": ".workdirs/build-3",
+    "requires": [{ "type": "binary", "name": "claude" }]
   }
 }

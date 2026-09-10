@@ -111,8 +111,11 @@ function withProjectContext(system) {
     `it explicitly because you're running here on a non-Claude-Code path):\n\n${context}`;
 }
 
+// Exported so preflight.js (Phase 1 Step 1, the long-horizon plan) can reuse the exact same
+// env-loading + relay providers.js import this adapter already does, rather than a second
+// almost-identical copy of "find relay, load its .env, import its call()".
 let providersModulePromise = null;
-function loadProviders() {
+export function loadProviders() {
   if (!providersModulePromise) {
     loadRelayEnv();
     const p = path.join(resolveRelayPath(), 'src', 'providers.js');

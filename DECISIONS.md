@@ -699,3 +699,30 @@
   also has no top-level `stages` array (critics live at `seats.critics`), corrected the same way.
   Awaiting the human-approval line in `docs/phase0-stack-truth.md` before Phase 1 starts -
   not typed here, that line is the author's own per the plan's own rule.
+
+## 2026-09-10: Phase 1 Step 1 - preflight.js network-error classification, tested paths
+
+`checkBinary`/`checkEnv` in `src/orchestrator/preflight.js` classify a seat's readiness failure
+as `missing_cli` (binary not on PATH), `auth` (env var unset, or a real provider rejection), or
+`network` (no reply within the 2s timeout). Verified for real, not just read back from the code:
+`ready` (all 8 seats, real keys, real live pings, 5.4s total), `missing_cli` (a synthetic seat
+requiring a nonexistent binary - real ENOENT), `auth`/unset (a synthetic seat requiring an unset
+env var), `auth`/rejected (a real HTTP 401 from Anthropic's actual API against a deliberately
+garbage key). **Not independently verified**: the `network` classification path itself (the
+`Promise.race` timeout branch) - simulating a real network blackout safely in this environment
+(without touching `/etc/hosts` or another invasive mechanism) wasn't attempted; the mechanism is
+a standard `Promise.race` + `setTimeout`, low risk, but this is named honestly as assumed-correct-
+by-construction rather than tested, not silently claimed as verified.
+
+Also found and fixed live during this same step: the original `checkEnv` checked
+`process.env[envVar]` *before* calling `loadProviders()` - but `loadProviders()` is what actually
+loads relay's own `.env` into `process.env` (via `messagesApi.js`'s `loadRelayEnv()`). A key that
+only exists in relay's `.env`, never in the orchestrator process's own inherited environment,
+would have read as "not set" even though it's real - reordered so the env-loading call happens
+first.
+
+Scope limit, deliberate: a `relay-chain-subprocess` seat (`plan-1..3`) only has `requires:
+[{type:'env', name:'ANTHROPIC_API_KEY'}]` in `seats.json`, even though `plan-cheap.json`'s real
+chain uses six providers total. Checking every critic provider a chain might reach is real added
+scope this step's acceptance test doesn't ask for - the seat that drafts/revises (and whose
+failure aborts a run immediately) is what's checked.
