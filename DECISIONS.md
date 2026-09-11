@@ -1294,3 +1294,33 @@ it, confirmed `PASS` again. Also verified for real, not just by the linter's own
 this directory, not the rest of the repo) and loaded it in a real Chrome tab - every real network
 request returned 200, zero 404s, fonts and the council seal rendered correctly. No deploy
 performed anywhere, per the item's own explicit acceptance-test boundary.
+
+## 2026-09-11: Backlog item 7 - a real gap in testing OS-notification permission, not in the code
+
+Item 7 (per-seat cost budget warning) reuses `seatNotify.ts`'s existing `sendNotification`/
+permission-check plumbing verbatim (`notifyBudgetExceeded` is a new caller of the same mechanism
+`notifySeatTransition` already uses, not a new mechanism) - only the new logic (threshold
+crossing detection in `checkBudget`, once-per-turn dedup via `budgetNotified`, the tile highlight,
+the ticker's "⚠" prefix) is genuinely new code this item adds.
+
+Live-verified for real, against a real standalone orchestrator with a fake `claude` CLI on `PATH`
+(same technique as items 4/6, no real spend needed): setting a $0.01 threshold on `build-1` via
+the real Budget warnings UI, then dispatching a real task from the real frontend form, produced
+the real `budget-exceeded` CSS class on the tile and the real "⚠ 1000 tokens — $0.02" ticker text -
+both confirmed via direct DOM inspection in a real Chrome tab. Code review confirms no code path
+in `checkBudget`/`notifyBudgetExceeded` ever sends a `stop` command - the acceptance test's
+"never auto-stops" half is structurally true, not just intended.
+
+**Not independently re-verified: the actual OS notification firing.** `seatNotify.ts`'s
+`permissionGranted` module variable is set once, at `initNotifications()` (called from
+`DOMContentLoaded`), by checking `window.Notification.permission` (falling back to a real
+`invoke('plugin:notification|is_permission_granted')` call if the browser's own permission state
+is `'default'`). In a plain Chrome tab standing in for the packaged app (no real Tauri backend),
+that check runs and resolves - one way or the other - before a test script gets control back after
+`navigate()`, so a `window.Notification`/`__TAURI_INTERNALS__` stub installed afterward cannot
+retroactively flip the already-latched flag; reload wipes the stub itself. This is the same class
+of "Tauri isn't present in a plain browser" limitation as the 2026-09-10 Phase 1 Step 2 entry and
+the Phase 3 Step 4/restart-bug entries above, not a new one - and it already didn't block trusting
+`notifySeatTransition`'s own real native-notification firing when that feature shipped
+(2026-09-10), so the same reasoning applies here: the plumbing is identical and already trusted,
+only this item's own new logic needed fresh verification, and that part is real and confirmed.

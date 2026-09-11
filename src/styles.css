@@ -261,6 +261,17 @@ body {
   transition: box-shadow 200ms ease;
 }
 
+/* Backlog item 7: gold, not --status-problem's red - crossing a self-set spend threshold is not
+   the seat erroring, it is real information the operator asked to know about. Combined with the
+   ticker's own "⚠" text prefix (main.ts's refreshCostTicker) so this is never a color-only
+   signal. No animation, unlike the problem/timeout pulses - this state can persist for a whole
+   turn, and a persistent pulse would be exactly the "informative element over-animated into a
+   nag" failure mode. Placed before the status-specific rules below so a real working/problem/
+   timeout ring always takes visual priority over a mere budget notice, never the reverse. */
+.tile.budget-exceeded {
+  box-shadow: inset 0 0 0 2px var(--gold-bright);
+}
+
 .tile[data-status="working"] {
   box-shadow: inset 0 0 0 2px var(--status-working);
 }
@@ -1390,6 +1401,40 @@ body {
 .cost-breakdown-table td:nth-child(3) {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.cost-budgets-title {
+  margin: var(--sp-3) 0 0;
+  font-family: var(--font-chrome);
+  font-size: 14px;
+}
+
+.cost-budgets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.cost-budgets-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  gap: var(--sp-2);
+}
+
+.cost-budget-input {
+  width: 90px;
+  background: var(--surface-modal);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  text-align: right;
 }
 
 .history-row {

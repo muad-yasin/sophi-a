@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { renderSeatOutput } from "./seatOutputRender";
-import { initNotifications, notifySeatTransition } from "./seatNotify";
+import { initNotifications, notifySeatTransition, notifyBudgetExceeded } from "./seatNotify";
 import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
 import { buildCostBreakdownRows, buildCostBreakdownCsv, costBreakdownCsvFilename } from "./exportCostCsv";
 
@@ -450,6 +450,13 @@ function handleSeatEvent(evt: SeatEvent) {
   switch (evt.type) {
     case "seat.start":
       // start is transient - no resting status change; the tile stays on whatever it was.
+      // Backlog item 7: a fresh turn starting clears any budget-exceeded highlight from the
+      // previous turn (so the highlight always reads as "this turn's spend," not a stale flag)
+      // and re-arms the notification for this seat, so a second turn that also crosses the
+      // threshold notifies again rather than firing only once ever per session.
+      tileEl(evt.seatId)?.classList.remove("budget-exceeded");
+      budgetNotified.delete(evt.seatId);
+      refreshCostTicker(evt.seatId);
       break;
     case "seat.working":
       setStatus(evt.seatId, "working");
@@ -512,15 +519,92 @@ function formatUsageTotal(total: UsageTotal): string {
 // the per-stage usage data the cost tracker already records" framing.
 const seatUsageCache = new Map<string, SeatUsageEvent>();
 
+// Backlog item 7: user-set per-seat spend thresholds, in-memory for this session (the acceptance
+// test only asks for "set a threshold, cross it, get notified" within one session - no
+// persistence requirement, unlike wizard-state.json's genuinely-must-survive-a-relaunch flags).
+// `budgetNotified` guards against re-notifying on every subsequent usage event once already past
+// threshold - reset on the seat's next `seat.start` (see handleSeatEvent above) so a later turn
+// that crosses it again still gets its own notification.
+const budgetThresholds = new Map<string, number>();
+const budgetNotified = new Set<string>();
+
+// The gold ring alone would be a color-only signal (ux-design's own rule against that) - a real
+// "⚠" prefix on the same ticker text every seat already shows carries the meaning too.
+function refreshCostTicker(seatId: string) {
+  const evt = seatUsageCache.get(seatId);
+  const ticker = tileEl(seatId)?.querySelector<HTMLElement>('[data-role="cost-ticker"]');
+  if (!ticker || !evt) return;
+  const prefix = budgetNotified.has(seatId) ? "⚠ " : "";
+  ticker.textContent = `${prefix}${formatUsageTotal(evt.total)}`;
+  ticker.hidden = false;
+}
+
+function checkBudget(seatId: string) {
+  const threshold = budgetThresholds.get(seatId);
+  const total = seatUsageCache.get(seatId)?.total;
+  if (
+    threshold === undefined ||
+    !total?.reported ||
+    !total.priced ||
+    total.usd < threshold ||
+    budgetNotified.has(seatId)
+  ) {
+    return;
+  }
+  budgetNotified.add(seatId);
+  tileEl(seatId)?.classList.add("budget-exceeded");
+  refreshCostTicker(seatId);
+  void notifyBudgetExceeded(seatId, total.usd, threshold);
+}
+
 function handleSeatUsage(evt: SeatUsageEvent) {
   seatUsageCache.set(evt.seatId, evt);
-  const tile = tileEl(evt.seatId);
-  const ticker = tile?.querySelector<HTMLElement>('[data-role="cost-ticker"]');
-  if (ticker) {
-    ticker.textContent = formatUsageTotal(evt.total);
-    ticker.hidden = false;
-  }
+  checkBudget(evt.seatId);
+  refreshCostTicker(evt.seatId);
   if (!document.getElementById("cost-breakdown-panel")?.hidden) renderCostBreakdownPanel();
+}
+
+function renderCostBudgetsList() {
+  const list = document.getElementById("cost-budgets-list");
+  if (!list) return;
+  list.innerHTML = "";
+  for (const seatId of SEAT_IDS) {
+    const li = document.createElement("li");
+    li.className = "cost-budgets-row";
+    const label = document.createElement("span");
+    label.textContent = paletteSeatLabel(seatId);
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.step = "0.01";
+    input.placeholder = "no limit";
+    input.className = "cost-budget-input";
+    input.setAttribute("aria-label", `Spend threshold for ${paletteSeatLabel(seatId)}`);
+    const existing = budgetThresholds.get(seatId);
+    if (existing !== undefined) input.value = String(existing);
+    const commit = () => {
+      const value = Number(input.value);
+      if (input.value.trim() === "" || Number.isNaN(value) || value <= 0) {
+        budgetThresholds.delete(seatId);
+      } else {
+        budgetThresholds.set(seatId, value);
+        // A newly-set (or changed) threshold should be able to fire again even if this seat's
+        // running total already happens to sit above it from earlier turns this session.
+        budgetNotified.delete(seatId);
+        checkBudget(seatId);
+      }
+    };
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+        input.blur();
+      }
+    });
+    li.append(label, input);
+    list.appendChild(li);
+  }
 }
 
 function costBreakdownRowsFromCache(): ReturnType<typeof buildCostBreakdownRows> {
@@ -571,6 +655,7 @@ function setupCostBreakdownPanel() {
     panel.hidden = false;
     toggle.setAttribute("aria-expanded", "true");
     renderCostBreakdownPanel();
+    renderCostBudgetsList();
   });
   close.addEventListener("click", () => {
     panel.hidden = true;

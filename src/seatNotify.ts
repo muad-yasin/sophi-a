@@ -44,3 +44,17 @@ export async function notifySeatTransition(seatId: string, outcome: "idle" | "pr
   const title = outcome === "problem" ? `${label} hit a problem` : `${label} finished`;
   sendNotification({ title, body: "Sophi-A" });
 }
+
+// Backlog item 7 (relay run 2026-09-10T23-20-49-005Z, follow-on to item 6's cost breakdown):
+// notification-only - this never stops anything, it only tells the operator a seat crossed a
+// spend threshold they set themselves. Deliberately does not skip on window focus the way
+// notifySeatTransition does above: a cost overrun is worth interrupting for even if the operator
+// is staring right at the tile, unlike "a turn finished" which the tile already shows.
+export async function notifyBudgetExceeded(seatId: string, usd: number, thresholdUsd: number): Promise<void> {
+  if (!permissionGranted) return;
+  const label = SEAT_LABELS[seatId] ?? seatId;
+  sendNotification({
+    title: `${label} passed its budget`,
+    body: `$${usd.toFixed(2)} spent, threshold was $${thresholdUsd.toFixed(2)}`,
+  });
+}

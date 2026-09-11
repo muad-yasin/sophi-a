@@ -97,6 +97,14 @@
         <tbody id="cost-breakdown-body"></tbody>
       </table>
       <button type="button" id="cost-breakdown-export" class="btn btn-send">Export CSV</button>
+
+      <!-- Backlog item 7: notification-only per-seat spend threshold, a follow-on to the
+           breakdown table above, not an independent feature - it only matters once the operator
+           has already seen where their spend goes. Never auto-stops anything; the highlight and
+           notification are the entire mechanism. -->
+      <h3 class="cost-budgets-title">Budget warnings</h3>
+      <p class="setup-hint">Set a $ threshold per seat - crossing it fires one native notification and highlights the tile. Never stops the seat.</p>
+      <ul id="cost-budgets-list" class="cost-budgets-list"></ul>
     </div>
 
     <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>
