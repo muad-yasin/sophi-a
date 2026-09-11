@@ -251,5 +251,6 @@
 - a741165 — Backlog item 4 (relay run 2026-09-10T23-20-49-005Z) — advisor-to-cnc forward flow, S2 security spec's second forward candidate
 - d445caa — Backlog item 5 (relay run 2026-09-10T23-20-49-005Z) — interactive offline Council demo, zero-network fixture reusing the real Debate panel render path
 - 03e7326 — Backlog item 6 (relay run 2026-09-10T23-20-49-005Z) — per-seat cost breakdown panel + CSV export (exportCostCsv.ts)
+- c1436e6 — Backlog item 7 (relay run 2026-09-10T23-20-49-005Z) — per-seat cost budget warning, follow-on to item 6
 - 2020e10 — Phase 2 Step 2 — cost-tracker.js + pricing.json + usage hooks in all three adapters + header ticker (long-horizon build plan)
 - 58f4de4 — Phase 2 Step 1 — Stop-All + per-seat watchdog (long-horizon build plan)
