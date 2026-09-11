@@ -395,6 +395,18 @@ body {
   font-size: 13px;
 }
 
+/* Backlog item 2: the first-run Council explainer reuses .wizard-panel/.wizard-box wholesale -
+   this is its one genuinely new visual element, the pull-quote from brand/HIGH_COUNCIL.md's own
+   headline sentence. Gold, not the neutral --text-secondary every other hint uses, since this is
+   the one line meant to be the actual sales pitch, not a hint. */
+.council-explainer-lede {
+  margin: 0;
+  color: var(--gold-bright);
+  font-family: var(--font-chrome);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
 .wizard-seat-list {
   list-style: none;
   margin: 0;

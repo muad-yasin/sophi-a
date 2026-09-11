@@ -109,6 +109,7 @@ interface PreflightResultEvent {
   type: "preflight.result";
   results: PreflightSeatResult[];
   isFirstRun: boolean;
+  councilExplainerShown: boolean;
 }
 
 // Phase 3 Step 2 (replay from history, honest by construction) - a plan-N seat's recorded past
@@ -337,7 +338,29 @@ function showWizardPanel() {
 function hideWizardPanel() {
   const panel = document.getElementById("wizard-panel");
   if (panel) panel.hidden = true;
+  // Backlog item 2: the Council explainer's one and only trigger is closing the wizard on the
+  // actual first run - never a later failure-triggered re-show (`pendingCouncilExplainer` is only
+  // ever set true in that one branch below), and never a second time even on that same run
+  // (`councilExplainerShownThisSession` covers the wizard being closed and reopened before the
+  // explainer's own dismiss fires the persisted flag).
+  if (pendingCouncilExplainer && !councilExplainerShownThisSession) {
+    pendingCouncilExplainer = false;
+    showCouncilExplainer();
+  }
 }
+
+function showCouncilExplainer() {
+  const panel = document.getElementById("council-explainer");
+  if (panel) panel.hidden = false;
+}
+
+function hideCouncilExplainer() {
+  const panel = document.getElementById("council-explainer");
+  if (panel) panel.hidden = true;
+}
+
+let pendingCouncilExplainer = false;
+let councilExplainerShownThisSession = false;
 
 function handlePreflightResult(evt: PreflightResultEvent) {
   seatReadiness.clear();
@@ -349,6 +372,10 @@ function handlePreflightResult(evt: PreflightResultEvent) {
   // seat is actually failing - never auto-shown on a clean repeat launch, matching "re-show only
   // on failure" once past the first run.
   if (evt.isFirstRun || hasFailure) showWizardPanel();
+  // Only an actual first run, never a later failure-triggered re-show, ever queues the explainer -
+  // and only if the server's own persisted flag says it hasn't been shown before (survives a
+  // relaunch; `councilExplainerShownThisSession` alone would not).
+  if (evt.isFirstRun && !evt.councilExplainerShown) pendingCouncilExplainer = true;
 }
 
 function setupWizardPanel() {
@@ -356,6 +383,18 @@ function setupWizardPanel() {
   document.querySelector('[data-role="wizard-recheck"]')?.addEventListener("click", () => {
     sendCommand({ cmd: "preflight" });
   });
+}
+
+function setupCouncilExplainer() {
+  const dismiss = () => {
+    hideCouncilExplainer();
+    if (!councilExplainerShownThisSession) {
+      councilExplainerShownThisSession = true;
+      sendCommand({ cmd: "mark_council_explainer_shown" });
+    }
+  };
+  document.querySelector('[data-role="council-explainer-close"]')?.addEventListener("click", dismiss);
+  document.querySelector('[data-role="council-explainer-dismiss"]')?.addEventListener("click", dismiss);
 }
 
 // Phase 2 Step 3 ("Export a run as markdown"): the raw source text last fed to a seat's output
@@ -1830,6 +1869,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupForwardControls();
   setupCommandPalette();
   setupWizardPanel();
+  setupCouncilExplainer();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

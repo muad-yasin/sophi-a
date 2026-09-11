@@ -465,11 +465,26 @@ const WIZARD_STATE_PATH = join(homedir(), '.sophia', 'wizard-state.json');
 
 async function handlePreflight(ws) {
   const isFirstRun = !existsSync(WIZARD_STATE_PATH);
+  // Backlog item 2 (Council discoverability explainer, relay run
+  // 2026-09-10T23-20-49-005Z/deliverable.md): "shown once ... does not reappear on relaunch"
+  // can't be derived from `isFirstRun` alone, since wizard-state.json already exists by the time
+  // *this* preflight call returns (the write below happens every call) - a real persisted flag,
+  // read before being overwritten, is what makes "once" durable across relaunches.
+  let councilExplainerShown = false;
+  if (!isFirstRun) {
+    try {
+      const prior = JSON.parse(readFileSync(WIZARD_STATE_PATH, 'utf8'));
+      councilExplainerShown = prior.councilExplainerShown === true;
+    } catch {
+      // Corrupt/unreadable state file - fail open to "not shown yet" rather than assume it was.
+    }
+  }
   const results = await checkAllSeats(seats);
   const state = {
     version: 1,
     last_check: new Date().toISOString(),
     seats: Object.fromEntries(results.map(r => [r.seat, { ready: r.status === 'ready' }])),
+    councilExplainerShown,
   };
   try {
     mkdirSync(dirname(WIZARD_STATE_PATH), { recursive: true });
@@ -477,7 +492,28 @@ async function handlePreflight(ws) {
   } catch (err) {
     console.error(`preflight: failed to persist wizard-state.json: ${err.message}`);
   }
-  ws.send(JSON.stringify({ type: 'preflight.result', results, isFirstRun }));
+  ws.send(JSON.stringify({ type: 'preflight.result', results, isFirstRun, councilExplainerShown }));
+}
+
+// Companion to handlePreflight above: the frontend calls this once the operator actually
+// dismisses the Council explainer, so the "shown once" flag survives a relaunch. Deliberately not
+// folded into the `configure` command - this isn't a seat setting, it's app-level onboarding
+// state, and reusing wizard-state.json (rather than a new file) keeps the plan's own "named
+// persistence path... legible outside the app too" property intact for this flag as well.
+function handleMarkCouncilExplainerShown() {
+  let state = { version: 1, last_check: new Date().toISOString(), seats: {} };
+  try {
+    state = JSON.parse(readFileSync(WIZARD_STATE_PATH, 'utf8'));
+  } catch {
+    // No prior state (or corrupt) - write a fresh minimal one below rather than block on it.
+  }
+  state.councilExplainerShown = true;
+  try {
+    mkdirSync(dirname(WIZARD_STATE_PATH), { recursive: true });
+    writeFileSync(WIZARD_STATE_PATH, JSON.stringify(state, null, 2));
+  } catch (err) {
+    console.error(`mark_council_explainer_shown: failed to persist wizard-state.json: ${err.message}`);
+  }
 }
 
 // Phase 3 Step 2 (replay from history, honest by construction): a history dropdown per plan-N
@@ -664,6 +700,7 @@ function main() {
       else if (msg.cmd === 'estimate_cost') handleEstimateCost(ws, msg.seatId);
       else if (msg.cmd === 'forward_deliverable') forwardDeliverable(wss, msg.fromSeatId, msg.toSeatId, msg.confirmed);
       else if (msg.cmd === 'preflight') handlePreflight(ws);
+      else if (msg.cmd === 'mark_council_explainer_shown') handleMarkCouncilExplainerShown();
       else if (msg.cmd === 'list_runs') handleListRuns(ws, msg.seatId);
       else if (msg.cmd === 'replay_run') handleReplayRun(ws, msg.seatId, msg.runId);
       else if (msg.cmd === 'get_seat_logs') handleGetSeatLogs(ws, msg.seatId, msg.runId);

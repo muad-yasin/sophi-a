@@ -151,6 +151,31 @@
       </div>
     </div>
 
+    <!-- First-run Council discoverability explainer (backlog item 2, relay run
+         2026-09-10T23-20-49-005Z/deliverable.md): shown once, immediately after the setup wizard
+         is dismissed on a first run - never a second time, per src/orchestrator/index.js's
+         councilExplainerShown flag in ~/.sophia/wizard-state.json. -->
+    <div id="council-explainer" class="wizard-panel" role="dialog" aria-label="Meet the High Council" hidden>
+      <div class="wizard-box council-explainer-box">
+        <div class="wizard-header">
+          <h2>Meet the High Council</h2>
+          <button type="button" class="wizard-close" data-role="council-explainer-close" aria-label="Close">&times;</button>
+        </div>
+        <p class="council-explainer-lede">
+          Your plan doesn't ship until five other labs' models have tried to kill it, on the record.
+        </p>
+        <p class="wizard-hint">
+          That's what the <strong>Planner 1-3</strong> tiles do: one model drafts your plan, five
+          other labs' models grade it blind, round after round, until they sign off or the run
+          records exactly who refused and why. Send a task to any Planner tile to see it happen -
+          the Debate panel on that tile shows the real signoff, live.
+        </p>
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-send" data-role="council-explainer-dismiss">Got it</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Command palette (Cmd/Ctrl+K) - dispatch a task to any seat without hunting for its tile,
          useful specifically when juggling several seats/sessions at once. Single-seat dispatch
          only - build-1's own fan-out checkboxes are still the path for parallel-build-and-compare,
