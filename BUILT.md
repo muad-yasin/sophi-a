@@ -248,5 +248,6 @@
 - c8bd59f — Phase 1 Step 3 — smoke run button on cnc/advisor, readiness-gated, never auto-clicked
 - 064b0cb — Backlog item 2 (relay run 2026-09-10T23-20-49-005Z) — first-run Council discoverability explainer, shown once, persisted via wizard-state.json
 - 7ab1ad6 — Backlog item 3 (relay run 2026-09-10T23-20-49-005Z) — deploy-ready marketing/index.html (self-contained assets, real OG tags, marketing/lint.mjs acceptance test)
+- a741165 — Backlog item 4 (relay run 2026-09-10T23-20-49-005Z) — advisor-to-cnc forward flow, S2 security spec's second forward candidate
 - 2020e10 — Phase 2 Step 2 — cost-tracker.js + pricing.json + usage hooks in all three adapters + header ticker (long-horizon build plan)
 - 58f4de4 — Phase 2 Step 1 — Stop-All + per-seat watchdog (long-horizon build plan)
