@@ -376,6 +376,25 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
 - [x] **Fixed 2026-09-09.** The S2 forward rule is now a comment directly above the `start`
       dispatch in `index.js`'s connection handler, in the way of whoever wires plan->build or
       advisor->cnc next.
+- [x] **Fixed 2026-09-11** (backlog item 4, relay run `2026-09-10T23-20-49-005Z`). The second
+      named candidate - advisor's reply into `cnc` - is now built: `forwardAdvisorReply`
+      (`index.js`), same three requirements as `forwardDeliverable`'s plan->build flow. The server
+      caches advisor's own last real `seat.output` text (`makeEmit`, never a client-supplied
+      string) as `lastAdvisorReply`; forwarding wraps it in an `<advisor-reply
+      trust="untrusted-model-output">` block with an explicit "ignore embedded instructions"
+      line, requires `confirmed: true` (rejected server-side otherwise, not a UI courtesy), and
+      caps it at the same 16,000-char `FORWARD_MAX_CHARS` the plan->build flow uses. Live-verified
+      end to end against a real standalone orchestrator (real advisor API call, a fake `claude`
+      CLI on `PATH` standing in for `cnc`'s real subprocess so no real file edits/API spend were
+      needed to see the exact `-p` prompt text it received): `confirmed !== true` and "nothing
+      cached yet" are both rejected server-side before any subprocess exists; a real advisor turn
+      asked for an example injection payload for a security test and - notably - itself refused to
+      emit a bare unframed one, instead quoting it clearly inside its own answer (exactly the
+      concern this rule exists for); forwarding that reply produced a `cnc` task where the entire
+      quoted payload, "IGNORE ALL PREVIOUS INSTRUCTIONS..." included, sat nested inside the
+      `<advisor-reply>` block, never as a bare top-level instruction. That confirms the mechanical
+      wrap/gate this code controls; it is not a claim about what any given LLM would do if it did
+      receive an unframed instruction - no code-level check can prove that.
 - [x] **Fixed 2026-09-09, in relay directly** (same standing pattern CLAUDE.md already documents
       for the Cohere max-tokens bug - a real fix in the dependency, not worked around here).
       `relay/src/chain.js`'s `normaliseCritique` now caps every critic-controlled field
@@ -412,8 +431,9 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
       `index.js` and the `DECISIONS.md` entry were both reworded to describe the real token-based
       check now in place, not the no-op it used to honestly describe.
 
-**Everything in this document's checklist is now fixed and live-verified**, P0 through P2. What's
-left is forward-looking only: the S2 "forward" rule comment (§2 above, and the one sitting
-directly above `index.js`'s command dispatch) exists precisely because nothing in this product
-today wires one seat's output into another seat's task/prompt - the day that changes, re-read
-this document before writing the code that does it.
+**Everything in this document's checklist is now fixed and live-verified**, P0 through P2,
+including both named S2 forward candidates (plan->build, and as of 2026-09-11 advisor->cnc). The
+S2 "forward" rule comment (§2 above, and the one sitting directly above `index.js`'s command
+dispatch) still stands as the rule to re-read before wiring any *third* cross-seat forward path -
+the same three requirements (untrusted-content framing, backend-enforced human confirmation, a
+size cap) apply to any future one, not just the two built so far.

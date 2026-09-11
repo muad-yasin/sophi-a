@@ -708,6 +708,13 @@ body {
   gap: var(--sp-2);
 }
 
+/* Backlog item 4: full-width, its own row below Accept/Dismiss - same spacing rule as
+   .smoke-run-btn below (a rare, deliberate action, not a routine one). */
+[data-role="advisor-forward-btn"] {
+  width: 100%;
+  margin-top: var(--sp-2);
+}
+
 /* Phase 1 Step 3 (long-horizon build plan) - "Smoke run": deliberately plain/outline, never the
    gold btn-send treatment - this is a rare, deliberate confirmation click, not a routine action,
    and shouldn't visually invite repeated clicking the way Send does. */

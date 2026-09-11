@@ -249,6 +249,15 @@
             <button class="btn btn-accept" data-action="accept" type="button">Accept</button>
             <button class="btn btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
           </div>
+
+          <!-- Backlog item 4 (docs/security-prompt-injection.md S2 forward rule, second
+               candidate): forwards advisor's real last reply into cnc, wrapped as untrusted
+               model output, gated behind the same confirm modal plan-N's forward-to-build uses.
+               Deliberately separate from Accept/Dismiss above, which stay inert per S4's own
+               guidance (Accept must carry a structured intent the orchestrator defines, not raw
+               advisor prose) - this button IS that structured intent, named for what it does. -->
+          <button type="button" class="btn forward-btn" data-role="advisor-forward-btn" disabled
+            title="Advisor hasn't replied yet">Forward to cnc</button>
         </div>
       </section>
 

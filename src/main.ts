@@ -439,6 +439,12 @@ function handleSeatEvent(evt: SeatEvent) {
       break;
     case "seat.output":
       if (evt.detail) setOutput(evt.seatId, evt.detail);
+      // Backlog item 4: mirrors the server's own lastAdvisorReply cache (index.js's makeEmit) -
+      // only enables the "Forward to cnc" button once advisor has actually said something real.
+      if (evt.seatId === "advisor" && evt.detail) {
+        hasAdvisorReply = true;
+        updateAdvisorForwardButton();
+      }
       break;
     case "seat.idle": {
       const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
@@ -1358,10 +1364,46 @@ function setupForwardConfirmModal() {
   document.querySelector('[data-role="forward-confirm-confirm"]')?.addEventListener("click", () => {
     if (!pendingForward) return;
     const { fromSeatId, toSeatId } = pendingForward;
-    sendCommand({ cmd: "forward_deliverable", fromSeatId, toSeatId, confirmed: true });
-    echoTask(toSeatId, `> forwarded ${fromSeatId}'s Council-approved plan`);
+    if (fromSeatId === "advisor") {
+      // Backlog item 4 (docs/security-prompt-injection.md S2 forward rule, second candidate):
+      // same confirm modal as plan->build, different command - forwardAdvisorReply (index.js)
+      // has no fromSeatId/toSeatId pair to pick, the direction is fixed.
+      sendCommand({ cmd: "forward_advisor_reply", confirmed: true });
+      echoTask("cnc", "> forwarded advisor's reply");
+    } else {
+      sendCommand({ cmd: "forward_deliverable", fromSeatId, toSeatId, confirmed: true });
+      echoTask(toSeatId, `> forwarded ${fromSeatId}'s Council-approved plan`);
+    }
     hideForwardConfirmModal();
   });
+}
+
+// Backlog item 4: advisor's own "Forward to cnc" button. Unlike plan-N's forward (gated on a
+// Council signoff), advisor has no pass/fail concept - the button is disabled only while advisor
+// has never produced a reply yet at all (`hasAdvisorReply`), mirroring updateForwardButton's own
+// "nothing to forward yet" reasoning for the planner case.
+let hasAdvisorReply = false;
+
+function updateAdvisorForwardButton() {
+  const btn = document.querySelector<HTMLButtonElement>('[data-role="advisor-forward-btn"]');
+  if (!btn) return;
+  btn.disabled = !hasAdvisorReply;
+  btn.title = hasAdvisorReply ? "" : "Advisor hasn't replied yet";
+}
+
+function setupAdvisorForwardControl() {
+  const btn = document.querySelector<HTMLButtonElement>('[data-role="advisor-forward-btn"]');
+  btn?.addEventListener("click", () => {
+    const modal = document.getElementById("forward-confirm-modal");
+    const title = document.getElementById("forward-confirm-title");
+    if (!modal || !title) return;
+    pendingForward = { fromSeatId: "advisor", toSeatId: "cnc" };
+    title.textContent =
+      "This sends advisor's last reply to cnc as its task, wrapped as untrusted model output - " +
+      "cnc will start writing and editing real files. Continue?";
+    modal.hidden = false;
+  });
+  updateAdvisorForwardButton();
 }
 
 function setupForwardControls() {
@@ -1867,6 +1909,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupCostPanels();
   setupForwardConfirmModal();
   setupForwardControls();
+  setupAdvisorForwardControl();
   setupCommandPalette();
   setupWizardPanel();
   setupCouncilExplainer();
