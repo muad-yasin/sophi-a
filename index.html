@@ -40,6 +40,9 @@
         <button type="button" id="exports-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="exports-panel">
           Recent exports
         </button>
+        <button type="button" id="cost-breakdown-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="cost-breakdown-panel">
+          Cost breakdown
+        </button>
         <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
           Setup
         </button>
@@ -74,6 +77,26 @@
         </div>
         <div id="exports-preview-body" class="tile-output"></div>
       </div>
+    </div>
+
+    <!-- Backlog item 6 (relay run 2026-09-10T23-20-49-005Z): the shipped cost meter only ever
+         showed a per-seat running total on that seat's own tile - this is the same real per-stage
+         usage data (cost-tracker.js), just broken out per seat in one place, plus a CSV export
+         reusing export_run_markdown's existing exports-dir/native-confirm machinery (a plain
+         string write, "markdown" in its name notwithstanding). -->
+    <div id="cost-breakdown-panel" class="setup-panel history-panel" role="dialog" aria-labelledby="cost-breakdown-title" hidden>
+      <div class="setup-panel-header">
+        <h2 id="cost-breakdown-title">Cost breakdown</h2>
+        <button type="button" id="cost-breakdown-close" class="setup-close" aria-label="Close cost breakdown">&times;</button>
+      </div>
+      <p class="setup-hint">Real per-seat usage this session - never a fabricated total for a seat that hasn't run.</p>
+      <table class="cost-breakdown-table">
+        <thead>
+          <tr><th>Seat</th><th>Tokens</th><th>Cost</th></tr>
+        </thead>
+        <tbody id="cost-breakdown-body"></tbody>
+      </table>
+      <button type="button" id="cost-breakdown-export" class="btn btn-send">Export CSV</button>
     </div>
 
     <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>

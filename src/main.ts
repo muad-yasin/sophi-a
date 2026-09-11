@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { renderSeatOutput } from "./seatOutputRender";
 import { initNotifications, notifySeatTransition } from "./seatNotify";
 import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
+import { buildCostBreakdownRows, buildCostBreakdownCsv, costBreakdownCsvFilename } from "./exportCostCsv";
 
 type SeatEventType =
   | "seat.start"
@@ -148,11 +149,27 @@ interface UsageTotal {
   reported: boolean;
   priced: boolean;
 }
+interface SeatUsageStage {
+  label: string | null;
+  provider?: string | null;
+  model?: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  priced: boolean;
+  usd: number | null;
+}
 interface SeatUsageEvent {
   type: "seat.usage";
   seatId: string;
   timestamp: number;
-  detail?: { reported: boolean; inputTokens?: number; outputTokens?: number; priced?: boolean; usd?: number | null };
+  detail?: {
+    reported: boolean;
+    inputTokens?: number;
+    outputTokens?: number;
+    priced?: boolean;
+    usd?: number | null;
+    stages?: SeatUsageStage[];
+  };
   total: UsageTotal;
 }
 
@@ -488,12 +505,85 @@ function formatUsageTotal(total: UsageTotal): string {
   return `${tokens} tokens — $${total.usd.toFixed(total.usd < 0.01 && total.usd > 0 ? 4 : 2)}`;
 }
 
+// Backlog item 6: the latest usage event per seat, cached client-side - `total` is already the
+// running session total (index.js's makeEmit accumulates it), and `detail.stages` (when present,
+// relay-chain seats only) is that seat's most recent completed run's own per-stage breakdown.
+// Reading what's already tracked, not a new historical ledger - matches this item's own "reading
+// the per-stage usage data the cost tracker already records" framing.
+const seatUsageCache = new Map<string, SeatUsageEvent>();
+
 function handleSeatUsage(evt: SeatUsageEvent) {
+  seatUsageCache.set(evt.seatId, evt);
   const tile = tileEl(evt.seatId);
   const ticker = tile?.querySelector<HTMLElement>('[data-role="cost-ticker"]');
-  if (!ticker) return;
-  ticker.textContent = formatUsageTotal(evt.total);
-  ticker.hidden = false;
+  if (ticker) {
+    ticker.textContent = formatUsageTotal(evt.total);
+    ticker.hidden = false;
+  }
+  if (!document.getElementById("cost-breakdown-panel")?.hidden) renderCostBreakdownPanel();
+}
+
+function costBreakdownRowsFromCache(): ReturnType<typeof buildCostBreakdownRows> {
+  return buildCostBreakdownRows(
+    SEAT_IDS.map((seatId) => {
+      const evt = seatUsageCache.get(seatId);
+      return { seatId, total: evt?.total ?? null, stages: evt?.detail?.stages };
+    }),
+  );
+}
+
+function renderCostBreakdownPanel() {
+  const body = document.getElementById("cost-breakdown-body");
+  if (!body) return;
+  body.innerHTML = "";
+  const rows = costBreakdownRowsFromCache();
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    td.className = "inspect-empty";
+    td.textContent = "No seat has recorded any usage yet this session.";
+    tr.appendChild(td);
+    body.appendChild(tr);
+    return;
+  }
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    const seatTd = document.createElement("td");
+    seatTd.textContent = row.stage ? `${paletteSeatLabel(row.seat)} — ${row.stage}` : paletteSeatLabel(row.seat);
+    const tokensTd = document.createElement("td");
+    tokensTd.textContent = String(row.tokens);
+    const costTd = document.createElement("td");
+    costTd.textContent = row.usd === null ? "unpriced" : `$${row.usd.toFixed(row.usd < 0.01 && row.usd > 0 ? 4 : 2)}`;
+    tr.append(seatTd, tokensTd, costTd);
+    body.appendChild(tr);
+  }
+}
+
+function setupCostBreakdownPanel() {
+  const toggle = document.getElementById("cost-breakdown-toggle");
+  const panel = document.getElementById("cost-breakdown-panel");
+  const close = document.getElementById("cost-breakdown-close");
+  const exportBtn = document.getElementById("cost-breakdown-export");
+  if (!toggle || !panel || !close || !exportBtn) return;
+
+  toggle.addEventListener("click", () => {
+    panel.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+    renderCostBreakdownPanel();
+  });
+  close.addEventListener("click", () => {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  });
+  exportBtn.addEventListener("click", async () => {
+    const csv = buildCostBreakdownCsv(costBreakdownRowsFromCache());
+    try {
+      await invoke<string>("export_run_markdown", { filename: costBreakdownCsvFilename(), content: csv });
+    } catch (err) {
+      debugLog(`cost breakdown CSV export failed: ${String(err)}`);
+    }
+  });
 }
 
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 8000, 8000];
@@ -1967,6 +2057,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupCouncilDemo();
   setupSeatExportControls();
   setupExportsPanel();
+  setupCostBreakdownPanel();
   setupCostPanels();
   setupForwardConfirmModal();
   setupForwardControls();

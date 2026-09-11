@@ -477,7 +477,10 @@ fn list_recent_exports(app: tauri::AppHandle) -> Result<Vec<ExportEntry>, String
     let mut entries: Vec<ExportEntry> = fs::read_dir(&dir)
         .map_err(|e| format!("could not read exports dir: {e}"))?
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map(|ext| ext == "md").unwrap_or(false))
+        // Backlog item 6: CSV cost-breakdown exports share this same directory/command
+        // (export_run_markdown just writes a string - nothing markdown-specific about it), so
+        // they belong in this same browse list, not a second one.
+        .filter(|e| e.path().extension().map(|ext| ext == "md" || ext == "csv").unwrap_or(false))
         .filter_map(|e| {
             let meta = e.metadata().ok()?;
             let modified = meta.modified().ok()?;

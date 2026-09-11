@@ -1364,6 +1364,34 @@ body {
   overflow-y: auto;
 }
 
+/* Backlog item 6: cost breakdown panel, reuses .setup-panel/.history-panel's own box/positioning. */
+.cost-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: var(--sp-2) 0;
+}
+
+.cost-breakdown-table th {
+  text-align: left;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.cost-breakdown-table td {
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.cost-breakdown-table td:nth-child(2),
+.cost-breakdown-table td:nth-child(3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .history-row {
   font-size: 12px;
   color: var(--text-primary);
