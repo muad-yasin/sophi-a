@@ -1252,3 +1252,45 @@ authorization to start building item 1 - it's a reviewed, costed, ranked candida
 for Muad's own go/no-go/reorder, exactly like every other Council output this project produces.
 `HANDOFF.md` (written for whichever session eventually builds from this) says the same thing in
 its own first paragraph, so a future session reading it cold doesn't miss that distinction either.
+
+## 2026-09-11: Backlog item 3 - marketing/index.html made deploy-ready, real gap found first
+
+Before touching anything, checked what "deploy-ready" would actually require and found a real,
+concrete gap: every asset the page loaded - the favicon, the council seal, all five font files -
+was referenced via a `../` path reaching *outside* `marketing/`, into `public/`, `brand/`, and
+`src/fonts/`. That works today because everything lives in one git checkout, but it would 404
+immediately on any static host that serves `marketing/` as its own root (Netlify, GitHub Pages,
+S3 - all of them). Fixed by copying the five real assets actually used (favicon.svg,
+council-seal.svg, four font files across two families, each family's real `OFL.txt` license
+alongside it) into a new `marketing/assets/`, and repointing every reference to the local copy -
+the page is now genuinely self-contained, not merely self-contained-looking in dev.
+
+**Real judgment call: no invented URL.** OG/Twitter tags need `og:url`/`og:image` values, and this
+item's own acceptance boundary is "stops at ready to deploy" - no real domain has been decided.
+Rather than guess `sower-industries.de/...` (SHOP.md names a *success-page* URL,
+`sower-industries.de/en/sophi-a/next/`, but never states where the marketing page itself will
+live), every OG/canonical field uses a literal `PLACEHOLDER-deploy-url` string, named in an HTML
+comment as needing the real domain filled in at actual deploy time - the same honest-placeholder
+pattern this file already used for the GitHub-source and Stripe-payment links before either was
+real (2026-09-09/2026-09-10 entries).
+
+**Also fixed:** the footer's `../brand/HIGH_COUNCIL.md` link (a repo-relative markdown path, dead
+on any deploy) now points at the real public GitHub blob URL - real because the repo itself is
+already public (2026-09-09 entry), not invented.
+
+**Static-host config, kept real rather than a checkbox:** `marketing/_headers` (Netlify format,
+ignored harmlessly by hosts that don't read it) sets long-lived immutable caching on fonts/SVGs
+and a short-cache/revalidate policy on the HTML itself - genuinely useful once deployed, not
+present merely because the ranked item's own text named "a static-host config file."
+
+**Acceptance test, dependency-free by design:** `marketing/lint.mjs` - no new package for a check
+this small and stable. Parses `index.html` for every local `href`/`src`/CSS `url()` reference
+(explicitly excluding external links, in-page anchors, and the placeholder domain above, which is
+a named gap, not a broken link), resolves each against disk, and checks every required OG/Twitter
+tag's presence via pattern match. Verified the check actually catches something: deliberately
+broke one path, confirmed a real `FAIL` naming the exact broken reference and exit code 1, restored
+it, confirmed `PASS` again. Also verified for real, not just by the linter's own logic: served
+`marketing/` alone via `python3 -m http.server` (simulating a static host that only knows about
+this directory, not the rest of the repo) and loaded it in a real Chrome tab - every real network
+request returned 200, zero 404s, fonts and the council seal rendered correctly. No deploy
+performed anywhere, per the item's own explicit acceptance-test boundary.

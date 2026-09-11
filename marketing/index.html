@@ -5,13 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sophi-A — The High Council</title>
 <meta name="description" content="Sophi-A: a Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
-<link rel="icon" type="image/svg+xml" href="../public/favicon.svg" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+
+<!-- Backlog item 3 (relay run 2026-09-10T23-20-49-005Z): OG/Twitter tags for a real link preview.
+     og:url/og:image/canonical are left as PLACEHOLDER — no real deploy URL exists yet (this
+     item's own boundary: it stops at "ready to deploy," the actual host/domain is a separate
+     human decision, not guessed here per the project's standing "don't invent URLs" rule, same
+     as the GitHub-source and Stripe-link placeholders this file already carried before either
+     was real). Fill in the real domain in the same pass as the actual deploy. -->
+<link rel="canonical" href="PLACEHOLDER-deploy-url/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Sophi-A" />
+<meta property="og:title" content="Sophi-A — The High Council" />
+<meta property="og:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<meta property="og:image" content="PLACEHOLDER-deploy-url/assets/og-image.png" />
+<meta property="og:url" content="PLACEHOLDER-deploy-url/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Sophi-A — The High Council" />
+<meta name="twitter:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<meta name="twitter:image" content="PLACEHOLDER-deploy-url/assets/og-image.png" />
+
 <style>
-  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-Regular.ttf") format("truetype"); font-weight: 400; }
-  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-SemiBold.ttf") format("truetype"); font-weight: 600; }
-  @font-face { font-family: "Space Grotesk"; src: url("../src/fonts/SpaceGrotesk/SpaceGrotesk-Bold.ttf") format("truetype"); font-weight: 700; }
-  @font-face { font-family: "IBM Plex Sans"; src: url("../src/fonts/IBMPlexSans/IBMPlexSans-Regular.ttf") format("truetype"); font-weight: 400; }
-  @font-face { font-family: "IBM Plex Sans"; src: url("../src/fonts/IBMPlexSans/IBMPlexSans-Medium.ttf") format("truetype"); font-weight: 500; }
+  @font-face { font-family: "Space Grotesk"; src: url("assets/fonts/SpaceGrotesk/SpaceGrotesk-Regular.ttf") format("truetype"); font-weight: 400; }
+  @font-face { font-family: "Space Grotesk"; src: url("assets/fonts/SpaceGrotesk/SpaceGrotesk-SemiBold.ttf") format("truetype"); font-weight: 600; }
+  @font-face { font-family: "Space Grotesk"; src: url("assets/fonts/SpaceGrotesk/SpaceGrotesk-Bold.ttf") format("truetype"); font-weight: 700; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("assets/fonts/IBMPlexSans/IBMPlexSans-Regular.ttf") format("truetype"); font-weight: 400; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("assets/fonts/IBMPlexSans/IBMPlexSans-Medium.ttf") format("truetype"); font-weight: 500; }
 
   :root {
     --bg: #0a0908;
@@ -324,7 +343,7 @@
 
 <header class="hero">
   <div class="wrap">
-    <img class="seal" src="../brand/council-seal.svg" alt="The Sophi-A High Council seal — five critic-lab seats ringed around the Sophi-A mark" />
+    <img class="seal" src="assets/council-seal.svg" alt="The Sophi-A High Council seal — five critic-lab seats ringed around the Sophi-A mark" />
     <h1 class="wordmark">Sophi-A</h1>
     <p class="tagline">Five labs review your plan before a line of code exists. Nothing builds until the Council signs off — or tells you exactly why it won't.</p>
     <div class="cta-row">
@@ -461,7 +480,7 @@
 <footer>
   <div class="wrap">
     Sophi-A is built by Sower Industries. Apache-2.0 licensed.
-    See <a href="../brand/HIGH_COUNCIL.md">brand/HIGH_COUNCIL.md</a> for the full identity spec.
+    See <a href="https://github.com/muad-yasin/sophi-a/blob/master/brand/HIGH_COUNCIL.md" rel="noopener">brand/HIGH_COUNCIL.md</a> for the full identity spec.
   </div>
 </footer>
 

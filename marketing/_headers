@@ -1,0 +1,16 @@
+# Netlify-format static-host headers (backlog item 3, relay run 2026-09-10T23-20-49-005Z).
+# Any static host that reads this format picks it up automatically; hosts that don't just ignore
+# the file - it isn't required for the page to work, only to serve it slightly better once it is
+# deployed (deploy itself stays a separate, owner-only human step - not done by this file).
+
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/og-image.png
+  Cache-Control: public, max-age=86400
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

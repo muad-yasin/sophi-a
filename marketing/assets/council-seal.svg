@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- The High Council seal - see brand/HIGH_COUNCIL.md for the full identity spec.
+       Five real critic-lab seats (plan-cheap.json) ringed around the untouched Sophi-A mark
+       (public/favicon.svg's star, same gradients, same geometry - not redrawn). Seat I is at
+       top (12 o'clock), clockwise in HIGH_COUNCIL.md's table order: Qwen, GLM, Cohere, Gemini,
+       Llama. Each arc's opacity is the "idle/full council" state (all signed on) - a live-run
+       state would set .seat-N's opacity from that run's real report.json signoff, not redrawn
+       here; see HIGH_COUNCIL.md's "Live verdict" section before wiring that. -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fdf6e3" stop-opacity="0.55"/>
+      <stop offset="35%" stop-color="#e9c97f" stop-opacity="0.30"/>
+      <stop offset="70%" stop-color="#c9a24d" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#c9a24d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="47%" cy="45%" r="58%">
+      <stop offset="0%" stop-color="#fffdf6"/>
+      <stop offset="26%" stop-color="#fdeec0"/>
+      <stop offset="48%" stop-color="#f2d18e"/>
+      <stop offset="68%" stop-color="#dcac57"/>
+      <stop offset="88%" stop-color="#a8763a"/>
+      <stop offset="100%" stop-color="#6b4420"/>
+    </radialGradient>
+    <linearGradient id="flare" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f9c97f" stop-opacity="0.95"/>
+      <stop offset="55%" stop-color="#c9a24d" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#c9a24d" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soften" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <!-- Council ring: five 40deg arc wedges, 72deg apart, seat I centered at top (0deg), clockwise.
+       Every seat reuses the exact same wedge path (span -20deg..+20deg from top, r=210) and gets
+       placed purely by `transform="rotate(N 256 256)"` - one shape, five rotations, so the ring
+       stays geometrically exact by construction instead of five hand-computed arcs. -->
+  <g id="council-ring" stroke-width="0" opacity="0.9">
+    <path class="seat seat-1" fill="#7a8fa6" fill-opacity="0.30"
+      d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+    <path class="seat seat-2" fill="#8a9a7a" fill-opacity="0.30"
+      d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+    <path class="seat seat-3" fill="#a68a6b" fill-opacity="0.30"
+      d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+    <path class="seat seat-4" fill="#7a90a6" fill-opacity="0.30"
+      d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+    <path class="seat seat-5" fill="#9a8a6b" fill-opacity="0.30"
+      d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+  </g>
+
+  <!-- Sigils, one per seat, at each wedge's outer midpoint (196px from center). Stroke-width 12
+       and ~22px shape radii (2026-09-10 revision - see HIGH_COUNCIL.md's colorblind/legibility
+       finding): the original stroke-width ~2.5-3 rendered at well under half a pixel on the
+       80x80 in-app seal (index.html's .council-seal), i.e. invisible - not just "thin," actually
+       not there. This size renders at ~1.9px at 80px, the minimum that reads as a deliberate
+       mark rather than a rendering artifact; still reads cleanly at 512px full size. -->
+  <g id="council-sigils" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Seat I - Qwen: a bar through a ring, top (0deg) -->
+    <g transform="translate(256 60)">
+      <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
+      <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
+    </g>
+    <!-- Seat II - GLM: a balance scale (a beam, two pans) - a scale, not a hexagram; two
+         same-orientation triangles were tried first and rejected here for reading as a Star of
+         David at small sizes, an unintended resemblance worth avoiding outright. -->
+    <g transform="rotate(72 256 256) translate(256 60) rotate(-72)"
+      fill="none" stroke="#b3c2a8" stroke-width="10">
+      <line x1="-20" y1="-4" x2="20" y2="-4"/>
+      <line x1="0" y1="-4" x2="0" y2="19"/>
+      <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
+      <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
+    </g>
+    <!-- Seat III - Cohere: a hexagon, 144deg -->
+    <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
+      <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z"
+        fill="none" stroke="#c4ab8e" stroke-width="10"/>
+    </g>
+    <!-- Seat IV - Gemini: two opposed arcs (twin lenses), 216deg -->
+    <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
+      <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+      <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+    </g>
+    <!-- Seat V - Llama: a triangle inside a circle (mountain seat), 288deg -->
+    <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
+      <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
+      <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
+    </g>
+  </g>
+
+  <!-- The Advocate's seat: the mark itself, untouched from public/favicon.svg - see
+       HIGH_COUNCIL.md, "does not get a Council-ring sigil - sits at the mark's own position". -->
+  <circle cx="256" cy="256" r="150" fill="url(#glow)"/>
+  <g filter="url(#soften)">
+    <path d="M 256 256 L 246 100 L 262 100 Z" fill="url(#flare)" transform="rotate(8 256 256)"/>
+    <path d="M 256 256 L 248 120 L 260 120 Z" fill="url(#flare)" transform="rotate(66 256 256)"/>
+    <path d="M 256 256 L 244 92 L 264 92 Z" fill="url(#flare)" transform="rotate(132 256 256)"/>
+    <path d="M 256 256 L 249 124 L 259 124 Z" fill="url(#flare)" transform="rotate(191 256 256)"/>
+    <path d="M 256 256 L 245 96 L 263 96 Z" fill="url(#flare)" transform="rotate(247 256 256)"/>
+    <path d="M 256 256 L 250 128 L 258 128 Z" fill="url(#flare)" transform="rotate(305 256 256)"/>
+  </g>
+  <circle cx="256" cy="256" r="88" fill="url(#orb)"/>
+</svg>
