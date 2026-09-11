@@ -1162,8 +1162,41 @@ const debateCache = new Map<string, DebateReportDetail>();
 // in the background never silently swaps out a replay the operator deliberately opened (the
 // "honest by construction" rule cuts both ways: replay must never look live, and a live update
 // must never quietly interrupt a replay either).
-type ReplayView = { runId: string; report: DebateReportDetail } | { runId: string; error: string };
+// Backlog item 5 (relay run 2026-09-10T23-20-49-005Z): `demo` reuses this exact same view - a
+// simulated run is rendered through the identical code path as a real saved-run replay, just
+// without ever calling `replay_run` over the WebSocket to get there (see setupCouncilDemo below).
+// "not live" is true of both a replay and a demo, so the banner only needs to say which kind.
+type ReplayView =
+  | ({ runId: string; report: DebateReportDetail } | { runId: string; error: string }) & { demo?: boolean };
 const replayView = new Map<string, ReplayView>();
+
+// Backlog item 5: pre-cached fixture data for the offline Council demo - a genuinely different
+// discoverability path from item 2's static explainer (relay run 2026-09-10T23-20-49-005Z's own
+// scope-additions note: this item is kept separate on purpose, for the buyer who hasn't
+// configured a single API key yet and still wants to see the mechanism run). Provider strings
+// match plan-cheap.json's real critic roster verbatim (see debate-seal's own data-provider
+// selectors) so the seal lights up exactly as it would for a real run.
+const COUNCIL_DEMO_REPORT: DebateReportDetail = {
+  runId: "demo-fixture",
+  passed: true,
+  signoff: [
+    { provider: "together", model: "Qwen/Qwen3.5-9B", signedOff: true },
+    { provider: "zai", model: "glm-4.7-flash", signedOff: true },
+    { provider: "cohere", model: "command-r7b-12-2024", signedOff: true },
+    { provider: "google", model: "gemini-3.6-flash", signedOff: true },
+    { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct", signedOff: true },
+  ],
+  scoreboard: {
+    labs: [
+      { lab: "together", accepted: 3, proposed: 3 },
+      { lab: "zai", accepted: 2, proposed: 3 },
+      { lab: "cohere", accepted: 3, proposed: 3 },
+      { lab: "google", accepted: 2, proposed: 2 },
+      { lab: "openrouter", accepted: 1, proposed: 2 },
+    ],
+  },
+  failures: [],
+};
 
 function renderDebatePanel(seatId: string) {
   const tile = tileEl(seatId);
@@ -1180,7 +1213,14 @@ function renderDebatePanel(seatId: string) {
   const report = view ? ("report" in view ? view.report : undefined) : debateCache.get(seatId);
   const errorText = view && "error" in view ? view.error : undefined;
 
-  if (banner) banner.hidden = !view; // "REPLAY — not live" (the honesty rule) - only ever visible while a saved run is selected
+  if (banner) {
+    // "REPLAY — not live" / "SIMULATED DEMO — not a real run" (the honesty rule, backlog item 5's
+    // own bar: a demo indistinguishable from a live run is exactly the fake-state brand/BRAND.md
+    // forbids) - only ever visible while a saved run or the demo fixture is selected.
+    banner.hidden = !view;
+    banner.textContent = view?.demo ? "SIMULATED DEMO — not a real run" : "REPLAY — not live";
+    banner.classList.toggle("debate-demo-banner", Boolean(view?.demo));
+  }
   signoffList.innerHTML = "";
   scoreboardList.innerHTML = "";
   failureList.innerHTML = "";
@@ -1311,6 +1351,26 @@ function handleReplayResult(evt: ReplayResultEvent) {
   const tile = tileEl(evt.seatId);
   const panel = tile?.querySelector<HTMLElement>('[data-role="debate-panel"]');
   if (panel && !panel.hidden) renderDebatePanel(evt.seatId);
+}
+
+// Backlog item 5: clicking the demo button sets `replayView` directly from the local fixture
+// above and re-renders - the identical render path a real replay uses, with zero WebSocket
+// traffic (no `replay_run` send, no response to wait on), matching this item's own acceptance
+// test verbatim ("zero network or IPC requests emitted during the render cycle"). Selecting
+// "Live" (or a real run) in the History dropdown already overwrites/clears `replayView` via the
+// existing handlers above, so exiting the demo needs no new code.
+function setupCouncilDemo() {
+  for (const seatId of PLANNER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const btn = tile?.querySelector<HTMLButtonElement>('[data-role="council-demo-btn"]');
+    if (!tile || !btn) continue;
+    btn.addEventListener("click", () => {
+      replayView.set(seatId, { runId: "demo-fixture", report: COUNCIL_DEMO_REPORT, demo: true });
+      const select = tile.querySelector<HTMLSelectElement>('[data-role="debate-history-select"]');
+      if (select) select.value = ""; // the dropdown has no "Demo" entry - park it on "Live" visually
+      renderDebatePanel(seatId);
+    });
+  }
 }
 
 function setupDebateHistory() {
@@ -1904,6 +1964,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupHistoryPanel();
   setupDebatePanels();
   setupDebateHistory();
+  setupCouncilDemo();
   setupSeatExportControls();
   setupExportsPanel();
   setupCostPanels();

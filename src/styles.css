@@ -1490,6 +1490,26 @@ body {
   padding: var(--sp-1) var(--sp-2);
 }
 
+/* Backlog item 5: gold, not the replay banner's amber "working" semantic - a simulated demo isn't
+   a caution state the way a saved-run replay is, it's a deliberate, distinct third state. */
+.debate-demo-banner {
+  color: var(--gold-bright) !important;
+  background: color-mix(in srgb, var(--gold-bright) 12%, transparent) !important;
+}
+
+.council-demo-btn {
+  align-self: flex-end;
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  font-weight: var(--font-chrome-weight);
+  background: none;
+  border: none;
+  color: var(--accent-bright);
+  cursor: pointer;
+  padding: var(--sp-1) 0;
+  text-decoration: underline;
+}
+
 /* "The High Council" (brand/HIGH_COUNCIL.md) - the seal above the signoff list. Idle default
    (no report yet, or a seat with no signoff entry) is a dim, even ring - the "live verdict"
    state HIGH_COUNCIL.md designs, driven per-seat by renderDebatePanel from a real report.json,
