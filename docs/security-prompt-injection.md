@@ -395,6 +395,15 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
       `<advisor-reply>` block, never as a bare top-level instruction. That confirms the mechanical
       wrap/gate this code controls; it is not a claim about what any given LLM would do if it did
       receive an unframed instruction - no code-level check can prove that.
+- [x] **Fixed 2026-09-11** (backlog item 8, relay run `2026-09-10T23-20-49-005Z`). A third forward
+      candidate, not one of the two originally named here: `forwardArtifact` (`index.js`) lets a
+      build seat's own workdir file be forwarded into `advisor` or `cnc`. Same three requirements
+      again: `<build-artifact seatId="..." path="..." trust="untrusted-model-output">` framing,
+      `confirmed: true` enforced server-side, and the same `FORWARD_MAX_CHARS` cap every forward
+      path in this app shares. One requirement this candidate adds that the first two didn't need:
+      a binary file is rejected outright server-side (`inspectArtifact`'s null-byte sniff,
+      `compareSnapshot.js`), never silently forwarded as garbled text - "Text assets only" is a
+      real backend rejection, not just a disabled button.
 - [x] **Fixed 2026-09-09, in relay directly** (same standing pattern CLAUDE.md already documents
       for the Cohere max-tokens bug - a real fix in the dependency, not worked around here).
       `relay/src/chain.js`'s `normaliseCritique` now caps every critic-controlled field
@@ -432,8 +441,9 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
       check now in place, not the no-op it used to honestly describe.
 
 **Everything in this document's checklist is now fixed and live-verified**, P0 through P2,
-including both named S2 forward candidates (plan->build, and as of 2026-09-11 advisor->cnc). The
-S2 "forward" rule comment (§2 above, and the one sitting directly above `index.js`'s command
-dispatch) still stands as the rule to re-read before wiring any *third* cross-seat forward path -
-the same three requirements (untrusted-content framing, backend-enforced human confirmation, a
+including all three built forward paths (plan->build, advisor->cnc as of 2026-09-11, and
+build->advisor/cnc as of 2026-09-11 also). The S2 "forward" rule comment (§2 above, and the one
+sitting directly above `index.js`'s command dispatch) still stands as the rule to re-read before
+wiring any *further* cross-seat forward path - the same three requirements (untrusted-content
+framing, backend-enforced human confirmation, a
 size cap) apply to any future one, not just the two built so far.

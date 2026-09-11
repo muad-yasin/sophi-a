@@ -1324,3 +1324,46 @@ the Phase 3 Step 4/restart-bug entries above, not a new one - and it already did
 `notifySeatTransition`'s own real native-notification firing when that feature shipped
 (2026-09-10), so the same reasoning applies here: the plumbing is identical and already trusted,
 only this item's own new logic needed fresh verification, and that part is real and confirmed.
+
+## 2026-09-11: Backlog item 8 - a real near-miss with the shared `.workdirs/build-N` directory
+
+Item 8 (build-seat artifact inspector + context forwarder) needed real files in a builder's
+workdir to test against. `.workdirs/build-N` is a fixed, repo-relative path
+(`src/orchestrator/index.js`'s `root` is resolved from the module's own file location, never
+overridable by `HOME` or any other env var the way this session's other standalone-orchestrator
+tests isolated `~/.sophia`) - so a standalone test orchestrator against this real checkout always
+points at the *same* `.workdirs/build-N` any other running instance uses, including whichever real
+app-spawned orchestrator Muad's own session has open.
+
+This session wrote two real test files directly into the real `.workdirs/build-1/` to test against
+- a mistake caught immediately (before any WS traffic was ever sent to that orchestrator instance,
+before any file was read by it) and reverted in the same breath: both test files deleted, the
+directory's two genuinely pre-existing files (`.compare-snapshot.json`, `impl.py`) confirmed
+untouched. While investigating, found (unrelated to this mistake) **three real app-spawned
+orchestrator processes running simultaneously** (`ps aux`, bundled-node absolute-path
+invocations - PIDs from Sep-10 session start, 01:46, and 02:26), plus one of this session's own
+leftover standalone test orchestrators from an earlier item's testing that hadn't been killed
+cleanly. The stray test process was killed; **the three app-spawned orchestrators were left
+alone** - this session has no way to know which one Rust's own `OrchestratorState` currently
+considers "the" child process, and killing the wrong one risks disrupting Muad's real session
+rather than fixing anything. **Flagging for Muad, not resolved here**: either multiple app windows
+are genuinely open, or `restart_orchestrator` (or a crash) is leaving old children un-reaped -
+worth checking `ps aux | grep orchestrator/index.js` for real next time the app is in front of
+him.
+
+**Consequence for this item's own verification scope**: rather than risk a second live test
+against the same shared directory right after that near-miss, the artifact-inspection logic
+(`inspectArtifact`/`listWorkdirFiles`, `compareSnapshot.js`) was instead unit-tested directly
+against a fully isolated `/tmp` scratch directory - zero shared-state risk. Confirmed: file listing
+returns all three real files; a 20,000-char text file reports `binary:false`,
+`estimatedTokens:5000` (correctly over the 4,000-token warning threshold); a real binary file
+(repeating null bytes) reports `binary:true`, `content:null`; a missing path returns `null`
+cleanly. `forwardArtifact`'s own binary-rejection and `FORWARD_MAX_CHARS` truncation logic was
+separately replicated and confirmed against the same fixtures (binary rejected outright; the
+20,000-char file truncated to exactly 16,000 characters plus the truncation marker; the short file
+passed through untouched). The WS handlers (`handleGetArtifact`/`handleListArtifacts`/
+`forwardArtifact` itself in `index.js`) are thin, directly-reviewed wrappers around this
+already-verified logic - not independently re-run end-to-end through a real orchestrator/browser
+this time, a deliberate, honestly-named scope reduction given the real risk just found, not an
+oversight. The frontend wiring (binary warning, token warning, truncate checkbox, forward-disable)
+follows the exact same DOM patterns already live-verified for items 4 and 6 in this same session.

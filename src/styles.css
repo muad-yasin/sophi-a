@@ -1324,6 +1324,41 @@ body {
   background: color-mix(in srgb, var(--status-problem) 12%, transparent);
 }
 
+/* Backlog item 8: the artifact drawer's forward row. */
+.artifact-forward-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-top: var(--sp-1);
+  border-top: 1px solid var(--border);
+}
+
+.artifact-forward-warning {
+  margin: 0;
+  font-size: 12px;
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--gold-bright) 12%, transparent);
+  border-radius: 4px;
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.artifact-truncate-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.artifact-forward-controls {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.artifact-forward-controls .forward-btn {
+  flex: 1;
+}
+
 .inspect-pick-actions {
   display: flex;
   gap: var(--sp-2);

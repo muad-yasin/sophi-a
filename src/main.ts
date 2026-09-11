@@ -47,6 +47,24 @@ interface CompareDiffEvent {
   patch?: DiffPatch;
   error?: string;
 }
+// Backlog item 8: the artifact drawer's own events - a plain file list (no snapshot needed) and
+// one file's content/binary-detection/token-estimate, independent of the comparison-diff events
+// above.
+interface ArtifactListEvent {
+  type: "artifact.list";
+  seatId: string;
+  files?: string[];
+  error?: string;
+}
+interface ArtifactResultEvent {
+  type: "artifact.result";
+  seatId: string;
+  path: string;
+  binary?: boolean;
+  content?: string | null;
+  estimatedTokens?: number | null;
+  error?: string;
+}
 interface ComparePickEvent {
   type: "compare.pick";
   winner: string;
@@ -735,6 +753,8 @@ async function connect() {
         | SeatEvent
         | CompareChangesEvent
         | CompareDiffEvent
+        | ArtifactListEvent
+        | ArtifactResultEvent
         | ComparePickEvent
         | CompareHistoryEvent
         | DebateReportEvent
@@ -745,6 +765,8 @@ async function connect() {
         | SeatUsageEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
+      else if (evt.type === "artifact.list") handleArtifactList(evt);
+      else if (evt.type === "artifact.result") handleArtifactResult(evt);
       else if (evt.type === "compare.pick") handleComparePick(evt);
       else if (evt.type === "compare.history") handleCompareHistory(evt);
       else if (evt.type === "debate.report") handleDebateReport(evt);
@@ -1199,13 +1221,23 @@ function handleCompareChanges(evt: CompareChangesEvent) {
 
   diffEl && (diffEl.hidden = true);
   list.innerHTML = "";
+  const forwardRow = tile.querySelector<HTMLElement>('[data-role="artifact-forward-row"]');
+  if (forwardRow) forwardRow.hidden = true;
+  currentArtifactPath.delete(evt.seatId);
 
   // A seat with no snapshot was never part of a comparison run - no pick/delete makes sense
   // there either (§5's actions are scoped to seats that actually ran a comparison task).
   if (evt.error || !evt.changes || evt.changes.length === 0) {
+    if (pickActions) pickActions.hidden = true;
+    // Backlog item 8: "no snapshot" is exactly the common single-task case (never part of a
+    // comparison run) - falls back to the plain artifact listing instead of a dead end, since
+    // real files worth inspecting still exist in the workdir either way.
+    if (evt.error?.includes("no snapshot")) {
+      sendCommand({ cmd: "list_artifacts", seatId: evt.seatId });
+      return;
+    }
     empty.hidden = false;
     empty.textContent = evt.error ?? "No changes since dispatch.";
-    if (pickActions) pickActions.hidden = true;
     return;
   }
   empty.hidden = true;
@@ -1259,6 +1291,114 @@ function handleCompareDiff(evt: CompareDiffEvent) {
       div.textContent = line;
       diffEl.appendChild(div);
     }
+  }
+}
+
+// Backlog item 8: the artifact drawer's fallback listing (no snapshot needed) - renders into the
+// exact same inspect-file-list the comparison view uses, just without status/cross-builder badges
+// (there is no "since dispatch" or "vs. sibling" concept for a plain file list) and routing each
+// file's click to get_artifact instead of get_diff.
+function handleArtifactList(evt: ArtifactListEvent) {
+  const tile = tileEl(evt.seatId);
+  const empty = tile?.querySelector<HTMLElement>('[data-role="inspect-empty"]');
+  const list = tile?.querySelector<HTMLUListElement>('[data-role="inspect-file-list"]');
+  const forwardRow = tile?.querySelector<HTMLElement>('[data-role="artifact-forward-row"]');
+  if (!tile || !empty || !list) return;
+
+  list.innerHTML = "";
+  if (forwardRow) forwardRow.hidden = true;
+  currentArtifactPath.delete(evt.seatId);
+  if (evt.error || !evt.files || evt.files.length === 0) {
+    empty.hidden = false;
+    empty.textContent = evt.error ?? "No files in this seat's workdir yet.";
+    return;
+  }
+  empty.hidden = true;
+  for (const path of evt.files) {
+    const li = document.createElement("li");
+    li.className = "inspect-file-row";
+    const pathBtn = document.createElement("button");
+    pathBtn.type = "button";
+    pathBtn.className = "inspect-file-path";
+    pathBtn.textContent = path;
+    pathBtn.addEventListener("click", () => {
+      sendCommand({ cmd: "get_artifact", seatId: evt.seatId, path });
+    });
+    li.appendChild(pathBtn);
+    list.appendChild(li);
+  }
+}
+
+// Backlog item 8: which file the forward row currently targets, per seat - set the moment either
+// a diff or a plain artifact is opened, cleared on nothing (there is always exactly one "last
+// opened file" once any file has been clicked, matching the acceptance test's "forwarding a log"
+// singular framing).
+const currentArtifactPath = new Map<string, string>();
+
+function renderArtifactForwardRow(seatId: string, result: ArtifactResultEvent) {
+  const tile = tileEl(seatId);
+  const row = tile?.querySelector<HTMLElement>('[data-role="artifact-forward-row"]');
+  const binaryWarning = tile?.querySelector<HTMLElement>('[data-role="artifact-binary-warning"]');
+  const tokenWarning = tile?.querySelector<HTMLElement>('[data-role="artifact-token-warning"]');
+  const truncateLabel = tile?.querySelector<HTMLElement>('[data-role="artifact-truncate-label"]');
+  const forwardBtn = tile?.querySelector<HTMLButtonElement>('[data-role="artifact-forward-btn"]');
+  if (!row || !binaryWarning || !tokenWarning || !truncateLabel || !forwardBtn) return;
+
+  row.hidden = false;
+  const isBinary = result.binary === true;
+  binaryWarning.hidden = !isBinary;
+  forwardBtn.disabled = isBinary;
+  forwardBtn.title = isBinary ? "Text assets only" : "";
+
+  // 4,000 tokens (this backlog item's own named threshold) at the same 4-chars/token estimate
+  // FORWARD_MAX_CHARS (16,000 chars) already assumes elsewhere in this app - one number, two
+  // names, never two inconsistent caps.
+  const ARTIFACT_TOKEN_WARNING_THRESHOLD = 4000;
+  const overThreshold = !isBinary && (result.estimatedTokens ?? 0) > ARTIFACT_TOKEN_WARNING_THRESHOLD;
+  tokenWarning.hidden = !overThreshold;
+  truncateLabel.hidden = !overThreshold;
+  if (overThreshold) {
+    tokenWarning.textContent = `~${result.estimatedTokens} tokens (estimated) - over the 4,000-token warning threshold.`;
+  }
+}
+
+function handleArtifactResult(evt: ArtifactResultEvent) {
+  const tile = tileEl(evt.seatId);
+  const diffEl = tile?.querySelector<HTMLElement>('[data-role="inspect-diff"]');
+  if (!tile || !diffEl) return;
+
+  if (evt.error) {
+    diffEl.hidden = false;
+    diffEl.textContent = evt.error;
+    return;
+  }
+
+  currentArtifactPath.set(evt.seatId, evt.path);
+  diffEl.hidden = false;
+  diffEl.textContent = evt.binary ? "(binary file - preview not shown)" : (evt.content ?? "");
+  renderArtifactForwardRow(evt.seatId, evt);
+}
+
+function setupArtifactForward() {
+  for (const seatId of BUILDER_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const btn = tile?.querySelector<HTMLButtonElement>('[data-role="artifact-forward-btn"]');
+    const select = tile?.querySelector<HTMLSelectElement>('[data-role="artifact-forward-select"]');
+    if (!tile || !btn || !select) continue;
+
+    btn.addEventListener("click", () => {
+      const path = currentArtifactPath.get(seatId);
+      if (!path) return;
+      const toSeatId = select.value;
+      const modal = document.getElementById("forward-confirm-modal");
+      const title = document.getElementById("forward-confirm-title");
+      if (!modal || !title) return;
+      pendingForward = { fromSeatId: seatId, toSeatId, artifactPath: path };
+      title.textContent =
+        `This sends ${seatId}'s "${path}" to ${toSeatId === "advisor" ? "advisor" : "cnc"} as ` +
+        `untrusted file content${toSeatId === "cnc" ? " - cnc will start writing and editing real files" : ""}. Continue?`;
+      modal.hidden = false;
+    });
   }
 }
 
@@ -1572,7 +1712,7 @@ function setupDebateHistory() {
 // product pitch ("nothing builds until the Council signs off"), so this isn't just a UX nicety,
 // it's the same guarantee the backend's own lastDeliverable cache enforces (relayChainSubprocess
 // only ever populates it on a passed run).
-let pendingForward: { fromSeatId: string; toSeatId: string } | null = null;
+let pendingForward: { fromSeatId: string; toSeatId: string; artifactPath?: string } | null = null;
 
 function updateForwardButton(seatId: string) {
   const tile = tileEl(seatId);
@@ -1598,8 +1738,13 @@ function setupForwardConfirmModal() {
 
   document.querySelector('[data-role="forward-confirm-confirm"]')?.addEventListener("click", () => {
     if (!pendingForward) return;
-    const { fromSeatId, toSeatId } = pendingForward;
-    if (fromSeatId === "advisor") {
+    const { fromSeatId, toSeatId, artifactPath } = pendingForward;
+    if (artifactPath) {
+      // Backlog item 8 (docs/security-prompt-injection.md S2 forward rule, third candidate):
+      // same confirm modal again, forwardArtifact (index.js) needs the path too.
+      sendCommand({ cmd: "forward_artifact", seatId: fromSeatId, path: artifactPath, toSeatId, confirmed: true });
+      echoTask(toSeatId, `> forwarded ${fromSeatId}'s "${artifactPath}"`);
+    } else if (fromSeatId === "advisor") {
       // Backlog item 4 (docs/security-prompt-injection.md S2 forward rule, second candidate):
       // same confirm modal as plan->build, different command - forwardAdvisorReply (index.js)
       // has no fromSeatId/toSeatId pair to pick, the direction is fixed.
@@ -2136,6 +2281,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupBuild1CompareDispatch();
   setupCostConfirmModal();
   setupInspectPanels();
+  setupArtifactForward();
   setupHistoryPanel();
   setupDebatePanels();
   setupDebateHistory();

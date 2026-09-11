@@ -92,6 +92,18 @@ function currentFiles(workdir) {
   return files;
 }
 
+/**
+ * Backlog item 8: the artifact drawer's file list, independent of comparison-run history - unlike
+ * changedSinceSnapshot (which needs a dispatch-time snapshot to exist at all and only every shows
+ * "since dispatch" deltas), this just lists what's actually in the workdir right now. Every
+ * builder task creates real files whether or not it was ever part of a multi-seat comparison run,
+ * and the drawer's whole point is inspecting those, not only a comparison's diffs.
+ * @param {string} workdir
+ */
+export function listWorkdirFiles(workdir) {
+  return Object.keys(currentFiles(workdir)).sort();
+}
+
 /** A single file's current hash in a workdir, or null if it doesn't exist there. Used to compute
  * the "same"/"differs" cross-builder badge (PLAN_PARALLEL_BUILD.md §4) - never from the
  * manifest, always the file as it stands right now. */
@@ -142,4 +154,37 @@ export function diffAgainstSnapshot(workdir, relPath) {
   const after = existsSync(currentFile) ? readFileSync(currentFile, 'utf8') : null;
   if (before === null && after === null) return null;
   return structuredPatch(relPath, relPath, before ?? '', after ?? '', '', '', { context: 3 });
+}
+
+// Backlog item 8 (relay run 2026-09-10T23-20-49-005Z, "build-seat artifact inspector + context
+// forwarder"): standard binary-detection heuristic (a null byte anywhere in the first 8000
+// bytes - the same window `git diff` itself uses to decide "Binary files differ" rather than
+// printing one) - read as a raw Buffer first, never decoded as UTF-8 before this check, so a
+// real binary file can never be mis-detected as text by virtue of Node's own lossy decode.
+const BINARY_SNIFF_BYTES = 8000;
+
+function looksBinary(buffer) {
+  return buffer.subarray(0, BINARY_SNIFF_BYTES).includes(0);
+}
+
+/**
+ * Read one file from a builder's workdir for the artifact inspector: binary-detected first, then
+ * (if text) returned as a plain string with a rough token-count estimate (chars/4 - a standard
+ * approximation, not a real tokenizer count; no tokenizer library exists in this codebase and
+ * this item's own build-speed score doesn't justify adding one for an estimate used only to
+ * decide whether to warn, not to bill anything). Never diffed against the snapshot - this reads
+ * *current* content, the same "what does this file actually say right now" a vibecoder forwarding
+ * a build's output to advisor for diagnosis wants, not what changed.
+ * @param {string} workdir
+ * @param {string} relPath
+ */
+export function inspectArtifact(workdir, relPath) {
+  const fullPath = join(workdir, relPath);
+  if (!existsSync(fullPath)) return null;
+  const buffer = readFileSync(fullPath);
+  if (looksBinary(buffer)) {
+    return { binary: true, content: null, estimatedTokens: null };
+  }
+  const content = buffer.toString('utf8');
+  return { binary: false, content, estimatedTokens: Math.ceil(content.length / 4) };
 }
