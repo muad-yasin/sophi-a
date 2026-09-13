@@ -1394,3 +1394,55 @@ exist in THCMCP), no change to `seats.json`, and the private relay is still wher
 work landed first - thcmcp-cb re-curates it into THCMCP, so for a few hours the two engines
 differ (THCMCP lacks v2 until that lands). The resolver does not try to pick the "newer" one;
 that would be guessing.
+
+## 2026-09-13: Visual pass - traffic lights out, breathing room and soft lighting in
+
+Muad's brief, verbatim intent: "I don't like the green, yellow, red colours on the gui. No visual
+polishing. No smooth lighting and blurred glows. No empty space, no breathing room." Only
+`src/styles.css` changed - every class name, `data-status` value and DOM node is untouched, so
+`main.ts` and the tests didn't need to move. Branch `visual-pass-2026-09-13`, zero API spend (no
+seat or chain was ever started; the UI was driven in a real Chrome tab against `vite` on port
+5199 with the grid's `hidden` cleared and states set on the tiles by hand, the same technique the
+2026-09-11 entries used).
+
+**State encoding instead of hue.** Status now lives on the tile's left edge (an inset box-shadow
+bar on the tile's own box, so it doesn't scroll away) plus the badge's weight and text: idle = no
+bar, outlined badge; working = 3px gold bar that slowly breathes gold -> the mark's upper bloom
+(`#fdeec0`), filled gold badge; problem = 3px ivory (`--text-primary`) bar, filled ivory badge with
+a `! ` text prefix, finite two-beat width pulse; timeout = the same weight but a *dashed* border,
+badge `! TIMED OUT`; budget-exceeded = a thin gold-bright frame, static, on top of which any real
+status bar still shows. Gold vs ivory differ in lightness/saturation, not hue, so it survives the
+protan/deutan/tritan case; shape (solid/dashed/none) and the badge text carry it in greyscale. The
+`--status-*` tokens were kept but retargeted to those brand values rather than deleted, so every
+secondary use (Stop buttons, wizard dots, diff lines, setup badges, replay banners, signoff marks)
+lost its red/amber/green in one move and was then re-tuned by hand: wizard ready = filled gold
+disc vs hollow ivory ring; diff add = gold tint, del = dimmed; the A/M/D letter stays the diff
+carrier. The Council seal's five seat wedges (slate/sage/clay/steel/taupe, `brand/HIGH_COUNCIL.md`)
+are seat identities, not status colours, and were left alone.
+
+**Breathing room.** New `--sp-5` (20px) step; grid gutters and tile padding moved up a step; tile
+internal gap 8 -> 12; `--measure: 64ch` caps prose width on seat output and setup hints; the
+Debate panel got real top/bottom padding, a 12/16px margin around the seal and a 320px max instead
+of 220.
+
+**Lighting.** One layered `--shadow-card` for tiles, `--shadow-float` for every floating panel
+(wizard, palette, setup, cost-confirm), an ambient gold glow *only* on the `:focus-within` tile and
+(as a drop-shadow) on the Council seal. The Send button's own permanent gold glow was removed -
+eight of them on one screen was exactly "a glow on everything"; its bevel and hover shine stay.
+
+**Two real bugs found only by looking, both pre-existing and visible in the "before" screenshot:**
+(1) `.tile-output` had `flex: 1` and collapsed to zero height inside a side tile whose content
+outgrew its grid row - the seat output was simply not on screen for Planner/Builder tiles; now
+`flex: 1 0 auto`. (2) The Debate/cost/inspect panels are flex children with no `flex-shrink: 0`,
+so the Debate panel (and the seal with it) was crushed to a few pixels; fixed, and tiles now
+scroll (`overflow: hidden auto`, thin palette-coloured scrollbar) instead of clipping silently.
+The side tiles still hold more than one third of a 900px-tall window - they scroll now, which is
+honest, but the amount of chrome per tile is a layout question this pass did not take on.
+
+Judged from real screenshots (`docs/screenshots/2026-09-13-visual-pass-{before,after}-*`): the four
+states read at a glance from across the room, the grid no longer looks like a traffic
+intersection, and the one warm/bright thing on the idle grid is the focused seat, as
+`brand/BRAND.md` asks. Not verified: the WebKitGTK build (Tauri on Linux) rendering `@property`
+-registered custom properties in keyframes - Chrome does; if the Tauri window shows a static gold
+bar for "working" instead of a breathing one, that is why, and the fallback is a plain static bar,
+not a broken layout. `npx tsc --noEmit` and `vite build` clean.

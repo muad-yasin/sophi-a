@@ -4,12 +4,21 @@
    there is no shared-module setup between a Unity project and a Tauri web frontend. Do not
    invent new colors here; if SMO's palette changes, resync from that file, don't drift locally.
 
-   Status ring mapping (Sophi-A's own choice, not copied 1:1 from SMO's own UI - SMO has no
-   "agent working" concept): idle -> Gain (SMO's stock-gain green), working -> Warning (SMO's
-   caution orange), problem -> Breaking (SMO's breaking-news red). Brand/chrome accent is
-   AiAccent, deliberately reused from SMO's own "algorithm tier" AI-thematic color, since Sophi-A
-   literally is an AI-orchestration tool; Gold stays reserved for primary-action buttons (Send),
-   matching SMO's own "buttons, overlines" usage. */
+   Seat status (visual pass 2026-09-13, Muad: "I don't like the green, yellow, red colours"):
+   SMO's Gain/Warning/Breaking traffic lights are gone from the seat tiles. Status is carried by
+   the tile's LEFT EDGE BAR (shape + weight + motion) and the badge's text/weight, never by hue:
+     idle     - no bar, hairline border, outlined badge (recedes)
+     working  - 3px solid gold bar with a slow travelling light, filled gold badge (the only
+                warm/bright thing on the grid, per brand/BRAND.md's "the star is the calmest,
+                warmest thing" rule - working seats ARE where the light is)
+     problem  - 3px solid ivory (--text-primary) bar, filled ivory badge with a "!" prefix,
+                finite two-beat pulse on entry
+     timeout  - same as problem but the bar is DASHED (shape, not hue, tells the two apart)
+     budget   - 1px gold-bright full frame (thin, static, no bar) + the ticker's own "⚠" prefix
+   Gold vs ivory differ in lightness and saturation, not hue, so the distinction survives every
+   colourblind simulation; the badge text is always there as well. Brand/chrome accent stays
+   AiAccent; Gold stays reserved for the primary action (Send) and now for "working". The
+   --status-* tokens are kept (retargeted) so nothing that still references them regresses. */
 
 @font-face {
   font-family: "Space Grotesk";
@@ -72,10 +81,19 @@
 
   /* status - SMO Gain/Warning/Breaking, repurposed for agent-seat status (Sophi-A's own mapping,
      not an SMO UI concept - see file header) */
-  --status-idle: #45c689;
-  --status-working: #e08a3c;
-  --status-problem: #c7362b;
-  --on-problem: #fbede9; /* SMO OnBreaking - text on a --status-problem fill */
+  --status-idle: #b3ac9c; /* = --text-secondary: idle recedes */
+  --status-working: #c9a24d; /* = --gold: working is where the light is */
+  --status-problem: #f2ede3; /* = --text-primary: needs attention, by weight not hue */
+  --on-problem: #0a0908; /* text on a --status-problem fill */
+
+  /* lighting - one layered shadow for every raised card, a glow ONLY on the focused seat and
+     the Council seal (soft lighting, not a glow on everything) */
+  --shadow-card: 0 1px 0 rgba(242, 237, 227, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.45),
+    0 10px 28px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 1px 0 rgba(242, 237, 227, 0.04) inset, 0 2px 6px rgba(0, 0, 0, 0.5),
+    0 24px 56px rgba(0, 0, 0, 0.55);
+  --glow-focus: 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent),
+    0 0 28px color-mix(in srgb, var(--gold) 18%, transparent);
 
   /* brand/chrome accent - SMO AiAccent (already the "algorithm/AI" thematic color in-game) */
   --accent: #5b7088;
@@ -91,8 +109,10 @@
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
+  --sp-5: 20px;
   --sp-6: 24px;
   --sp-8: 32px;
+  --measure: 64ch; /* max line length for prose (seat output, hints) */
 
   /* type - SMO's two-family rule: Space Grotesk for chrome/numerals/labels/buttons, IBM Plex
      Sans for body prose. No third (Hanken Grotesk) hero face here - this app has no single
@@ -175,9 +195,9 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  padding: var(--sp-2) var(--sp-4);
-  background: color-mix(in srgb, var(--status-problem) 20%, var(--surface));
-  border-bottom: 1px solid var(--status-problem);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--surface-modal);
+  border-bottom: 1px solid var(--divider);
   color: var(--text-primary);
   font-size: var(--font-chrome-size);
   font-weight: var(--font-chrome-weight);
@@ -191,10 +211,10 @@ body {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   grid-template-rows: auto 1fr;
-  gap: var(--sp-4);
+  gap: var(--sp-5);
   flex: 1;
   min-height: 0;
-  padding: var(--sp-4);
+  padding: var(--sp-3) var(--sp-5) var(--sp-5);
 }
 
 .tile.advisor {
@@ -247,53 +267,99 @@ body {
 /* --- tile chrome --- */
 
 .tile {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: var(--sp-3) var(--sp-4);
+  border-radius: 10px;
+  padding: var(--sp-4) var(--sp-5);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  overflow: hidden;
-  /* the glow ring itself: an inset ring so it reads as a status frame, not a decorative glow -
-     informative, not inviting, per ux-design's signal-job distinction */
-  box-shadow: inset 0 0 0 2px var(--status-idle);
-  transition: box-shadow 200ms ease;
+  gap: var(--sp-3);
+  /* a tile whose content outgrows its grid row scrolls instead of silently clipping (found in
+     the 2026-09-13 visual pass: the Debate panel was being clipped/collapsed out of sight) */
+  overflow: hidden auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--divider) transparent;
+  transition: box-shadow 200ms ease, border-color 200ms ease;
 }
 
-/* Backlog item 7: gold, not --status-problem's red - crossing a self-set spend threshold is not
-   the seat erroring, it is real information the operator asked to know about. Combined with the
-   ticker's own "⚠" text prefix (main.ts's refreshCostTicker) so this is never a color-only
-   signal. No animation, unlike the problem/timeout pulses - this state can persist for a whole
-   turn, and a persistent pulse would be exactly the "informative element over-animated into a
-   nag" failure mode. Placed before the status-specific rules below so a real working/problem/
-   timeout ring always takes visual priority over a mere budget notice, never the reverse. */
+/* status edge bar - the one status carrier besides the badge text (see file header). Drawn on
+   the tile's own box (inset shadow / border) rather than as a child, so it stays put when the
+   tile scrolls; no DOM or class changes for main.ts. Idle: transparent, i.e. no bar. The two
+   custom properties are registered below so the pulse/breathe animations interpolate. */
+@property --bar-color {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+@property --bar-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 3px;
+}
+
+.tile {
+  --bar-color: transparent;
+  --bar-width: 3px;
+  --focus-glow: 0 0 0 transparent;
+  box-shadow: var(--shadow-card), inset var(--bar-width) 0 0 var(--bar-color), var(--focus-glow);
+}
+
+/* the focused seat is the only tile that gets a glow - soft lighting, not a status */
+.tile:focus-within {
+  border-color: color-mix(in srgb, var(--gold) 35%, var(--border));
+  --focus-glow: var(--glow-focus);
+}
+
+/* Backlog item 7: a thin gold-bright frame, not a bar - crossing a self-set spend threshold is
+   not the seat erroring, it is real information the operator asked to know about. Combined with
+   the ticker's own "⚠" text prefix (main.ts's refreshCostTicker) so this is never a color-only
+   signal. No animation - this state can persist for a whole turn, and a persistent pulse would
+   be exactly the "informative element over-animated into a nag" failure mode. The status bar is
+   a separate carrier, so a real working/problem/timeout state is always visible on top of a
+   budget notice, never hidden by it. */
 .tile.budget-exceeded {
-  box-shadow: inset 0 0 0 2px var(--gold-bright);
+  border-color: var(--gold-bright);
 }
 
+/* motion is the "working" signal: the gold bar breathes between gold and the mark's upper bloom
+   (#fdeec0, brand/BRAND.md) - noticeable, not nagging */
 .tile[data-status="working"] {
-  box-shadow: inset 0 0 0 2px var(--status-working);
+  --bar-color: var(--gold);
+  animation: working-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes working-breathe {
+  0%, 100% { --bar-color: #c9a24d; }
+  50% { --bar-color: #fdeec0; }
 }
 
 .tile[data-status="problem"] {
-  box-shadow: inset 0 0 0 2px var(--status-problem);
+  --bar-color: var(--status-problem);
   animation: problem-pulse 900ms ease-out 2;
 }
 
-/* Phase 2 Step 1: the per-seat watchdog auto-stopped this seat for going silent - same red as
-   "problem" (still a bad outcome, still needs the operator's attention), same finite pulse so it
-   never becomes a nagging animation, but a distinct status word on the badge below. */
+/* Phase 2 Step 1: the per-seat watchdog auto-stopped this seat for going silent - same
+   attention weight as "problem", but a DASHED left border instead of the solid bar, and a
+   distinct status word on the badge, so the two are told apart by shape and text. */
 .tile[data-status="timeout"] {
-  box-shadow: inset 0 0 0 2px var(--status-problem);
+  border-left: 3px dashed var(--status-problem);
   animation: problem-pulse 900ms ease-out 2;
 }
 
 /* a finite pulse (2 iterations, then settles) on entering the problem state only - enough to
    be noticeable without becoming a nagging, infinitely-looping animation */
 @keyframes problem-pulse {
-  0%, 100% { box-shadow: inset 0 0 0 2px var(--status-problem); }
-  50% { box-shadow: inset 0 0 0 4px var(--status-problem); }
+  0%, 100% { --bar-width: 3px; opacity: 1; }
+  50% { --bar-width: 7px; opacity: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-status="working"],
+  .tile[data-status="problem"],
+  .tile[data-status="timeout"] {
+    animation: none;
+  }
 }
 
 .tile.cnc {
@@ -336,20 +402,30 @@ body {
   letter-spacing: 0.04em;
   padding: 2px var(--sp-2);
   border-radius: 4px;
-  color: var(--bg);
-  background: var(--status-idle);
+  /* idle: outlined, receding. Working/problem: filled - the badge's weight changes, not just
+     its colour, so the state reads at a glance and in greyscale. */
+  color: var(--text-secondary);
+  border: 1px solid var(--divider);
+  background: transparent;
 }
 
 [data-status="working"] .status-badge {
-  background: var(--status-working);
+  color: var(--on-gold);
+  border-color: var(--gold);
+  background: var(--gold);
 }
 
-[data-status="problem"] .status-badge {
-  background: var(--status-problem);
-}
-
+[data-status="problem"] .status-badge,
 [data-status="timeout"] .status-badge {
+  color: var(--on-problem);
+  border-color: var(--status-problem);
   background: var(--status-problem);
+}
+
+/* a text mark as well as the fill - never colour or weight alone */
+[data-status="problem"] .status-badge::before,
+[data-status="timeout"] .status-badge::before {
+  content: "! ";
 }
 
 /* --- Setup wizard (Phase 1 Step 2, long-horizon build plan) --- */
@@ -372,7 +448,7 @@ body {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-float);
   padding: var(--sp-4);
   display: flex;
   flex-direction: column;
@@ -444,12 +520,15 @@ body {
   margin-top: 4px;
 }
 
+/* ready = filled gold disc, not ready = hollow ivory ring: shape carries it, the row's own
+   detail text says why */
 .wizard-seat-row[data-ready="true"] .wizard-seat-dot {
-  background: var(--status-idle);
+  background: var(--gold);
 }
 
 .wizard-seat-row[data-ready="false"] .wizard-seat-dot {
-  background: var(--status-problem);
+  background: transparent;
+  border: 2px solid var(--text-primary);
 }
 
 .wizard-seat-name {
@@ -489,7 +568,7 @@ body {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-float);
   padding: var(--sp-3);
   display: flex;
   flex-direction: column;
@@ -571,7 +650,7 @@ body {
 
 .tile-output {
   margin: 0;
-  flex: 1;
+  flex: 1 0 auto; /* never collapses to zero height inside an overflowing tile (found 2026-09-13) */
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -579,7 +658,8 @@ body {
   -webkit-box-orient: vertical;
   color: var(--text-secondary);
   font-size: var(--font-body-size);
-  line-height: 1.4;
+  line-height: 1.5;
+  max-width: var(--measure);
 }
 
 /* Rendered seat output (src/seatOutputRender.ts) - markdown -> DOMPurify-sanitized HTML, replacing
@@ -648,7 +728,7 @@ body {
 .tile-output .hljs-keyword,
 .tile-output .hljs-built_in { color: var(--accent-bright); }
 .tile-output .hljs-string,
-.tile-output .hljs-attr { color: var(--status-idle); }
+.tile-output .hljs-attr { color: var(--text-primary); }
 .tile-output .hljs-comment { color: var(--text-placeholder); font-style: italic; }
 .tile-output .hljs-number,
 .tile-output .hljs-literal { color: var(--gold-bright); }
@@ -676,7 +756,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-3) var(--sp-5);
   background: none;
   border: none;
   color: inherit;
@@ -704,7 +784,7 @@ body {
 }
 
 .advisor-body {
-  padding: 0 var(--sp-4) var(--sp-4);
+  padding: 0 var(--sp-5) var(--sp-5);
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -754,11 +834,11 @@ body {
 }
 
 .btn-accept {
-  border-color: var(--status-idle);
+  border-color: var(--gold);
 }
 
 .btn-dismiss {
-  border-color: var(--text-secondary);
+  border-color: var(--divider);
 }
 
 .btn:disabled {
@@ -827,8 +907,9 @@ body {
   box-shadow:
     inset 0 2px 0 rgba(255, 255, 255, 0.5),
     inset 0 -3px 0 rgba(90, 60, 10, 0.5),
-    0 6px 14px rgba(0, 0, 0, 0.45),
-    0 0 14px rgba(201, 162, 77, 0.25);
+    0 6px 14px rgba(0, 0, 0, 0.45);
+  /* no ambient gold glow here any more (2026-09-13): eight Send buttons on one screen each
+     glowing was "a glow on everything" - the bevel and the hover shine carry it */
 }
 
 .btn-send:disabled {
@@ -873,16 +954,22 @@ body {
   }
 }
 
+/* Stop: outlined in ivory rather than red - the same "attention" weight a problem tile uses,
+   and the word itself is the carrier */
 .btn-stop {
-  border-color: var(--status-problem);
+  border-color: var(--text-secondary);
 }
 
-/* Phase 2 Step 1: header "Stop All" - same .setup-toggle chrome as Run history/Setup, but a red
-   accent (matching --status-problem, the same color a stopped/timed-out tile's badge uses) so it
-   reads as the one button in that row with a real, immediate effect on running seats. */
+.btn-stop:not(:disabled) {
+  border-color: var(--text-primary);
+}
+
+/* Phase 2 Step 1: header "Stop All" - same .setup-toggle chrome as Run history/Setup, but
+   ivory-on-ivory-outline so it reads as the one button in that row with a real, immediate
+   effect on running seats. */
 .stop-all-btn {
-  border-color: var(--status-problem);
-  color: var(--status-problem);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 /* --- cnc/advisor: provider + model picker, chat-only disclosure --- */
@@ -933,8 +1020,8 @@ body {
   letter-spacing: 0.04em;
   padding: 2px var(--sp-2);
   border-radius: 4px;
-  color: var(--status-working);
-  border: 1px solid var(--status-working);
+  color: var(--text-secondary);
+  border: 1px solid var(--divider);
   white-space: nowrap;
 }
 
@@ -954,7 +1041,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
 }
 
 .app-brand {
@@ -1010,11 +1097,11 @@ body {
   background: var(--surface-modal);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: var(--sp-4);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-float);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
+  gap: var(--sp-5);
 }
 
 .setup-panel-header {
@@ -1052,7 +1139,8 @@ body {
   margin: 0 0 var(--sp-2);
   font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.5;
+  max-width: var(--measure);
 }
 
 .setup-hint code {
@@ -1080,11 +1168,12 @@ body {
 }
 
 .setup-cli-status[data-state="ok"] {
-  color: var(--status-idle);
+  color: var(--gold-bright);
 }
 
 .setup-cli-status[data-state="problem"] {
-  color: var(--status-problem);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .setup-provider-list {
@@ -1134,7 +1223,7 @@ body {
 }
 
 .setup-provider-badge[data-set="true"] {
-  color: var(--status-idle);
+  color: var(--gold-bright);
 }
 
 /* --- parallel-build-and-compare: build-1's fan-out trigger + cost-confirm modal
@@ -1172,12 +1261,13 @@ body {
 .cost-confirm-box {
   max-width: min(420px, calc(100vw - 2 * var(--sp-4)));
   background: var(--surface-modal);
-  border: 1px solid var(--status-working);
+  border: 1px solid var(--gold);
   border-radius: 10px;
-  padding: var(--sp-4);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-float);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
+  gap: var(--sp-5);
 }
 
 .cost-confirm-box p {
@@ -1210,13 +1300,14 @@ body {
 
 .inspect-panel {
   border-top: 1px solid var(--border);
-  padding-top: var(--sp-2);
+  padding-top: var(--sp-3);
   margin-top: var(--sp-1);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
   max-height: 220px;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .inspect-empty {
@@ -1250,16 +1341,18 @@ body {
   border-radius: 3px;
 }
 
+/* the letter (A/M/D) is the carrier; weight/tone only supports it */
 .inspect-file-status-added {
-  color: var(--status-idle);
+  color: var(--gold-bright);
 }
 
 .inspect-file-status-modified {
-  color: var(--status-working);
+  color: var(--text-secondary);
 }
 
 .inspect-file-status-deleted {
-  color: var(--status-problem);
+  color: var(--text-placeholder);
+  text-decoration: line-through;
 }
 
 .inspect-file-path {
@@ -1290,11 +1383,11 @@ body {
 }
 
 .inspect-file-cross-same {
-  color: var(--status-idle);
+  color: var(--text-placeholder);
 }
 
 .inspect-file-cross-differs {
-  color: var(--status-problem);
+  color: var(--gold-bright);
 }
 
 .inspect-diff {
@@ -1314,14 +1407,15 @@ body {
   white-space: pre;
 }
 
+/* diff lines keep their own +/- prefix; added = lit gold tint, removed = dimmed and recessed */
 .diff-line-add {
-  color: var(--status-idle);
-  background: color-mix(in srgb, var(--status-idle) 12%, transparent);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
 }
 
 .diff-line-del {
-  color: var(--status-problem);
-  background: color-mix(in srgb, var(--status-problem) 12%, transparent);
+  color: var(--text-placeholder);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
 }
 
 /* Backlog item 8: the artifact drawer's forward row. */
@@ -1538,13 +1632,15 @@ body {
 
 .debate-panel {
   border-top: 1px solid var(--border);
-  padding-top: var(--sp-2);
+  padding: var(--sp-4) 0 var(--sp-2);
   margin-top: var(--sp-1);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  max-height: 220px;
+  gap: var(--sp-3);
+  max-height: 320px;
   overflow-y: auto;
+  /* was collapsing to a few px as a flex child of a fixed-height tile (2026-09-13 visual pass) */
+  flex-shrink: 0;
 }
 
 /* Phase 3 Step 2 (replay from history, honest by construction) - the history dropdown, and the
@@ -1583,8 +1679,8 @@ body {
   letter-spacing: 0.04em;
   text-align: center;
   text-transform: uppercase;
-  color: var(--status-working);
-  background: color-mix(in srgb, var(--status-working) 12%, transparent);
+  color: var(--text-secondary);
+  border: 1px dashed var(--divider);
   border-radius: 4px;
   padding: 3px var(--sp-2);
 }
@@ -1592,17 +1688,18 @@ body {
 .debate-replay-error {
   margin: 0;
   font-size: 12px;
-  color: var(--status-problem);
-  background: color-mix(in srgb, var(--status-problem) 10%, transparent);
-  border-radius: 4px;
-  padding: var(--sp-1) var(--sp-2);
+  color: var(--text-primary);
+  border-left: 3px solid var(--text-primary);
+  background: var(--surface-modal);
+  border-radius: 0 4px 4px 0;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 /* Backlog item 5: gold, not the replay banner's amber "working" semantic - a simulated demo isn't
    a caution state the way a saved-run replay is, it's a deliberate, distinct third state. */
 .debate-demo-banner {
   color: var(--gold-bright) !important;
-  background: color-mix(in srgb, var(--gold-bright) 12%, transparent) !important;
+  border: 1px solid var(--gold) !important;
 }
 
 .council-demo-btn {
@@ -1624,8 +1721,11 @@ body {
    not a static "everyone agreed" image (see that doc's own warning against faking this). */
 .council-seal {
   display: block;
-  margin: 0 auto var(--sp-2);
+  margin: var(--sp-3) auto var(--sp-4);
   flex-shrink: 0;
+  overflow: visible;
+  /* the one deliberate glow besides the focused seat: the star is the warmest thing on screen */
+  filter: drop-shadow(0 0 10px rgba(201, 162, 77, 0.35)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
 }
 .council-seal .seat {
   opacity: 0.22;
@@ -1702,12 +1802,13 @@ body {
   text-align: center;
 }
 
+/* the mark glyph itself carries the verdict; lit gold = signed off, plain ivory = objected */
 .debate-signoff-signed-off {
-  color: var(--status-idle);
+  color: var(--gold-bright);
 }
 
 .debate-signoff-objected {
-  color: var(--status-problem);
+  color: var(--text-primary);
 }
 
 .debate-signoff-abstained {
@@ -1716,10 +1817,11 @@ body {
 
 .debate-failure-row {
   font-size: 12px;
-  color: var(--status-working);
-  background: color-mix(in srgb, var(--status-working) 10%, transparent);
-  border-radius: 4px;
-  padding: var(--sp-1) var(--sp-2);
+  color: var(--text-secondary);
+  background: var(--surface-modal);
+  border-left: 3px solid var(--text-secondary);
+  border-radius: 0 4px 4px 0;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 /* "Plan approved" -> "code exists" (docs/security-prompt-injection.md S2 forward rule) - stays
@@ -1774,13 +1876,14 @@ body {
 
 .cost-panel {
   border-top: 1px solid var(--border);
-  padding-top: var(--sp-2);
+  padding-top: var(--sp-3);
   margin-top: var(--sp-1);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
   max-height: 220px;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .cost-row-list {
