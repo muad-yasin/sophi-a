@@ -10,7 +10,7 @@ your own Claude Code/API credentials, nothing is resold.
 
 What makes this different from a parallel-session manager like conductor.build or Nimbalyst: the
 three planning seats don't run more copies of the same agent racing to the same answer. Each one
-spawns a real `relay` chain (`RELAY_PATH`, see `PLAN.md`) where one model drafts a plan and
+spawns a real council chain on The High Council MCP, the public engine (`RELAY_PATH` overrides, see `CLAUDE.md`) where one model drafts a plan and
 critic seats from five *other* labs - Qwen, GLM, Cohere, Gemini, Llama, never Grok - grade it
 blind, the draft gets revised against their objections, and the run ends either with unanimous
 sign-off or a `report.json` naming exactly which lab refused and why. That cross-lab argument -

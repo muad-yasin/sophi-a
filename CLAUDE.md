@@ -61,9 +61,16 @@ current price/link/launch-country state, which moves faster than this file.
 
 ## Dependency: relay
 
-`relay` (`~/Projects/relay`, `RELAY_PATH` env var, defaults to `../relay`) is a dependency, not a
-parent project. `plan-1..3` spawn real relay chains via its CLI (`src/cli.js`) and poll the run
-folder - genuine reuse of working code, not a description of it. If a plan seat's chain crashes or
+The council engine is a dependency, not a parent project. Since 2026-09-13 the plan seats run on
+the **public** engine by default - The High Council MCP (`~/Projects/THCMCP`, public repo
+`github.com/muad-yasin/the-high-council-mcp`, MIT, BYOK) - so the product ships on the same code
+everyone else gets. Resolution order lives in `src/orchestrator/enginePath.js`: `RELAY_PATH`
+override, sibling `THCMCP`, sibling `the-high-council-mcp`, the npm package `the-high-council`,
+then the private `~/Projects/relay` as last-resort fallback (it is the private source THCMCP is
+curated from, and the only place operator API keys live in a `.env`). `plan-1..3` spawn real
+chains via the engine's CLI (`src/cli.js`) and poll its run folder - genuine reuse of working
+code, not a description of it. `node scripts/verify-engine-path.mjs` proves the order and runs a
+free `mock` chain on the public engine. If a plan seat's chain crashes or
 misbehaves, check whether the bug is actually relay's before assuming it's this repo's (a real
 critic-seat token-cap crash was found and fixed there, not here - see `DECISIONS.md`).
 

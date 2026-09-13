@@ -1367,3 +1367,30 @@ already-verified logic - not independently re-run end-to-end through a real orch
 this time, a deliberate, honestly-named scope reduction given the real risk just found, not an
 oversight. The frontend wiring (binary warning, token warning, truncate checkbox, forward-disable)
 follows the exact same DOM patterns already live-verified for items 4 and 6 in this same session.
+
+## 2026-09-13: Engine switch - the product now runs on the public MCP, private relay is the fallback
+
+Muad's direction today: the really useful thing is the free MCP, and Sophi-A is the connection
+between the council and a vibecoder. Until now `plan-1..3` were hardwired to `../relay`, the
+private source repo, while the public repo (`THCMCP`) was a curated copy nobody ran in anger.
+That is backwards for a product whose pitch is "the code you can read is the code that runs".
+
+`src/orchestrator/enginePath.js` now resolves the engine: `RELAY_PATH` (only if it actually
+looks like an engine - `src/cli.js` plus `chains/` - a bogus path is skipped, not trusted),
+then sibling `THCMCP`, sibling `the-high-council-mcp`, the npm package `the-high-council` (not
+published yet; the hook is there), then `../relay` last. Both adapters (`relayChainSubprocess.js`,
+`messagesApi.js`) call it; the choice is logged once per process so a run log says which engine
+ran it. Keys: the public engine is BYOK and ships no `.env`, so `engineEnvFiles()` also reads
+`../relay/.env` when present - nothing regresses on this machine, and a packaged build without
+a private checkout simply relies on the environment, as the MCP's own README says.
+
+Verified with a real `mock` chain on THCMCP (free) through the exact spawn args the seat uses;
+not verified with a priced chain, because there is no API budget today. Checked that the public
+repo stays clean after a seat run: THCMCP's `.gitignore` covers `runs/`, `tasks/` and `*.log`,
+which is where the adapter writes its task file, run folder and side log.
+
+Not done on purpose: no change to which chains the presets name (`plan-fast`, `plan-thorough`
+exist in THCMCP), no change to `seats.json`, and the private relay is still where today's v2
+work landed first - thcmcp-cb re-curates it into THCMCP, so for a few hours the two engines
+differ (THCMCP lacks v2 until that lands). The resolver does not try to pick the "newer" one;
+that would be guessing.

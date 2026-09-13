@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSy
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { root } from '../index.js';
+import { resolveEnginePath } from '../enginePath.js';
 import { recordRun } from '../run-recorder.js';
 import { usageFromReport, stageUsageFromReport } from '../cost-tracker.js';
 
@@ -22,7 +23,8 @@ const RUN_TIMEOUT_MS = 600_000; // 600s - a real multi-lab chain run takes minut
 // module and src/orchestrator/index.js import each other; `root` is a live ES-module
 // binding that is only actually assigned by the time a seat is started, not at import time.
 export function resolveRelayPath() {
-  return resolve(process.env.RELAY_PATH || join(root, '..', 'relay'));
+  // 2026-09-13: public MCP repo first, private relay last - see enginePath.js.
+  return resolveEnginePath(root);
 }
 
 // Phase 3 Step 3 (chain presets): `seatConfig.chainConfig`, when set, is a path to a relay

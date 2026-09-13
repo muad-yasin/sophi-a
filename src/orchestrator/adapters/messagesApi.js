@@ -5,6 +5,7 @@
 // `call(provider, opts)` directly; does not spawn relay's CLI or invoke its MCP server (see
 // PLAN.md "What 'reuses relay's backend' means, precisely").
 import { readFileSync, existsSync } from 'node:fs';
+import { resolveEnginePath, engineEnvFiles } from '../enginePath.js';
 import path from 'node:path';
 import { root } from '../index.js';
 import { isAllowedProvider } from '../providers.js';
@@ -69,7 +70,7 @@ export function clearHistory(seatId) {
 // each other, and `root` is a live ES-module binding only actually assigned by the time a seat
 // is started (see relayChainSubprocess.js for the same pattern).
 function resolveRelayPath() {
-  return path.resolve(process.env.RELAY_PATH || path.join(root, '..', 'relay'));
+  return resolveEnginePath(root);
 }
 
 // relay's own provider-call function reads API keys straight from process.env - it never loads
@@ -80,11 +81,13 @@ let envLoaded = false;
 function loadRelayEnv() {
   if (envLoaded) return;
   envLoaded = true;
-  const envPath = path.join(resolveRelayPath(), '.env');
-  if (!existsSync(envPath)) return;
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && m[2] && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  // The public engine is BYOK and ships no .env; engineEnvFiles() also reads the private
+  // relay checkout's .env when it sits next to this repo, first definition wins.
+  for (const envPath of engineEnvFiles(root)) {
+    for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (m && m[2] && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    }
   }
 }
 
