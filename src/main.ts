@@ -3,6 +3,14 @@ import { renderSeatOutput } from "./seatOutputRender";
 import { initNotifications, notifySeatTransition, notifyBudgetExceeded } from "./seatNotify";
 import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
 import { buildCostBreakdownRows, buildCostBreakdownCsv, costBreakdownCsvFilename } from "./exportCostCsv";
+import {
+  setupSeatLayout,
+  setSeatSummary,
+  setSeatExpanded,
+  focusSeat,
+  onSeatStatus,
+  surfaceToCnc,
+} from "./seatLayout";
 
 type SeatEventType =
   | "seat.start"
@@ -277,6 +285,8 @@ function setStatus(seatId: string, status: Status) {
   const badge = tile.querySelector('[data-role="badge"]');
   if (badge) badge.textContent = STATUS_LABELS[status];
   setControlsEnabled(tile, status);
+  // GUI restructure: a background seat opens itself while it works and closes again after.
+  onSeatStatus(seatId, status);
 }
 
 // Phase 1 Step 1/2 (long-horizon build plan): seatId -> ready, from the orchestrator's real
@@ -447,6 +457,7 @@ function setOutput(seatId: string, text: string) {
   if (!output) return;
   renderSeatOutput(output, text);
   output.classList.remove("placeholder");
+  setSeatSummary(seatId, text);
 }
 
 // A visual record of what the operator asked for, since seat.output/seat.idle only ever carry
@@ -462,6 +473,7 @@ function echoTask(seatId: string, task: string) {
   if (!output) return;
   output.textContent = `> ${task}`;
   output.classList.remove("placeholder");
+  setSeatSummary(seatId, `> ${task}`);
 }
 
 function handleSeatEvent(evt: SeatEvent) {
@@ -480,7 +492,10 @@ function handleSeatEvent(evt: SeatEvent) {
       setStatus(evt.seatId, "working");
       break;
     case "seat.output":
-      if (evt.detail) setOutput(evt.seatId, evt.detail);
+      if (evt.detail) {
+        setOutput(evt.seatId, evt.detail);
+        surfaceToCnc(evt.seatId, evt.detail, "output");
+      }
       // Backlog item 4: mirrors the server's own lastAdvisorReply cache (index.js's makeEmit) -
       // only enables the "Forward to cnc" button once advisor has actually said something real.
       if (evt.seatId === "advisor" && evt.detail) {
@@ -501,6 +516,7 @@ function handleSeatEvent(evt: SeatEvent) {
       const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
       setStatus(evt.seatId, "problem");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
+      surfaceToCnc(evt.seatId, evt.detail || "hit a problem", "problem");
       if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
       break;
     }
@@ -511,6 +527,7 @@ function handleSeatEvent(evt: SeatEvent) {
       const wasWorking = tileEl(evt.seatId)?.dataset.status === "working";
       setStatus(evt.seatId, "timeout");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
+      surfaceToCnc(evt.seatId, evt.detail || "timed out", "problem");
       if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
       break;
     }
@@ -801,25 +818,14 @@ function scheduleReconnect() {
   setTimeout(connect, delay);
 }
 
-function setupAdvisorToggle() {
-  const toggle = document.getElementById("advisor-toggle");
-  const body = document.getElementById("advisor-body");
-  if (!toggle || !body) return;
-  toggle.addEventListener("click", () => {
-    const expanded = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!expanded));
-    body.hidden = expanded;
-  });
-}
-
 function setupAdvisorActions() {
   // Inert for slice 1, per PLAN.md: the affordance exists, the behavior is a later slice.
   document.querySelectorAll(".advisor-actions .btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const body = document.getElementById("advisor-body");
-      const toggle = document.getElementById("advisor-toggle");
-      if (body) body.hidden = true;
-      if (toggle) toggle.setAttribute("aria-expanded", "false");
+      // Collapse/unfocus through the one seat-layout owner, not by poking the DOM here - the
+      // advisor's hand-written toggle/body pair is now driven by src/seatLayout.ts.
+      setSeatExpanded("advisor", false);
+      focusSeat(null);
     });
   });
 }
@@ -911,6 +917,9 @@ function setupSeatKeyboardShortcuts() {
       const tile = tileEl(seatId);
       if (!tile) return;
       e.preventDefault();
+      // GUI restructure: a background seat's task input lives inside a collapsed body, and you
+      // cannot focus what is `hidden` - so the shortcut pulls that seat to the foreground first.
+      if (seatId !== "cnc") focusSeat(seatId);
       const input = tile.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
       if (input && !input.disabled) input.focus();
       return;
@@ -2270,7 +2279,9 @@ function setupSetupPanel() {
 window.addEventListener("DOMContentLoaded", () => {
   void initNotifications();
   showConnecting();
-  setupAdvisorToggle();
+  // First: the collapse/focus restructure moves every non-cnc tile's body into a collapsible
+  // wrapper. It must run before the setup* calls below so they bind to the moved nodes.
+  setupSeatLayout();
   setupAdvisorActions();
   setupTaskForms();
   setupStopAllButton();

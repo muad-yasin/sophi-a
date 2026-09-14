@@ -1808,3 +1808,333 @@ body {
   color: var(--text-primary);
   margin: 0;
 }
+
+/* ==========================================================================
+   GUI restructure - 2026-09-14, Muad's own design direction (DECISIONS.md).
+   "Only the C&C seat should have a text window - a large one, centered, seamless
+    into the screen. The other seats get a placeholder image and sit in the
+    background; they can display messages to C&C. The user can select one to send
+    messages directly to that session, and pull its chat log into the foreground."
+
+   Everything below is layout/identity only. No seat feature, event, control or
+   data-role is removed by it - src/seatLayout.ts moves existing nodes into a
+   collapsible wrapper, it never rebuilds them. Rules live at the end of the file
+   so they win over the original 3x3 grid section above by order, keeping that
+   section readable as the thing this replaces.
+   ========================================================================== */
+
+/* --- the stage: C&C centre, seven background seats around it --- */
+
+#grid.grid {
+  position: relative;
+  grid-template-columns: minmax(240px, 1fr) minmax(520px, 2.2fr) minmax(240px, 1fr);
+  grid-template-rows: auto auto auto 1fr;
+  align-items: start;
+  gap: var(--sp-3);
+}
+
+/* background seats never stretch: a collapsed chip is exactly as tall as its content */
+#grid.grid .tile.planner,
+#grid.grid .tile.builder,
+#grid.grid .tile.advisor {
+  align-self: start;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+#grid.grid .tile.cnc {
+  align-self: stretch;
+  height: 100%;
+}
+
+/* --- C&C: the one text window, seamless into the screen --- */
+
+.tile.cnc {
+  --cnc-accent: var(--status-idle);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0 var(--sp-4);
+  gap: var(--sp-3);
+}
+
+.tile.cnc[data-status="working"] { --cnc-accent: var(--status-working); }
+.tile.cnc[data-status="problem"],
+.tile.cnc[data-status="timeout"] { --cnc-accent: var(--status-problem); }
+
+/* Status is still carried twice, never by colour alone: the text badge in the header plus this
+   hairline. C&C loses the inset ring because a ring is a frame, and a frame is the opposite of
+   "seamless" - the hairline keeps the same information without drawing a box. */
+.tile.cnc .tile-header {
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--cnc-accent);
+}
+
+.tile.cnc .tile-name {
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.tile.cnc .tile-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: block;
+  -webkit-line-clamp: unset;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.tile.cnc .task-input {
+  min-height: 92px;
+  font-size: 15px;
+  background: var(--surface);
+  border-radius: 10px;
+}
+
+/* --- messages a background seat surfaces to C&C --- */
+
+.cnc-notices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 140px;
+  overflow-y: auto;
+  flex: 0 0 auto;
+}
+
+.cnc-notice-btn {
+  width: 100%;
+  display: flex;
+  gap: var(--sp-2);
+  align-items: baseline;
+  background: none;
+  border: none;
+  border-left: 2px solid var(--border);
+  padding: 2px var(--sp-2);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cnc-notice-btn:hover {
+  background: var(--surface);
+  border-left-color: var(--accent, var(--text-secondary));
+}
+
+.cnc-notice-problem .cnc-notice-btn { border-left-color: var(--status-problem); }
+
+.cnc-notice-seat {
+  flex: 0 0 auto;
+  font-family: var(--font-chrome);
+  font-size: 11px;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+}
+
+.cnc-notice-text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- background seat chips (step 1: the collapse) --- */
+
+#grid.grid .tile.planner,
+#grid.grid .tile.builder,
+#grid.grid .tile.advisor {
+  padding: 0;
+}
+
+.tile-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile-toggle:hover { background: var(--surface-raised); }
+
+.seat-mark-wrap {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-placeholder);
+  opacity: 0.85;
+}
+
+.seat-mark { width: 100%; height: 100%; }
+
+.chip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chip-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.chip-name {
+  font-family: var(--font-chrome);
+  font-size: var(--font-chrome-size);
+  font-weight: var(--font-chrome-weight);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Planners and Builders are told apart by more than their header text (step 3): a role word in
+   the family's own colour, plus the family's placeholder mark on the left. */
+.chip-role {
+  font-family: var(--font-chrome);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+}
+
+.tile.planner .chip-role { color: var(--gold-bright, #d9b166); }
+.tile.builder .chip-role { color: #7ea6c4; }
+
+.chip-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-summary.placeholder { color: var(--text-placeholder); font-style: italic; }
+
+/* The differentiator, visible at rest on every Planner tile instead of only in the first-run
+   modal (which a user dismisses once and never sees again). */
+.chip-council {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 45%;
+}
+
+.tile-toggle .chevron {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  transition: transform 150ms ease;
+}
+
+.tile-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+.tile-body {
+  padding: 0 var(--sp-3) var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+/* the same [hidden] hazard DECISIONS.md records for the advisor body: an author display rule on
+   a flex container silently defeats [hidden]. Stated explicitly here so it cannot be re-broken. */
+.tile-body[hidden] { display: none !important; }
+
+/* --- step 2: pulling one background seat into the foreground --- */
+
+#grid.grid.has-focus .tile.planner:not(.focused),
+#grid.grid.has-focus .tile.builder:not(.focused),
+#grid.grid.has-focus .tile.advisor:not(.focused) {
+  opacity: 0.45;
+}
+
+#grid.grid .tile.focused {
+  position: absolute;
+  top: var(--sp-3);
+  bottom: var(--sp-3);
+  width: 430px;
+  max-height: none;
+  z-index: 30;
+  background: var(--surface-modal);
+  border: 1px solid var(--divider);
+  overflow-y: auto;
+  box-shadow: inset 0 0 0 2px var(--status-idle), 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+#grid.grid .tile.focused[data-status="working"] {
+  box-shadow: inset 0 0 0 2px var(--status-working), 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+#grid.grid .tile.focused[data-status="problem"],
+#grid.grid .tile.focused[data-status="timeout"] {
+  box-shadow: inset 0 0 0 2px var(--status-problem), 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* a focused seat surfaces on its own side of the stage, so the eye never has to hunt for where
+   the panel came from */
+#grid.grid .tile.advisor.focused,
+#grid.grid .tile.planner.focused { left: var(--sp-3); }
+#grid.grid .tile.builder.focused { right: var(--sp-3); }
+
+#grid.grid .tile.focused .chip-summary,
+#grid.grid .tile.focused .chip-council { white-space: normal; }
+
+/* --- step 3: the persistent status legend --- */
+
+.status-legend {
+  list-style: none;
+  margin: 0 auto 0 var(--sp-4);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-family: var(--font-chrome);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-placeholder);
+}
+
+.status-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--status-idle);
+}
+
+.status-legend-swatch[data-status-key="working"] { background: var(--status-working); }
+.status-legend-swatch[data-status-key="problem"] { background: var(--status-problem); }
+.status-legend-swatch[data-status-key="budget"] { background: var(--gold-bright, #d9b166); }

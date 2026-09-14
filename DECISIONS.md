@@ -1394,3 +1394,59 @@ exist in THCMCP), no change to `seats.json`, and the private relay is still wher
 work landed first - thcmcp-cb re-curates it into THCMCP, so for a few hours the two engines
 differ (THCMCP lacks v2 until that lands). The resolver does not try to pick the "newer" one;
 that would be guessing.
+
+## GUI restructure: C&C is the stage, the other seven seats are background chips (2026-09-14)
+
+Muad, in the C&C chat: "Yes it's Sophi-A. We need to improve the GUI massively." Then the
+direction itself, verbatim: "Only the C&C seat should have a text window - a large one, centered,
+seamless into the screen. The other seats (Advisor, planning, building) get a placeholder image
+and sit in the background; they can display messages to C&C. The user can select one to send
+messages directly to that session, and pull its chat log into the foreground too."
+
+Built in three separable steps - collapse, then focus, then identity - so the cheapest and most
+obviously-correct part survives a rejection of the rest. `docs/gui-restructure-2026-09-14.md` has
+the full write-up; the judgment calls worth recording here:
+
+**This diverges from PLAN.md and is not pretending otherwise.** PLAN.md's "Desktop shell and UI"
+section describes eight tiles each showing name, glow ring and last output. The spatial
+arrangement, the ring, the five-event model and the last-output line all survive; what changes is
+that six tiles no longer show a full task form simultaneously, and C&C stops being one bordered
+tile among eight. The author gave this direction after using the built thing, which outranks a
+plan written before it existed - but the panel signed that section, so the divergence is written
+down in two places rather than slipped in. No architecture section of PLAN.md is touched.
+
+**Nodes are moved, never rebuilt.** The single biggest risk was silently detaching a control that
+`main.ts` queries by `[data-role=...]` - the artifact inspector, the cost panel, the debate
+replay, the compare fan-out checkboxes. `seatLayout.ts` reparents the existing elements into a
+`.tile-body`, so listeners, values and every query keep working, and
+`scripts/verify-gui-restructure.mjs` asserts that element-by-element rather than trusting it.
+
+**The `[hidden]` hazard from this file's own earlier entry is guarded explicitly.** A collapsed
+body is a flex container, and this repo has already lost a long stretch to an author `display`
+rule silently defeating `[hidden]`. `.tile-body[hidden] { display: none !important; }` is in the
+stylesheet with a comment naming that incident, and the DOM harness asserts the collapsed state
+via the attribute.
+
+**Keyboard shortcut fixed as a consequence, not discovered by looking.** Ctrl+1..8 focused a seat's
+task input; for a collapsed seat that input is inside a `hidden` subtree and cannot take focus, so
+the shortcut now pulls the seat to the foreground first. Found by reasoning about the change, not
+by using it.
+
+**What is NOT verified: appearance.** Nobody looked at the window for this change. A screenshot was
+not possible in this environment (Wayland, no X11 surface, grim/slurp absent) and installing system
+packages to get one was declined, as a previous agent also correctly declined. `npm run tauri dev`
+was run for real and the app built and launched; the *look* of it - centred, seamless, chip height,
+whether the 430px foreground panel covers something it shouldn't - is Muad's own check. Treat every
+claim about how this looks as unverified until he has opened it.
+
+**jsdom added as a devDependency** for `scripts/verify-gui-restructure.mjs`. It is the first real
+DOM harness in this repo; previous frontend verification used a live Chrome tab, which is not
+available in this environment.
+
+**Not done on purpose:** the window's fixed 1400x900 was not changed (the new columns need roughly
+1040px of content width, comfortable there); no seat feature was removed, reworded or
+re-permissioned; the first-run Council explainer modal was left exactly as it is - the persistent
+Planner-chip line is an addition beside it, not a replacement decision this session gets to make;
+and the C&C output pane is still the single-line-overwriting output model PLAN.md specifies, not a
+real appended transcript. Muad's "pull its chat log into the foreground" is satisfied today by
+bringing the seat's full panel forward; a true per-seat scrollback is a separate build.
