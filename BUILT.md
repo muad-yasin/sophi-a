@@ -256,3 +256,17 @@
 - 2020e10 — Phase 2 Step 2 — cost-tracker.js + pricing.json + usage hooks in all three adapters + header ticker (long-horizon build plan)
 - 58f4de4 — Phase 2 Step 1 — Stop-All + per-seat watchdog (long-horizon build plan)
 - da116b4 — Engine switch — Sophi-A plan seats run on the public High Council MCP (THCMCP) by default, private relay is the fallback (src/orchestrator/enginePath.js + scripts/verify-engine-path.mjs)
+- 2026-09-15 - Emissary card opens the focused overlay (UI plumbing only). `index.html`: the card's
+  summary is a real button now, with a seat-detail panel holding "Back to home", a plain note that
+  Emissary is not connected to anything and its behavior is undecided, and the design's
+  permission-boundary line verbatim. `src/main.ts`: `emissary` added to `FOCUSABLE_SEAT_IDS` only -
+  still not in `SEAT_IDS` and not in `seats.json`, so no status, no task form, no WS command, and
+  nothing mocked (PLAN.md item 2). `src/styles.css`: `.seat-card-unwired` (dim in the rail, full
+  strength focused). First test harness in the repo: `npm test` = `node --test
+  "test/**/*.test.mjs"` (an explicit glob, not a bare `node --test`, which would also pick up
+  scripts named `test-*.mjs`), with `test/seat-cards.test.mjs` - 5 tests deriving the focusable ids,
+  the card markup and `seats.json` from disk, pinning that Emissary gets no seat plumbing. One real
+  bug found by opening it in Chrome rather than trusting the typecheck: the cold-load rule
+  `.grid.is-cold .seat-card:not(.seat-card-static)` out-ranked the focused opacity, so the whole
+  Emissary overlay rendered at 0.6 - fixed by excluding `.seat-card-unwired`. Verified in a running
+  dev build in Chrome: rail 0.7, focused 1, panel shown, Escape and Back to home both close it.

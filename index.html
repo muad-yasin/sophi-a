@@ -958,16 +958,26 @@
         <div class="rail-eyebrow rail-eyebrow-extra"><span>EXTRA SEAT</span></div>
 
         <!-- Emissary has no backend seat yet (an outbound-drafting seat, not part of SEAT_IDS /
-             the orchestrator today) - per the task's own instruction, this is placeholder-only:
-             real shape and copy, no click handler, no WS wiring, nothing to fake. -->
-        <section class="tile seat-card seat-card-dashed seat-card-static" id="tile-emissary" data-seat="emissary">
-          <div class="seat-card-summary" aria-disabled="true">
+             the orchestrator today). It opens the same focused overlay as every other rail card,
+             but that is the only wiring: no task form, no WS command, no status updates, nothing
+             mocked - PLAN.md item 2 ("nothing in slice 1 is mocked"). What Emissary actually does
+             is a product decision still open; this panel says so rather than guessing.
+             test/seat-cards.test.mjs pins that none of that plumbing sneaks in. -->
+        <section class="tile seat-card seat-card-dashed seat-card-unwired" id="tile-emissary" data-seat="emissary">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
             <span class="seat-glyph" data-status="offline" aria-hidden="true"></span>
             <span class="seat-card-text">
               <span class="tile-name">Emissary</span>
               <span class="status-badge">offline</span>
               <p class="tile-output">Outbound-drafting seat — not wired in this build.</p>
             </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <p class="seat-unwired-note">Emissary is not connected to anything yet. There is no model behind this seat in this build, so it cannot draft or send anything. What it will do is still being decided.</p>
+            <p class="seat-disclaimer">Reaches Emissary's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
         </section>
       </aside>

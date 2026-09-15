@@ -888,7 +888,10 @@ function setupAdvisorActions() {
 // .seat-detail (task form, config, debate/cost/inspect panels - all pre-existing, untouched)
 // is simply revealed via CSS on the already-live DOM node; nothing is cloned or moved.
 
-const FOCUSABLE_SEAT_IDS = ["plan-1", "plan-2", "plan-3", "advisor", "build-1", "build-2", "build-3"] as const;
+// "emissary" is focusable but deliberately NOT in SEAT_IDS: it has no backend seat, so it gets the
+// overlay and nothing else - no status updates, no task form, no WS command (index.html's comment
+// on #tile-emissary has why). Its real behavior is an open product decision, not settled here.
+const FOCUSABLE_SEAT_IDS = ["plan-1", "plan-2", "plan-3", "advisor", "build-1", "build-2", "build-3", "emissary"] as const;
 let focusedSeatId: string | null = null;
 
 function focusSeat(seatId: string) {
