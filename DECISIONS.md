@@ -1580,3 +1580,72 @@ already owns the richer receipts rendering this would feed into.
 `peer-pool.js`), `test/peer-pool.test.mjs`'s existing 6 tests unchanged and still green. 73/73
 tests total (46 pre-existing + 27 new), run in chunks per the overnight instruction. Built in
 worktree `../families-a`, branch `families-a` off `master` @ `7bbffcb`. No merge, no push.
+
+## 2026-09-15: F1+F0 security-review fixes (two independent reviews: this session's own dispatched Fable 5.1 agent, and sophi-a-ed's separately-dispatched review - both found the same core gaps)
+
+Both reviews confirmed the `envRestrictions.js` extraction itself (G6) is clean - byte-identical
+to both prior copies, no loosening. Both also independently found the same two real gaps in new
+code, plus a matching set of lower-severity ones. Fixed all of them in this pass, each with a
+proving test (not just a code change):
+
+**HIGH - argv injection via `--resume`.** `spawnPeer()` pushed a caller-supplied session id onto
+`claude`'s argv completely unvalidated; a value like `--permission-mode=bypassPermissions` or
+`--tools=...` would have been parsed by the CLI as a new flag, potentially widening the restricted
+posture `RESTRICTED_ARGS` sets above it. Not reachable through this diff alone (nothing wires WS
+input into `sessionHandles` yet - that's F7), but exactly the path F7 is planned to wire. Fixed:
+`spawnPeer` now shape-checks any `resumeSessionId` against a UUID-like pattern and throws rather
+than passing it through. `test/peer-pool.test.mjs`'s new "malformed --resume session handle"
+test proves four different injection-shaped strings are all refused.
+
+**HIGH - flag-on `fanOut()` never checked the seat's own `runtimes` allowlist.** §2.7's "chat
+members stay text-only" invariant was a config-load-time fact (`familyConfig.js`'s validation)
+but nothing enforced it at the one place that actually spawns a write-capable `claude`
+subprocess - a seat configured `runtimes: ["chat","council"]` (every shipped `plan-N`/`advisor`
+row) could still fan out real claude-code peers once its own `enabled` flag was true, because
+`seatFanOutAllowed()` only checks `enabled`, never `runtimes`. Fixed: the flag-on branch now
+refuses with a clear error unless `seatRow.runtimes.includes('claude-code')`. Proving test added.
+
+**MEDIUM - path traversal in `familyMemory.js`.** `ownerSeat`/`familyId`/`sessionId` went straight
+into `join()` calls with only a truthiness check; a `familyId` of `"../../../home/user/.claude"`
+would have escaped `.families/` entirely. Not reachable today (only tests call these functions),
+but the exact contract F7 will wire real ids into. Fixed: a shared `assertSafeSegment()` (alnum
+plus `._-` only, no `..`) applied at every public entry point (`createFamily`, `writeSessionState`,
+`readSession`, `writeTurnResult`), plus `writeTurnResult`'s `turn` argument is now required to be
+a non-negative integer rather than interpolated raw into a filename. Proving tests added for both.
+
+**MEDIUM - the per-seat cap table was advisory, not binding.** `fanOut()` only applied a seat's
+own clamped `maxConcurrentPeers`/`spendCeilingUsd` when the caller omitted the field entirely - an
+explicit caller-supplied value (e.g. from a future WS command) overrode the clamp completely,
+defeating the whole "families.config.json's clamp is the real ceiling" story. Fixed: both values
+are now `Math.min()`'d against the seat's own config value regardless of whether the caller
+supplied one. Proving test added.
+
+**LOW, all fixed:**
+- `loadFamilyConfig()`'s "never throws" claim didn't hold for a `null` top-level value or a `null`
+  seat row (both threw a `TypeError`) - now both fold into a clean `{ok:false}`/safe-default
+  return via an explicit object-shape guard, proven by two new tests.
+- A non-numeric or negative cap value (`"lots"`, `-1`) silently became `NaN`, which then made
+  `fanOut()` dispatch zero peers with no notice explaining why - now rejected at load with a named
+  error, proven by two new tests.
+- `readSession`'s and `writeTurnResult`'s return objects spread file/caller content *before* the
+  trusted `ok`/`sessionId`/`schemaVersion`/`turn` fields, so a tampered or malformed file could
+  override them - reversed the spread order in both. Proving test added for `readSession`.
+- `loadFamilies`' top-level `statSync` calls (on `ownerDir`/`familyId` dirs) were unguarded,
+  contradicting the module's own "never throws" contract (the per-session loop already guarded
+  this pattern) - now guarded identically, and switched to `lstatSync` throughout so a symlink
+  itself, not its target, decides directory-ness. Proving test added (skips cleanly if the test
+  environment can't create symlinks).
+- `FAMILY.md`/`plan.md` were written with plain `writeFileSync`, contradicting the module header's
+  "every write here is atomic" claim (only the JSON writer was actually atomic) - now use the same
+  temp-then-rename pattern via a new `atomicWriteText()`. Proving test added.
+
+**INFO, addressed via comment, no code change needed:** `SOPHIA_FAMILIES_CONFIG_PATH` is read from
+`process.env` in production code (not gated behind a NODE_ENV check) - noted in-line that it's
+never in `envRestrictions.js`'s `SAFE_ENV_KEYS` allowlist, so it can only affect which config this
+process reads, never leak into a spawned child's environment.
+
+No prototype-pollution bypass found by either review (both checked `"__proto__"`/`"constructor"`
+seat-key shapes directly); not changed.
+
+85/85 tests green (73 prior + 12 new security-fix tests), run in chunks. Same commit range
+(worktree `../families-a`, branch `families-a`), still no merge/push.

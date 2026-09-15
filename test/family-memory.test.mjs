@@ -2,7 +2,7 @@
 // (relay/Docs/SophiA-Seat-Families-Plan.md §5 F1, council review §b "Memory-drift risk").
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -170,4 +170,80 @@ test('loadFamilies on an empty/missing families root returns no families and doe
   const root = join(freshRoot(), 'does-not-exist-yet');
   const { families } = loadFamilies(root);
   assert.deepEqual(families, []);
+});
+
+// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+
+test('security fix - path traversal: a familyId/ownerSeat/sessionId containing ".." is refused, never escapes familiesRoot', () => {
+  const root = freshRoot();
+  try {
+    assert.throws(() => createFamily({ ownerSeat: 'plan-1', familyId: '../../escape' }, root), /not a valid identifier/);
+    assert.throws(() => createFamily({ ownerSeat: '../escape', familyId: 'x' }, root), /not a valid identifier/);
+    assert.ok(!existsSync(join(root, '..', '..', 'escape')), 'nothing was ever written outside the tmp root');
+
+    const family = createFamily({ ownerSeat: 'plan-1', familyId: 'legit' }, root);
+    assert.throws(() => writeSessionState(family, { sessionId: '../../../etc/passwd', runtime: 'chat', status: 'idle' }), /not a valid identifier/);
+    assert.throws(() => readSession(family, '../../../etc/passwd'), /not a valid identifier/);
+    assert.throws(() => writeTurnResult(family, '../escape', 1, {}), /not a valid identifier/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('security fix - writeTurnResult rejects a non-integer or negative turn number, never interpolated raw into a filename', () => {
+  const root = freshRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'cnc', familyId: 'turn-guard' }, root);
+    writeSessionState(family, { sessionId: 's-1', runtime: 'claude-code', status: 'idle' });
+    assert.throws(() => writeTurnResult(family, 's-1', '../../escape', {}), /must be a positive integer/);
+    assert.throws(() => writeTurnResult(family, 's-1', -1, {}), /must be a positive integer/);
+    assert.throws(() => writeTurnResult(family, 's-1', 1.5, {}), /must be a positive integer/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('security fix - readSession: file content cannot override the trusted ok/sessionId fields (spread order)', () => {
+  const root = freshRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'cnc', familyId: 'spread-guard' }, root);
+    writeSessionState(family, { sessionId: 's-1', runtime: 'claude-code', status: 'idle' });
+    // Directly tamper with the on-disk file to claim a different sessionId/ok - the trusted
+    // fields readSession itself sets must win regardless.
+    writeFileSync(join(family.dir, 'sessions', 's-1', 'state.json'), JSON.stringify({ schemaVersion: 1, status: 'idle', sessionId: 'not-s-1', ok: false }));
+    const read = readSession(family, 's-1');
+    assert.equal(read.ok, true, 'the real ok:true always wins over a tampered file claiming ok:false');
+    assert.equal(read.sessionId, 's-1', 'the real sessionId always wins over a tampered file claiming a different one');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('security fix - FAMILY.md/plan.md are written atomically (temp-then-rename), matching the module header\'s claim', () => {
+  const root = freshRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'cnc', familyId: 'atomic-text' }, root);
+    const files = readdirSync(family.dir);
+    assert.ok(!files.some(f => f.includes('.tmp-')), 'no abandoned .tmp file left behind after a clean write');
+    assert.equal(readFileSync(join(family.dir, 'FAMILY.md'), 'utf8'), '');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('security fix - loadFamilies never throws on a broken symlink under familiesRoot', () => {
+  const root = freshRoot();
+  try {
+    createFamily({ ownerSeat: 'cnc', familyId: 'real' }, root);
+    try {
+      symlinkSync(join(root, 'does-not-exist'), join(root, 'cnc', 'broken-link'));
+    } catch {
+      return; // symlink creation unsupported in this environment - nothing to prove here
+    }
+    let result;
+    assert.doesNotThrow(() => { result = loadFamilies(root); });
+    assert.equal(result.families.length, 1, 'the broken symlink is skipped, the real family still loads');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

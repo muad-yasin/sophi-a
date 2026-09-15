@@ -56,43 +56,68 @@ export function loadFamilyConfig(path = DEFAULT_CONFIG_PATH) {
     return { ok: false, error: `families.config.json is not valid JSON: ${e.message}` };
   }
 
-  const global = {
-    maxConcurrentSessions: raw?.global?.maxConcurrentSessions ?? FLAG_OFF_CONFIG.global.maxConcurrentSessions,
-    spendCeilingUsd: raw?.global?.spendCeilingUsd ?? FLAG_OFF_CONFIG.global.spendCeilingUsd,
-  };
+  // Security review fix (LOW, both reviews - "never throws" wasn't quite true): a null/non-object
+  // top-level value, `global`, or seat row used to throw a TypeError reading a property off it.
+  // Every optional-chain access below already guards `undefined`; this guards `null` and
+  // non-object shapes the same way, so the whole function is a pure {ok,...} return, never a
+  // thrown exception, for any JSON-parseable input.
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: 'families.config.json: top level must be an object' };
+  }
 
-  const seats = {};
-  for (const [seatId, row] of Object.entries(raw?.seats ?? {})) {
-    for (const rt of row.runtimes ?? []) {
-      if (!VALID_RUNTIMES.includes(rt)) {
-        return { ok: false, error: `unsupported runtime ${rt}` };
-      }
+  function num(value, fallback, label) {
+    if (value === undefined || value === null) return fallback;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      throw new RangeError(`${label} must be a non-negative finite number, got ${JSON.stringify(value)}`);
     }
-    for (const p of row.providers ?? []) {
-      if (!isAllowedProvider(p)) {
-        return { ok: false, error: `unsupported provider ${p}` };
-      }
-    }
+    return value;
+  }
 
-    const rawMaxConcurrent = row.maxConcurrentSessions ?? global.maxConcurrentSessions;
-    const rawSpendCeiling = row.spendCeilingUsd ?? global.spendCeilingUsd;
-    const maxConcurrentSessions = Math.min(rawMaxConcurrent, global.maxConcurrentSessions);
-    const spendCeilingUsd = Math.min(rawSpendCeiling, global.spendCeilingUsd);
-
-    if ((rawMaxConcurrent > global.maxConcurrentSessions || rawSpendCeiling > global.spendCeilingUsd)
-      && !warnedSeats.has(seatId)) {
-      warnedSeats.add(seatId);
-      // eslint-disable-next-line no-console
-      console.warn(`families.config.json: seat "${seatId}" cap(s) above global, clamped to global (${global.maxConcurrentSessions} sessions / $${global.spendCeilingUsd})`);
-    }
-
-    seats[seatId] = {
-      enabled: row.enabled === true,
-      maxConcurrentSessions,
-      spendCeilingUsd,
-      runtimes: Array.isArray(row.runtimes) ? row.runtimes : [],
-      providers: Array.isArray(row.providers) ? row.providers : null,
+  let global;
+  let seats;
+  try {
+    global = {
+      maxConcurrentSessions: num(raw?.global?.maxConcurrentSessions, FLAG_OFF_CONFIG.global.maxConcurrentSessions, 'global.maxConcurrentSessions'),
+      spendCeilingUsd: num(raw?.global?.spendCeilingUsd, FLAG_OFF_CONFIG.global.spendCeilingUsd, 'global.spendCeilingUsd'),
     };
+
+    seats = {};
+    for (const [seatId, rawRow] of Object.entries(raw?.seats ?? {})) {
+      const row = (rawRow !== null && typeof rawRow === 'object' && !Array.isArray(rawRow)) ? rawRow : {};
+      for (const rt of row.runtimes ?? []) {
+        if (!VALID_RUNTIMES.includes(rt)) {
+          return { ok: false, error: `unsupported runtime ${rt}` };
+        }
+      }
+      for (const p of row.providers ?? []) {
+        if (!isAllowedProvider(p)) {
+          return { ok: false, error: `unsupported provider ${p}` };
+        }
+      }
+
+      const rawMaxConcurrent = num(row.maxConcurrentSessions, global.maxConcurrentSessions, `seats.${seatId}.maxConcurrentSessions`);
+      const rawSpendCeiling = num(row.spendCeilingUsd, global.spendCeilingUsd, `seats.${seatId}.spendCeilingUsd`);
+      const maxConcurrentSessions = Math.min(rawMaxConcurrent, global.maxConcurrentSessions);
+      const spendCeilingUsd = Math.min(rawSpendCeiling, global.spendCeilingUsd);
+
+      if ((rawMaxConcurrent > global.maxConcurrentSessions || rawSpendCeiling > global.spendCeilingUsd)
+        && !warnedSeats.has(seatId)) {
+        warnedSeats.add(seatId);
+        // eslint-disable-next-line no-console
+        console.warn(`families.config.json: seat "${seatId}" cap(s) above global, clamped to global (${global.maxConcurrentSessions} sessions / $${global.spendCeilingUsd})`);
+      }
+
+      seats[seatId] = {
+        enabled: row.enabled === true,
+        maxConcurrentSessions,
+        spendCeilingUsd,
+        runtimes: Array.isArray(row.runtimes) ? row.runtimes : [],
+        providers: Array.isArray(row.providers) ? row.providers : null,
+      };
+    }
+  } catch (e) {
+    if (e instanceof RangeError) return { ok: false, error: e.message };
+    throw e; // an unexpected bug, not a config-shape problem - surface it, don't hide it
   }
 
   return {

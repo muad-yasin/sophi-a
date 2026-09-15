@@ -119,7 +119,19 @@ function workdirFor(peerId) {
 function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS, resumeSessionId = null) {
   const dir = workdirFor(peerId);
   const args = ['-p', task, '--output-format', 'stream-json', '--verbose', '--add-dir', dir, ...RESTRICTED_ARGS];
-  if (resumeSessionId) args.push('--resume', resumeSessionId);
+  if (resumeSessionId) {
+    // Security review fix (Fable 5.1 review of b31f95f, HIGH): a claude-code session_id is
+    // always a UUID (the exact shape the CLI's own init line reports); a caller-supplied value
+    // this shape-checks against is never itself a `--flag` or `--flag=value` token, so it can
+    // never be mistaken for a new CLI option and widen the restricted posture set by
+    // RESTRICTED_ARGS above it (--tools/--mcp-config/--permission-mode etc). Reject anything
+    // else outright rather than silently dropping it - a caller passing a bad handle needs to
+    // know its resume was refused, not get a silent fresh session.
+    if (!/^[0-9a-fA-F-]{8,64}$/.test(resumeSessionId)) {
+      throw new Error(`spawnPeer: refusing to resume - "${resumeSessionId}" is not a plausible session id`);
+    }
+    args.push('--resume', resumeSessionId);
+  }
   const child = spawn('claude', args, { cwd: dir, env: safeEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
 
   let exited = false;
@@ -281,7 +293,10 @@ export function fanOut(coordinatorSeatId, opts, emit) {
   // Test-only override, same convention as enginePath.js's RELAY_PATH: unset in every real
   // deployment, so production always reads the shipped families.config.json next to
   // familyConfig.js. Lets test/peer-pool.test.mjs point a real fanOut() call at an isolated
-  // temp config file instead of mutating the real one.
+  // temp config file instead of mutating the real one. Security review note (info, both
+  // reviews): this env var is read from process.env in production code, but it is not in
+  // envRestrictions.js's SAFE_ENV_KEYS allowlist, so it never reaches a spawned child's env -
+  // it can only affect which config THIS process reads, never leak anywhere.
   const loaded = loadFamilyConfig(process.env.SOPHIA_FAMILIES_CONFIG_PATH || undefined);
   const config = loaded.ok ? loaded.config : FLAG_OFF_CONFIG;
 
@@ -302,8 +317,25 @@ export function fanOut(coordinatorSeatId, opts, emit) {
       throw new Error(gate.reason);
     }
     const seatRow = config.seats[coordinatorSeatId];
-    if (maxConcurrentPeers === undefined) maxConcurrentPeers = seatRow.maxConcurrentSessions;
-    if (opts.spendCeilingUsd === undefined) spendCeilingUsd = seatRow.spendCeilingUsd;
+    // Security review fix (Fable 5.1 review of b31f95f, HIGH): fanOut() spawns write-capable
+    // claude-code subprocesses. §2.7's "chat members stay text-only" invariant is a config-load
+    // fact (familyConfig.js's runtimes allowlist) but was never actually checked at this, the
+    // one dispatch path that exists today - a seat configured for chat/council only (e.g. the
+    // shipped plan-1..3/advisor rows) could still fan out real claude-code peers once its own
+    // `enabled` flag was true. Refused here, not deferred to F5 (familyRuntimes.js), since F0 is
+    // the code that actually spawns.
+    if (!seatRow.runtimes.includes('claude-code')) {
+      throw new Error(`Fan-out refused for seat ${coordinatorSeatId}: claude-code is not in its runtimes allowlist (families.seats.${coordinatorSeatId}.runtimes)`);
+    }
+    // Security review fix (MEDIUM): the per-seat cap table is meaningless if a caller can simply
+    // pass a larger opts.maxConcurrentPeers/spendCeilingUsd - clamp to the seat's own
+    // (already-global-clamped) config value instead of only defaulting when the caller omits it.
+    maxConcurrentPeers = maxConcurrentPeers === undefined
+      ? seatRow.maxConcurrentSessions
+      : Math.min(maxConcurrentPeers, seatRow.maxConcurrentSessions);
+    spendCeilingUsd = opts.spendCeilingUsd === undefined
+      ? seatRow.spendCeilingUsd
+      : Math.min(opts.spendCeilingUsd, seatRow.spendCeilingUsd);
   }
 
   const availableSlots = Math.max(0, maxConcurrentPeers - activePeers.size);

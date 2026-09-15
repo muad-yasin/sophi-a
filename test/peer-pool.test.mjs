@@ -44,7 +44,7 @@ const task = args[1]; // args[0] is '-p'
 const addDirIdx = args.indexOf('--add-dir');
 const addDir = addDirIdx !== -1 ? args[addDirIdx + 1] : null;
 if (task && addDir) fs.writeFileSync(path.join('${tmp.replace(/\\/g, '\\\\')}', 'invoked-' + task + '.json'), JSON.stringify({ addDir, args }));
-console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: 'peer-test-session' }));
+console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: '5f3b1c2a-64e2-4a1a-9b6a-0a1b2c3d4e5f' }));
 console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'hello from ' + task }] } }));
 ${stayAlive ? '' : "console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0.02, usage: { input_tokens: 5, output_tokens: 5 } }));"}
 ${stayAlive ? 'setInterval(() => {}, 1000);' : ''}
@@ -299,6 +299,68 @@ test('F0(d) - a per-seat cap above the global one is clamped, and fanOut() honor
     assert.match(notice, /Peer cap reached, dispatching 1 of 3/);
 
     stopAllPeers();
+    await waitUntil(() => activePeerCount() === 0, 3000);
+  });
+});
+
+// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+
+test('security fix - flag on, seat enabled, but claude-code not in its runtimes allowlist: refused, zero spawns', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['chat', 'council'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+    const before = activePeerCount();
+
+    assert.throws(
+      () => fanOut('plan-1', { count: 2, task: `sec-runtime-${Date.now()}` }, () => {}),
+      /claude-code is not in its runtimes allowlist/,
+    );
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(activePeerCount(), before, 'zero spawns - the config-level "chat stays text-only" guard is enforced at the one dispatch path that spawns claude');
+  });
+});
+
+test('security fix - an explicit caller-supplied maxConcurrentPeers/spendCeilingUsd above the seat cap is clamped, not honored verbatim', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 1, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude({ stayAlive: true });
+    const { fanOut, activePeerCount, stopAllPeers } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const { dispatched, notice } = fanOut('plan-1', { count: 3, task: `sec-clamp-${Date.now()}`, maxConcurrentPeers: 100 }, () => {});
+    assert.equal(dispatched.length, 1, 'the caller-supplied 100 does not override the seat\'s own cap of 1');
+    assert.match(notice, /Peer cap reached, dispatching 1 of 3/);
+
+    stopAllPeers();
+    await waitUntil(() => activePeerCount() === 0, 3000);
+  });
+});
+
+test('security fix - a malformed --resume session handle is refused, never reaches the claude subprocess argv', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    for (const badHandle of ['--permission-mode=bypassPermissions', '-x', 'not a real session id', '../../etc/passwd']) {
+      assert.throws(
+        () => fanOut('plan-1', { count: 1, task: `sec-argv-${Date.now()}-${Math.random()}`, sessionHandles: [badHandle] }, () => {}),
+        /not a plausible session id/,
+        `rejected: ${badHandle}`,
+      );
+    }
     await waitUntil(() => activePeerCount() === 0, 3000);
   });
 });

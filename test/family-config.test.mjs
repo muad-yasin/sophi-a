@@ -108,3 +108,63 @@ test('seatFanOutAllowed: flag on requires the seat\'s own row to say enabled:tru
   assert.equal(unlisted.allowed, false);
   assert.match(unlisted.reason, /Fan-out not enabled for seat build-2/);
 });
+
+// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+
+test('security fix - a null top-level value returns ok:false, never throws', () => {
+  const { path, dir } = tmpConfig({});
+  writeFileSync(path, 'null');
+  try {
+    let result;
+    assert.doesNotThrow(() => { result = loadFamilyConfig(path); });
+    assert.equal(result.ok, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('security fix - a null seat row returns ok:false (or a safe default), never throws', () => {
+  const { path, dir } = tmpConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': null },
+  });
+  try {
+    let result;
+    assert.doesNotThrow(() => { result = loadFamilyConfig(path); });
+    assert.equal(result.ok, true);
+    assert.equal(result.config.seats['plan-1'].enabled, false, 'a null row degrades to disabled, never a crash');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('security fix - a non-numeric or negative cap value is rejected at load, never silently coerced to NaN', () => {
+  const { path, dir } = tmpConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 'lots', runtimes: [] } },
+  });
+  try {
+    const { ok, error } = loadFamilyConfig(path);
+    assert.equal(ok, false);
+    assert.match(error, /must be a non-negative finite number/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('security fix - a negative global cap is rejected at load', () => {
+  const { path, dir } = tmpConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: -1, spendCeilingUsd: 5 },
+    seats: {},
+  });
+  try {
+    const { ok, error } = loadFamilyConfig(path);
+    assert.equal(ok, false);
+    assert.match(error, /global.maxConcurrentSessions/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
