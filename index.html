@@ -44,17 +44,17 @@
              no distinct "needs a blocking answer" signal wired yet (relay/orchestrator gap, not
              a GUI one) so that half of the count is honestly 0, not invented. -->
         <button type="button" class="needs-pill" id="needs-pill" aria-haspopup="dialog" aria-expanded="false" aria-controls="glance-popover">
-          <span class="needs-pill-line1"><span id="needs-glyph">◆</span> <span id="needs-count">0</span> seat(s) need you · <span id="degraded-count">0</span> degraded</span>
+          <span class="needs-pill-line1" id="needs-pill-line1">◆ All quiet</span>
           <span class="needs-pill-line2">PRESS TAB</span>
         </button>
 
         <!-- Session tabs, Todo pill, and the throughput gauge are static mockups - no backend
              session/todo/telemetry concept exists yet (design-handoff §1, "mockup"). -->
         <nav class="session-tabs" aria-label="Sessions (mockup)">
-          <span class="session-tab">1. Private</span>
-          <span class="session-tab">2. Private</span>
+          <span class="session-tab">1. PRIVATE</span>
+          <span class="session-tab">2. PRIVATE</span>
           <span class="session-tab session-tab-active">3. Seat4</span>
-          <span class="session-tab">4. Business</span>
+          <span class="session-tab">4. BUSINESS</span>
           <span class="session-tab">5. Dune</span>
         </nav>
 
@@ -67,7 +67,7 @@
           </div>
         </div>
 
-        <svg class="tokmin-gauge" viewBox="0 0 120 70" aria-hidden="true">
+        <svg class="tokmin-gauge" viewBox="0 0 120 92" aria-hidden="true">
           <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="#1e1e21" stroke-width="8" />
           <path d="M10 60 A50 50 0 0 1 82 20" fill="none" stroke="url(#gauge-gold)" stroke-width="8" stroke-linecap="round" />
           <defs>
@@ -76,7 +76,7 @@
               <stop offset="100%" stop-color="#dba52c" />
             </linearGradient>
           </defs>
-          <text x="60" y="52" text-anchor="middle" class="tokmin-gauge-text">18.4k tok/min</text>
+          <text x="60" y="84" text-anchor="middle" class="tokmin-gauge-text">18.4k tok/min</text>
         </svg>
       </div>
 
@@ -692,15 +692,18 @@
         <div class="home-conversation">
           <!-- Idle hero - shown while output still carries the placeholder text/class. -->
           <div class="home-idle-hero" data-role="idle-hero">
-            <img class="home-portrait home-portrait-idle" src="/design/sophia-portrait.png" alt="Sophi-A" />
-            <div class="home-idle-copy">
+            <div class="home-portrait-block">
+              <img class="home-portrait home-portrait-idle" src="/design/sophia-portrait.png" alt="Sophi-A" />
               <span class="home-nameplate">Sophi-A</span>
+              <span class="home-nameplate-tag">COMMAND &amp; CONTROL</span>
+            </div>
+            <div class="home-idle-copy">
               <h1 class="home-headline">What are we building?</h1>
-              <p class="home-sub">Talk to your home seat. Delegate to the planning rail when you want the panel to argue it out first, or to the build rail when it's time to write code.</p>
+              <p class="home-sub">Talk to me like you always do. When something deserves more than one opinion, I'll hand it to the planning seats to argue over — or to the build seats to swarm.</p>
               <div class="home-starters">
-                <button type="button" class="starter-pill" data-role="starter">Plan a migration, argued before it's built</button>
-                <button type="button" class="starter-pill" data-role="starter">Review a diff across three labs</button>
-                <button type="button" class="starter-pill" data-role="starter">Just talk something through</button>
+                <button type="button" class="starter-pill" data-role="starter">Stress-test a plan I already have</button>
+                <button type="button" class="starter-pill" data-role="starter">Have the seats argue about an approach</button>
+                <button type="button" class="starter-pill" data-role="starter">Swarm a big mechanical change</button>
               </div>
             </div>
           </div>

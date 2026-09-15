@@ -284,12 +284,15 @@ function setStatus(seatId: string, status: Status) {
 // seat's own current status. The "needs you" half stays a static 0 - there's no orchestrator
 // signal yet for "a seat is holding a blocking question," so it's left honest rather than mocked.
 function updateDegradedCount() {
-  const el = document.getElementById("degraded-count");
+  const line = document.getElementById("needs-pill-line1");
   const pill = document.getElementById("needs-pill");
-  if (!el) return;
-  const n = SEAT_IDS.filter((id) => tileEl(id)?.dataset.status === "problem").length;
-  el.textContent = String(n);
-  pill?.classList.toggle("is-alert", n > 0);
+  if (!line) return;
+  // "needs" (blocking-question count) has no real signal yet (see main.ts comment above) - it's
+  // always 0, so the only real-vs-not distinction is degraded > 0 or not.
+  const degraded = SEAT_IDS.filter((id) => tileEl(id)?.dataset.status === "problem").length;
+  line.textContent =
+    degraded === 0 ? "◆ All quiet" : `◆ 0 seat(s) need you · ${degraded} degraded`;
+  pill?.classList.toggle("is-alert", degraded > 0);
 }
 
 // Phase 1 Step 1/2 (long-horizon build plan): seatId -> ready, from the orchestrator's real
