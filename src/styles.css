@@ -2848,11 +2848,14 @@ body {
 /* --- .is-cold: every rail seat reads offline/waiting until the WS handshake completes once
    (main.ts's setColdRailState()) --- */
 
-.grid.is-cold .seat-card:not(.seat-card-static) {
+/* excludes .is-focused - a focused card leaves the rail and renders as its own full overlay
+   (found by gp-77 while wiring the Emissary card: without this, opening any real seat's overlay
+   during cold-load greyed the whole overlay, not just the collapsed rail card behind it) */
+.grid.is-cold .seat-card:not(.seat-card-static):not(.is-focused) {
   opacity: 0.6;
 }
 
-.grid.is-cold .seat-card .status-badge {
+.grid.is-cold .seat-card:not(.is-focused) .status-badge {
   color: var(--status-offline) !important;
 }
 
