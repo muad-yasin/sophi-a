@@ -2065,6 +2065,62 @@ body {
   max-width: 340px;
 }
 
+/* Stop All - demoted from a labeled button to a small icon-only affordance (real emergency
+   action, doesn't need to compete visually with the cost readout/gauge the design puts here). */
+.header-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--status-problem);
+  background: transparent;
+  color: var(--status-problem);
+  font-size: 10px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.header-icon-btn:hover {
+  background: color-mix(in srgb, var(--status-problem) 16%, transparent);
+}
+
+/* History menu - one real trigger, a small dropdown for the three "browse past records" panels
+   (Runs/Exports/Cost breakdown) instead of three loose header buttons. */
+.header-menu {
+  position: relative;
+}
+
+.header-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--sp-1);
+  border-radius: 10px;
+  border: 1px solid var(--divider);
+  background: var(--surface-modal);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.header-menu-item {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 6px;
+  font-family: var(--font-chrome);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.header-menu-item:hover {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
 /* five real utility buttons now live here (Stop All/History/Exports/Cost breakdown/Setup) -
    tighter than .setup-toggle's normal padding so a wrapped pair fits the 340px column without
    looking like it's fighting the layout; still a real, generous mouse click target, just not the

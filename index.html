@@ -85,18 +85,34 @@
         <div class="or-balance-mock">OR balance €7.77</div>
         <div class="header-right-row">
           <span class="run-cost-mock">$0.31 / $5</span>
-          <button type="button" id="stop-all-btn" class="setup-toggle stop-all-btn">
-            Stop All
-          </button>
-          <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
-            History
-          </button>
-          <button type="button" id="exports-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="exports-panel">
-            Exports
-          </button>
-          <button type="button" id="cost-breakdown-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="cost-breakdown-panel">
-            Cost breakdown
-          </button>
+          <!-- Emergency-only global action - real (stops every running seat), but doesn't need
+               to compete visually with the cost readout the design already puts here. Icon-only,
+               same real #stop-all-btn/click wiring as before, just demoted from a labeled button
+               to match its actual (rare) frequency of use. -->
+          <button type="button" id="stop-all-btn" class="header-icon-btn stop-all-btn" title="Stop all running seats" aria-label="Stop all running seats">&#9724;</button>
+
+          <!-- History/Exports/Cost breakdown are all "browse past records" - one real entry
+               point (History), a small menu for the other two, instead of three loose labeled
+               buttons none of the 7 Claude Design references show. Each item is still the exact
+               same real button (#history-toggle/#exports-toggle/#cost-breakdown-toggle) main.ts
+               already wires up independently - only where they live in the DOM changed. -->
+          <div class="header-menu" id="history-menu">
+            <button type="button" id="history-menu-toggle" class="setup-toggle history-toggle" aria-haspopup="menu" aria-expanded="false" aria-controls="history-menu-list">
+              History
+            </button>
+            <div id="history-menu-list" class="header-menu-list" role="menu" hidden>
+              <button type="button" id="history-toggle" class="header-menu-item" role="menuitem" aria-haspopup="dialog" aria-controls="history-panel">
+                Runs
+              </button>
+              <button type="button" id="exports-toggle" class="header-menu-item" role="menuitem" aria-haspopup="dialog" aria-controls="exports-panel">
+                Exports
+              </button>
+              <button type="button" id="cost-breakdown-toggle" class="header-menu-item" role="menuitem" aria-haspopup="dialog" aria-controls="cost-breakdown-panel">
+                Cost breakdown
+              </button>
+            </div>
+          </div>
+
           <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
             Setup
           </button>
@@ -215,6 +231,15 @@
         <h3>Provider keys</h3>
         <p class="setup-hint">Only needed for providers you pick for <code>cnc</code>/<code>advisor</code> in their own picker.</p>
         <ul id="setup-provider-list" class="setup-provider-list"></ul>
+      </section>
+
+      <section class="setup-section">
+        <h3>Developer</h3>
+        <p class="setup-hint">A real, tiny live request (~10 tokens, "Say hello") to confirm the home seat actually answers - never sent automatically, only on this click. Moved here from the composer, matching a one-time verification action's real frequency of use rather than sitting permanently under it.</p>
+        <button type="button" id="cnc-smoke-run-btn" class="btn smoke-run-btn" disabled
+          title="Sends a tiny real request (~10 tokens, &quot;Say hello&quot;) to confirm this seat actually works">
+          Smoke run
+        </button>
       </section>
 
       <section class="setup-section setup-footer">
@@ -754,13 +779,6 @@
             </div>
           </div>
         </form>
-
-        <!-- Phase 1 Step 3 (long-horizon build plan) - [HUMAN STOP]: see the advisor tile's own
-             comment above, same rule, same button, never clicked by a session. -->
-        <button type="button" class="btn smoke-run-btn" data-role="smoke-run-btn" disabled
-          title="Sends a tiny real request (~10 tokens, &quot;Say hello&quot;) to confirm this seat actually works">
-          Smoke run
-        </button>
       </section>
 
       <!-- ===== Right rail - "Build seats" (mirror of the left rail) ===== -->

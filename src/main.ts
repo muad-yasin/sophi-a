@@ -334,7 +334,12 @@ function setControlsEnabled(tile: HTMLElement, status: Status) {
   const compareCheckboxes = tile.querySelectorAll<HTMLInputElement>(
     '[data-role="also-build-2"], [data-role="also-build-3"]',
   );
-  const smokeRunBtn = tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
+  // cnc's smoke-run button lives in the Setup drawer now (see setupTaskForms()'s own comment on
+  // the id-based lookup below) - not a tile descendant any more, so it needs the same fallback.
+  const smokeRunBtn =
+    tile.dataset.seat === "cnc"
+      ? document.getElementById("cnc-smoke-run-btn") as HTMLButtonElement | null
+      : tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
   const chainSelect = tile.querySelector<HTMLSelectElement>('[data-role="chain-select"]');
   if (taskInput) taskInput.disabled = working;
   if (sendBtn) sendBtn.disabled = working || notReady;
@@ -1100,11 +1105,15 @@ function setupTaskForms() {
       });
     }
 
-    // Phase 1 Step 3 (long-horizon build plan) - only cnc/advisor have this button in the
-    // markup; querySelector returns null elsewhere and this block is a no-op for every other
-    // seat. Fixed ~10-token task, same dispatch path Send uses - a real live call, sent only on
-    // an actual human click (this code never calls .click() on it itself).
-    const smokeRunBtn = tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
+    // Phase 1 Step 3 (long-horizon build plan) - advisor's button lives inside its own
+    // .seat-detail (tile-scoped lookup is correct there, hidden until focused, same as before).
+    // cnc's copy moved into the Setup drawer (none of the 7 Claude Design references show it
+    // permanently under the composer) - a real DOM move, not a duplicate, so it needs its own
+    // id-based lookup instead of the tile-scoped one below, or it'd silently stop being found.
+    const smokeRunBtn =
+      seatId === "cnc"
+        ? document.getElementById("cnc-smoke-run-btn")
+        : tile.querySelector<HTMLButtonElement>('[data-role="smoke-run-btn"]');
     if (smokeRunBtn) {
       smokeRunBtn.addEventListener("click", () => {
         const task = "Say hello";
@@ -2143,6 +2152,11 @@ function setupSeatExportControls() {
   for (const seatId of SEAT_IDS) {
     const tile = tileEl(seatId);
     const output = tile?.querySelector<HTMLElement>('[data-role="output"]');
+    // Per-seat action, belongs inside the focused overlay (.seat-detail), not permanently
+    // visible on the collapsed rail card - none of the 7 Claude Design reference screenshots
+    // show these on a resting card. cnc has no .seat-detail (it's the home seat, not a rail
+    // card), so its export row stays inline same as before - there's no overlay to move it into.
+    const seatDetail = tile?.querySelector<HTMLElement>('[data-role="seat-detail"]');
     if (!tile || !output) continue;
     const row = buildExportRow(seatId, "seat", () =>
       buildSeatMarkdown(
@@ -2151,7 +2165,13 @@ function setupSeatExportControls() {
         seatOutputCache.get(seatId) ?? output.textContent ?? "",
       ),
     );
-    output.insertAdjacentElement("afterend", row);
+    if (seatDetail) {
+      const actions = seatDetail.querySelector('.seat-detail-actions');
+      if (actions) actions.insertAdjacentElement("afterend", row);
+      else seatDetail.prepend(row);
+    } else {
+      output.insertAdjacentElement("afterend", row);
+    }
   }
 
   for (const seatId of PLANNER_SEAT_IDS) {
@@ -2479,6 +2499,31 @@ function setupModelChips() {
   syncModelChips();
 }
 
+// Header "History" menu (Runs/Exports/Cost breakdown) - the menu itself is new, but every item
+// inside it is the exact same real button (#history-toggle/#exports-toggle/#cost-breakdown-toggle)
+// that setupHistoryPanel()/setupExportsPanel()/setupCostBreakdownPanel() already wire up
+// independently by id - this only controls whether the menu list is visible.
+function setupHistoryMenu() {
+  const toggle = document.getElementById("history-menu-toggle");
+  const list = document.getElementById("history-menu-list");
+  if (!toggle || !list) return;
+
+  const closeMenu = () => {
+    list.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+  const openMenu = () => {
+    list.hidden = false;
+    toggle.setAttribute("aria-expanded", "true");
+  };
+
+  toggle.addEventListener("click", () => (list.hidden ? openMenu() : closeMenu()));
+  list.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", () => closeMenu()));
+  document.addEventListener("click", (e) => {
+    if (!list.hidden && !document.getElementById("history-menu")?.contains(e.target as Node)) closeMenu();
+  });
+}
+
 function setupSetupPanel() {
   const toggle = document.getElementById("setup-toggle");
   const panel = document.getElementById("setup-panel");
@@ -2584,6 +2629,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupGlobalOverlayKeys();
   setupStarterPills();
   setupModelChips();
+  setupHistoryMenu();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {
