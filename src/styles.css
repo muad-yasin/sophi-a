@@ -81,7 +81,7 @@
    what came from the handoff verbatim vs. what's this repo's own adaptation. */
 :root {
   /* surface ladder */
-  --bg: #0a0a0b;
+  --bg: #050506;
   --surface: #0f0f11;
   --surface-raised: #111113;
   --surface-modal: #121214;
@@ -1954,8 +1954,12 @@ body {
   border-color: var(--border-hover);
 }
 
+/* confirmed against the live standalone prototype's computed styles: line1 is Space Grotesk
+   13.5px (not the pill's own default mono), line2 stays mono - the pill's base font-family was
+   being inherited by both lines, which was wrong for line1 specifically. */
 .needs-pill-line1 {
-  font-size: 12px;
+  font-family: var(--font-chrome);
+  font-size: 13.5px;
   color: var(--text-secondary);
 }
 
@@ -2348,6 +2352,14 @@ body {
   cursor: default;
 }
 
+/* the old pre-Command-Deck `.tile[data-status="working"]` ring (still gold, still matches this
+   element via .tile too) has equal specificity to .seat-card's own box-shadow:none reset above
+   and was winning by coming later in the file - confirmed against the live standalone
+   prototype's Working cards, which have no colored ring at all, same neutral border as Idle. */
+.seat-card[data-status="working"] {
+  box-shadow: none;
+}
+
 .seat-card-dashed {
   border-style: dashed;
 }
@@ -2421,9 +2433,11 @@ body {
 .seat-card-text .status-badge {
   align-self: flex-start;
   background: transparent;
-  color: var(--text-muted);
+  /* idle's real color, confirmed against the live standalone prototype's computed styles
+     (#8d8a84 / --text-placeholder), not the darker --text-muted this used before. */
+  color: var(--text-placeholder);
   padding: 0;
-  font-size: 10px;
+  font-size: 12.5px;
   /* every reference screenshot uses Title Case badges ("Idle"/"Working"/"Degraded"), not the
      base .status-badge pill's ALL-CAPS convention - overriding here since STATUS_LABELS in
      main.ts now supplies the real Title Case text and shouldn't get re-cased by CSS. */
@@ -2431,7 +2445,12 @@ body {
   letter-spacing: normal;
 }
 
-.tile[data-status="working"] .seat-card-text .status-badge { color: var(--status-working); }
+/* Working stays a neutral, slightly-lighter grey (--text-tertiary, #c9c4ba) in the live
+   prototype - it is NOT colored gold. Confirmed by inspecting computed styles directly: only
+   "Needs you" (gold) and "Degraded" (red) get a status color; "Idle"/"Working" both stay
+   neutral, an intentional restraint (don't visually alarm-flag routine in-progress work the same
+   way a real blocker or failure gets flagged). My working=gold color was a real mismatch. */
+.tile[data-status="working"] .seat-card-text .status-badge { color: var(--text-tertiary); }
 .tile[data-status="problem"] .seat-card-text .status-badge { color: var(--status-problem); }
 
 .seat-card-reverse .seat-card-text .status-badge {
@@ -2592,9 +2611,11 @@ body {
 .home-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--gold) 70%, var(--text-muted));
+  /* exact value from the live standalone prototype's computed style (#a8853a) - the
+     color-mix() approximation this replaced landed too bright/saturated (~#c59d3c). */
+  color: #a8853a;
   margin-right: var(--sp-3);
 }
 
