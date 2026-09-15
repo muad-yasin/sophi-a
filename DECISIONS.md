@@ -1768,3 +1768,60 @@ Also fixed in the same pass, found while re-reading `admit()` for the review res
 
 Full `npm test` after fixes: 78/78 green (5 new validation tests added, everything else
 unchanged). No re-review requested since nothing beyond the review's own findings changed.
+
+## 2026-09-15: Sophi-A Seat Families, Session E - F7 (familyManager.js + WS lifecycle commands)
+
+Built in worktree `../sophi-a-seat-families-e` off `master` @ `7bbffcb`, merging A (`families-a`
+@ `61311ac`/`fad7f00`) and B (`families-b` @ `aa1df71`) first. C (F3/F5) and D (F6/F9) did not
+land tonight - see `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` for the two distinct reasons.
+F7 is scoped accordingly: only the `claude-code` runtime is wired (via A's generalized
+`fanOut()`); a `family_dispatch` on `chat`/`council` and any Apply/gate path both return a clear
+"not built tonight" refusal rather than faking behavior.
+
+**Real gap found and fixed while building this, in F0's/A's own `peer-pool.js`, not glossed
+over**: `stopThisPeer()` (the operator/Stop-All path) calls `finish(detail => emit('peer.idle',
+detail))` with no `detail` argument - so a manually-stopped peer's `peer.idle` event carries no
+`peerId`, unlike every other event this module emits. A caller that (reasonably) filters incoming
+events by `detail.peerId` to know which peer finished - which is what my first working draft of
+`familyDispatch()` did - hangs forever on an operator Stop, since the filter never matches.
+Fixed here, not in `peer-pool.js` (A's file, out of scope for E to edit): `familyDispatch()`
+doesn't filter by `peerId` at all now, relying on the fact that `fanOut()`'s own `emit` callback
+is a fresh closure per call (`spawnPeer` builds its own `handleLine`/`finish` per invocation), so
+every event a `count:1` dispatch's `emit` receives is already scoped to that one peer - the filter
+was redundant *and* buggy. Flagging for whoever next touches `peer-pool.js`: `stopThisPeer()`
+should probably pass `{peerId}` as `detail` for consistency with every other `finish()` call site,
+even though nothing in this build ended up needing that fix.
+
+**`familyManager.js`'s own data-contract gap, not F1's.** `writeSessionState()`/`readSession()`
+persist a fixed field set that does not include `lastTaskHash`/`failedOwnedCountOnPlanItem` -
+`compassionPolicy.decide()`'s own inputs (B's own DECISIONS.md note: "the caller (F7, a different
+session) is responsible for counting it"). Rather than widen F1's contract mid-build, this module
+keeps a small sidecar file (`sessions/<id>/family-manager-meta.json`) next to `state.json`, same
+atomic temp-then-rename write F1 itself uses. Named as a real reopen candidate: a future pass
+could fold this into F1's own `state.json` shape instead, once F1's owner agrees to widen it.
+
+**Built**: `familyCreate` (humanClick-gated, Q1), `familyList`, `familyDispatch` (caps -> fanOut
+-> classify -> writeTurnResult/writeSessionState -> `family.session.state` event; refuses an
+identical re-dispatch and a second owned failure via `compassionPolicy.decide()`, exactly as B's
+`close`-never-automated reading requires), `familyStop`, `familyClose` (humanClick-gated),
+`familyManagerRestartRecovery` (Q5 - marks every `running` session `interrupted` on manager
+(re)start, handle intact, no auto-resume), `familyStopAll` (Stop All means all - family sessions
+included). **The WS command surface in `index.js` is also wired**:
+`family_create`/`family_list`/`family_dispatch`/`family_stop`/`family_close` as real `msg.cmd`
+handlers (`handleFamilyCreate`/`handleFamilyList`/`handleFamilyDispatch`/`handleFamilyStop`/
+`handleFamilyClose`), and the existing `stopAll()` (the seat-level Stop All) now also calls
+`familyStopAll()` - "Stop All must mean all" per the plan's own F7 test requirement, verified by a
+source-grep test rather than only by reading the diff.
+
+**Not built** (named, not silently deferred): the security-gate/Apply path (F6 never landed, so
+there is nothing for an Apply/Forward WS command to check against); resuming an `interrupted`
+session with an explicit `resume:true` (Q5's own answer requires this exist somewhere -
+`familyDispatch()` currently refuses every dispatch into an `interrupted` session outright,
+correctly conservative but not yet the full resume path - the WS surface has no separate
+`resume:true` flag yet either); F8's UI wiring (index.html/main.ts/styles.css) is a separate,
+later step in this same session's work, not done as part of F7 itself.
+
+10 new tests in `test/family-manager.test.mjs` (including a source-grep test proving the WS
+commands are actually wired, same convention as the existing `fan_out`/`stop_peer` test), all
+against real fake-claude subprocess spawns through the real `fanOut()`, no mocking of
+`node:child_process`. Full `npm test`: 127/127 green (117 from A+B's merge + 10 new).
