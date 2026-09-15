@@ -1,8 +1,12 @@
 // test/compassion-policy.test.mjs
 //
 // Sophi-A seat-owned families, F2 (relay/Docs/SophiA-Seat-Families-Plan.md §2.6, revised by
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §a Q2 / §d item 1). Pure decide() - fully
-// offline, no subprocess, no network, no model call.
+// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §a Q2 / §d item 1). `decide()` itself is
+// pure - fully offline, no subprocess, no network, no model call. This test file's own
+// git-diff-emptiness check on compassionStates.js is the one exception: it runs a fixed-argv
+// `execFileSync('git', [...])` (no shell, no interpolated input) as a real assertion mechanism,
+// not part of decide()'s own behavior - flagged by gp-77's real Fable-5.1 security review of
+// this branch (2026-09-15) as an inaccurate header claim, corrected here.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';

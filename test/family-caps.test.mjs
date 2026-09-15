@@ -161,3 +161,46 @@ test('admit: requesting 0 always admits 0 with no binding level', () => {
   });
   assert.deepEqual(result, { count: 0, level: null, notice: null });
 });
+
+// gp-77's real Fable-5.1 security review (2026-09-15) flagged that unvalidated requested/
+// perTurnUsd/cap/spend numbers reach peersWithinSpendCeiling()'s own while-loop, which is
+// bounded only by requestedCount - a huge, negative, or NaN input degrades to a long spin or a
+// silently wrong count rather than a clear error. Fixed by validating every numeric input up
+// front and failing loud; these tests prove the guard fires before any admission arithmetic runs.
+test('admit: throws on a negative requested count', () => {
+  assert.throws(() => admit({ requested: -1, family: generous, seat: generous, global: generous, spends: zeroSpends, estimates: noEstimate }), /requested must be a finite number/);
+});
+
+test('admit: throws on a non-finite requested count (NaN, Infinity)', () => {
+  assert.throws(() => admit({ requested: NaN, family: generous, seat: generous, global: generous, spends: zeroSpends, estimates: noEstimate }));
+  assert.throws(() => admit({ requested: Infinity, family: generous, seat: generous, global: generous, spends: zeroSpends, estimates: noEstimate }));
+});
+
+test('admit: throws on a negative perTurnUsd estimate', () => {
+  assert.throws(() => admit({
+    requested: 1, family: generous, seat: generous, global: generous,
+    spends: zeroSpends, estimates: { perTurnUsd: -0.01, hasUnpricedSpend: false },
+  }), /perTurnUsd must be a finite number/);
+});
+
+test('admit: throws on a negative or non-finite cap-level field (maxConcurrentSessions, spendCeilingUsd, activeCount)', () => {
+  assert.throws(() => admit({
+    requested: 1, family: { maxConcurrentSessions: -1, spendCeilingUsd: 1, activeCount: 0 }, seat: generous, global: generous,
+    spends: zeroSpends, estimates: noEstimate,
+  }), /family\.maxConcurrentSessions must be a finite number/);
+  assert.throws(() => admit({
+    requested: 1, family: generous, seat: { maxConcurrentSessions: 1, spendCeilingUsd: NaN, activeCount: 0 }, global: generous,
+    spends: zeroSpends, estimates: noEstimate,
+  }), /seat\.spendCeilingUsd must be a finite number/);
+  assert.throws(() => admit({
+    requested: 1, family: generous, seat: generous, global: { maxConcurrentSessions: 1, spendCeilingUsd: 1, activeCount: -5 },
+    spends: zeroSpends, estimates: noEstimate,
+  }), /global\.activeCount must be a finite number/);
+});
+
+test('admit: throws on a negative or non-finite spends field', () => {
+  assert.throws(() => admit({
+    requested: 1, family: generous, seat: generous, global: generous,
+    spends: { family: -0.01, seat: 0, global: 0 }, estimates: noEstimate,
+  }), /spends\.family must be a finite number/);
+});

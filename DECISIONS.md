@@ -1574,3 +1574,36 @@ Not built (explicitly out of this item's own file ownership per the council's wo
 `familyMemory.js`/`familyConfig.js` (Session A), `familyLedger.js` v2/`familyRuntimes.js`
 (Session C), the security gate (Session D), `familyManager.js`/WS commands/UI wiring (Session E,
 merges last). No Fable/paid call anywhere in this build - fully offline per the dispatch.
+
+## 2026-09-15: F2+F4, Fable-5.1 security review result
+
+Real security review run against this branch's diff (`af8b250` vs `origin/master`), a Fable
+5.1 agent, read-only, no code-write access: **PASS**, no critical/high findings. One LOW and
+four INFO findings, all addressed or judged not to need a code change:
+
+- **LOW, fixed**: `admit()` passed `requested`/`perTurnUsd` and every cap/spend field straight
+  into `peer-pool.js`'s `peersWithinSpendCeiling()` unvalidated - that function's own while-loop
+  is bounded only by `requestedCount`, so a huge, negative, or `NaN` input degrades to either a
+  long spin or a silently wrong admitted count rather than a clear error. Fixed by validating
+  every numeric input in `admit()` itself (finite, >= 0) and failing loud before any admission
+  arithmetic runs - `peer-pool.js` itself stays untouched, per this session's own file ownership.
+  5 new tests in `test/family-caps.test.mjs` prove each guard fires.
+- **INFO, fixed**: `test/compassion-policy.test.mjs`'s own header comment claimed "no subprocess"
+  while its git-diff-emptiness check does run a real `execFileSync('git', [...])` call (fixed
+  argv, no shell, no interpolated input - the review confirmed it's safe, just inaccurately
+  described). Comment corrected to describe what the file actually does.
+- **INFO, no change needed**: `hashTask()`'s use of SHA-256 for non-cryptographic distinctness
+  checking (never as an auth token or filename) - confirmed appropriate as reviewed.
+- **INFO, no change needed**: no prompt-injection or command-execution surface anywhere in
+  `decide()`/`admit()` - both return only fixed literal strings plus numeric interpolation; the
+  reviewer traced every input-derived string through to confirm none reaches a thrown message
+  except the deliberately-fail-loud unknown-state error.
+- **INFO, no change needed**: no secrets, no sensitive absolute paths, no dynamic code
+  execution, no new dependencies beyond Node's own `node:*` builtins already used elsewhere in
+  this repo.
+
+Also fixed in the same pass, found while re-reading `admit()` for the review response: an unused
+`const levels = { family, seat, global }` left over from an earlier draft, removed.
+
+Full `npm test` after fixes: 78/78 green (5 new validation tests added, everything else
+unchanged). No re-review requested since nothing beyond the review's own findings changed.

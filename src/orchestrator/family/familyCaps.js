@@ -45,7 +45,36 @@ const LEVEL_LABELS = { family: 'Family cap reached', seat: 'Seat cap reached', g
  * @returns {{count: number, level: 'family'|'seat'|'global'|null, notice: string|null}}
  */
 export function admit({ requested, family, seat, global, spends, estimates }) {
-  const levels = { family, seat, global };
+  // Real Fable-5.1 security review finding (2026-09-15, gp-77): `requested` and `perTurnUsd`
+  // reach peersWithinSpendCeiling()'s own while-loop unvalidated, which is bounded only by
+  // `requestedCount` - a huge/negative/NaN input degrades to either a long spin or a silently
+  // wrong count rather than a clear error. Both trace only to this orchestrator's own internal
+  // caller (F7), never to model or network input, so this was a robustness gap, not an
+  // exploitable boundary - fail loud rather than silently misbehave.
+  if (!Number.isFinite(requested) || requested < 0) {
+    throw new Error(`familyCaps.admit: requested must be a finite number >= 0, got ${requested}`);
+  }
+  const perTurnUsdRaw = estimates?.perTurnUsd ?? 0;
+  if (!Number.isFinite(perTurnUsdRaw) || perTurnUsdRaw < 0) {
+    throw new Error(`familyCaps.admit: estimates.perTurnUsd must be a finite number >= 0, got ${perTurnUsdRaw}`);
+  }
+  for (const [name, level] of Object.entries({ family, seat, global })) {
+    if (!Number.isFinite(level.maxConcurrentSessions) || level.maxConcurrentSessions < 0) {
+      throw new Error(`familyCaps.admit: ${name}.maxConcurrentSessions must be a finite number >= 0, got ${level.maxConcurrentSessions}`);
+    }
+    if (!Number.isFinite(level.spendCeilingUsd) || level.spendCeilingUsd < 0) {
+      throw new Error(`familyCaps.admit: ${name}.spendCeilingUsd must be a finite number >= 0, got ${level.spendCeilingUsd}`);
+    }
+    if (!Number.isFinite(level.activeCount) || level.activeCount < 0) {
+      throw new Error(`familyCaps.admit: ${name}.activeCount must be a finite number >= 0, got ${level.activeCount}`);
+    }
+  }
+  for (const [name, value] of Object.entries(spends)) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`familyCaps.admit: spends.${name} must be a finite number >= 0, got ${value}`);
+    }
+  }
+
   const concurrencyCounts = {
     family: concurrencyFit(family, requested),
     seat: concurrencyFit(seat, requested),
