@@ -1492,3 +1492,85 @@ seat-card markup (a `main.ts` DOM-wiring pass, not part of items 3/4's own file 
 risked touching the same shared surface another session's work might also touch mid-flight,
 without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
 here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
+
+## 2026-09-15: Sophi-A seat-owned families, Session B - F2 (compassion policy) + F4 (caps hierarchy)
+
+Built in worktree `families-b` off `origin/master` @ 7bbffcb, per thcmcp-66's C&C overnight
+dispatch after the real planning council (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`,
+building from `relay/Docs/SophiA-Seat-Families-Plan.md`). Not merged/pushed - Session E merges
+last per the plan's own worktree split. `compassionStates.js` and `peer-pool.js` are both
+untouched (`git diff origin/master` on each is empty) - F2/F4 build only against their public
+contracts, per this session's own file ownership (`src/orchestrator/family/compassionPolicy.js`,
+`src/orchestrator/family/familyCaps.js`).
+
+**F2's `decide()` data contract, since the plan named states but not a concrete signature.**
+§2.6's illustrative signature (`decide({state, turnsOnThisTask, lastTaskHash, proposedTaskHash,
+proposedContextAdded, humanPresent})`) doesn't carry a per-plan-item failure count, which Q2's
+binding rewrite needs ("after the second failed-owned on the same planItem"). Built as
+`failedOwnedCountOnPlanItem` (the total count including the failure being decided right now, so
+1 = first failure, 2+ = second-or-later) - the caller (F7, a different session) is responsible
+for counting it from `sessions/*/turns/*.result.json`; `decide()` itself stays pure and stateless,
+consistent with F1/F4's own "no I/O in the pure layer" pattern. `humanPresent` is accepted per
+the plan's own named signature but is a documented no-op in this version - nothing in the binding
+spec differentiates its effect on `decide()`'s own logic (see the `close` judgment call below),
+and removing it would silently break the exact contract F7 is expected to call against.
+
+**Real judgment call, documented rather than guessed past: does `close` ever appear in
+`decide()`'s `allowed` set for HOLDOUT?** §2.6 rule 6 (as originally written) names `close` as one
+of two permitted responses to a holdout. Q2's later, binding answer (§a of the council review)
+says, about the second-failure/needs-human case specifically: "`close` is explicitly excluded
+from the allowed set... because `close` is a UI-only human action and must never appear as
+something an LLM owner seat can select on its own... a human may still close a `needs-human`
+session by hand at any time via the UI, **independent of `decide()`**." Read as the general,
+resolving principle rather than scoped to one state (the reasoning itself is stated generally,
+and "independent of decide()" describes how the UI's Close action works structurally, not just
+for one state) - `decide()` in this build **never** returns `close` in `allowed`, for any of the
+three states, including HOLDOUT. A human can still close a holdout session via the UI at any time;
+that path does not go through this function. Named explicitly rather than silently resolved either
+way, since the plan's own §2.6 text and the council's Q2 answer read in mild tension on this one
+point - `test/compassion-policy.test.mjs` has a dedicated test asserting `close` never leaks into
+`allowed` across every scenario tried.
+
+**§2.6 rule 7's forbidden-word list extended**, not just described: `compassionCopy.js`'s existing
+string test (`test/compassion-states.test.mjs`) now checks `blame`/`lazy`/`stupid`/`punish`/
+`retry until` (the literal, checkable subset of rule 7), exported as a single shared constant
+(`BANNED_COMPASSION_WORDS`, in `compassionPolicy.js`) so `compassionCopy.js`'s test and
+`compassionPolicy.js`'s own reason-string test never carry two copies of the same list that could
+drift. The "model-identity attack" clause has no literal string to grep, so it's approximated as:
+`compassionCopy.js` names no specific provider/vendor at all (deepseek/glm/mistral/qwen/kimi/gpt/
+claude/gemini/ollama) - a real, if imperfect, checkable proxy, named as an approximation rather
+than claimed as a complete test of the clause. **Real near-miss caught while writing this test**:
+a first draft of `compassionPolicy.js`'s own reason-string test grepped the whole source file,
+which self-matched the rule's own quoted word list in its header comment (the same false-positive
+shape `familyReceipts.js`'s forbidden-phrase test hit earlier this session, on `sophi-a-family-
+mvp-b`) - fixed the same way: check the actual strings `decide()` can return, not the file that
+documents the rule.
+
+**F4's `admit()` binding-level bug found and fixed before it shipped**: an early draft picked the
+"binding level" by checking `perLevelCount[name] < requested` in family→seat→global order, which
+returns the *first* level below `requested` rather than the level that actually matches the
+overall minimum count - wrong whenever family is looser than seat but still below `requested`
+(e.g. family=3, seat=2, global=5, requested=5 would have wrongly named `family` as the binding
+level with count 2, when seat was the real bottleneck). Fixed by matching each level's own count
+against the already-computed overall minimum instead of against `requested` directly, with
+family-first tie-breaking on an exact match - caught by `test/family-caps.test.mjs`'s own "the
+tightest level among family/seat/global wins, even if it is seat or global" test before this was
+ever reported done.
+
+**Unpriced-spend degradation, made concrete**: once `estimates.hasUnpricedSpend` is true, the
+entire `$` branch is skipped for that call - admission falls through to the concurrency minimum
+only, and the notice is the fixed string `'unpriced spend present; $ headroom unavailable'`
+regardless of how absurd the real `$` numbers are (tested with a family $999 over its own $0.01
+ceiling, still admitted purely on concurrency). `admit()` is stateless and has no way to "clear"
+the flag itself - persisting `hasUnpricedSpend` for a family's lifetime once it becomes true is a
+different module's job (F1/F7), documented here so a future reader doesn't look for that logic in
+this file and not find it.
+
+Both test files: `test/compassion-policy.test.mjs` (14 tests) + `test/family-caps.test.mjs` (12
+tests), plus 2 tests added to the existing `test/compassion-states.test.mjs`. Full `npm test`:
+73/73 green.
+
+Not built (explicitly out of this item's own file ownership per the council's worktree split):
+`familyMemory.js`/`familyConfig.js` (Session A), `familyLedger.js` v2/`familyRuntimes.js`
+(Session C), the security gate (Session D), `familyManager.js`/WS commands/UI wiring (Session E,
+merges last). No Fable/paid call anywhere in this build - fully offline per the dispatch.
