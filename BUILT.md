@@ -291,3 +291,13 @@
   (16 pre-existing + 11 new). Built in worktree `../sophi-a-family-mvp-a`, branch
   `sophi-a-family-mvp-a`, rebased onto `master` @ 0a9674b after Muad approved the peer-pool-v1
   merge. Not merged - Muad's call.
+- 2026-09-15 - "Family" MVP, Session B, items 3+4 (worktree `sophi-a-family-mvp-b`, not merged).
+  `src/orchestrator/familyLedger.js` (read-only, event-derived per-seat family receipts, capped at
+  10 rows/seat) + `src/ui/familyReceipts.js` (render, `.js` not `.jsx` - no React toolchain in
+  this app, see DECISIONS.md). `src/orchestrator/compassionStates.js` (pure `classify()`,
+  FAILED-OWNED/STUCK/HOLDOUT precedence) + `src/ui/compassionCopy.js` (fixed, test-pinned copy) +
+  `src/ui/compassionBadge.js` (render). `test/family-receipts.test.mjs` (8 tests) +
+  `test/compassion-states.test.mjs` (11 tests), both against Session A's real fixtures
+  (`test/fixtures/fake-claude.sh`, `mock-relay-chain.mjs`, pulled in from `sophi-a-family-mvp-a`).
+  Full `npm test`: 30/30. Not wired into `index.html`/`main.ts` seat cards (see DECISIONS.md for
+  why); not merged/pushed.

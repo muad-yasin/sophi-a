@@ -1421,3 +1421,74 @@ entry, including `fanOut()`'s exact-message guard).
 No code change to `peer-pool.js` itself in this entry - this is a decision record only. Built as
 part of Session A (this session) of the family-MVP's 3-session split; Session B (receipts panel +
 compassion states) and Session C (TODO pill) build on top of this decision without reopening it.
+## 2026-09-15: "Family" MVP polish, Session B - items 3+4 (family receipts + compassion states)
+
+Built in worktree `sophi-a-family-mvp-b` off `peer-pool-v1` @ c566d2a, per thcmcp-66/sophi-a-ed's
+C&C dispatch after the real planning council (`relay/runs/2026-09-15T18-55-34-601Z`, unanimous
+3-lab sign-off, $0.031). Not merged/pushed - Muad's permission not granted yet.
+
+**Real gap found before building, not assumed away: this app has no React/JSX toolchain.** The
+plan's own build.md asks for `src/ui/FamilyReceipts.jsx` and `src/ui/CompassionBadge.jsx`.
+Checked directly rather than trusted: `package.json` has no `"react"` dependency, and grepping
+the whole `src/` tree for `.tsx`/`.jsx` found none - this app's real, only rendering convention is
+plain DOM-building functions (`src/seatOutputRender.ts`'s own pattern: build a fragment, sanitize
+anything model-adjacent, `textContent` never `innerHTML`). Introducing a React build step for two
+panels would be new, unrequested tooling with no mandate in an MVP-polish pass that explicitly
+forbids Phase 4 code - not done. Both files were built as `.js` following the app's own real
+convention instead (`src/ui/familyReceipts.js`, `src/ui/compassionBadge.js`), each also exporting
+a plain-text render function for tests/headless checks, since there's no jsdom in this repo either
+(checked: not in package.json).
+
+**Real gap found in item 3's own data-source assumption.** build.md §2 says family-receipts rows
+are "sourced only from the existing run-recorder store." Checked before writing `familyLedger.js`:
+`recordRun()` (run-recorder.js) has exactly one real call site, `relayChainSubprocess.js` - a
+seat's own relay-chain completion. `peer-pool.js`'s `fanOut()` has never written anything to that
+store; its own header comment says peers are "owned entirely by this module's own in-memory
+state... never read from or written to seats.json" and the same is true of run-recorder. Extending
+`peer-pool.js` to persist there is a different module, out of this item's scope. `familyLedger.js`
+instead derives rows from peer-pool's own real completion events (`observePeerEvent(seatId, type,
+detail)`, fed by whatever already holds peer-pool's `emit` callback) plus the peer's own real,
+already-created workdir (`.workdirs/peers/<peerId>`, made by peer-pool's own `workdirFor` before
+any process spawns) as the row's `artifactPath` - still derived from real facts, never model
+self-report, never a second thing written to disk (source-grep test in
+`test/family-receipts.test.mjs` proves no `writeFile`/`appendFile`/`mkdir` call exists in
+`familyLedger.js`). Named here rather than silently reworded to match the plan's prose.
+
+**Second real finding, discovered while writing the acceptance test:** `peer-pool.js`'s own
+`safeEnv()` forwards only a fixed non-secret allowlist (`PATH`/`HOME`/`LANG`/...) plus
+`ANTHROPIC_API_KEY` via its own separate conditional (`peer-pool.js:29`, not part of
+`SAFE_ENV_KEYS` itself - a real key genuinely is forwarded, since a peer's whole job is running
+`claude` for real) to the spawned child - a deliberate security boundary either way, from
+`docs/security-prompt-injection.md`. Session A's `FAKE_CLAUDE_*` env knobs are on neither path, so
+a real `fanOut()` call can never
+actually drive `fake-claude.sh`'s scripted success/failure output - only its own default output
+(a fixed placeholder line, not valid stream-json) is reachable through a real fan-out. Widening
+`SAFE_ENV_KEYS` to make an offline test more convenient would weaken a real security boundary for
+zero product reason - not done. Consequence, verified rather than worked around: fake-claude's
+default output produces no parseable `result` line, so `peer-pool.js` correctly reports
+`peer.problem` ("exited before a result line arrived"), which `familyLedger.js` correctly turns
+into a `failure owned: ...` row - a legitimate real outcome, not a test-setup bug. The success
+path (`peer.idle` → "completed - result recorded") is proven by a separate direct unit test
+against `observePeerEvent` itself, which doesn't need to cross that boundary.
+
+**Item 4's `runRecord` shape and precedence, since the plan named states but not a data
+contract:** `classify(runRecord, now)` reads `{exitCode, lastOutputAt, holdout}` - `holdout`
+reuses `test/fixtures/mock-relay-chain.mjs`'s own field shape verbatim (that fixture's own header
+comment: "mirrors the real engine's report.json fields... not a new shape invented for this
+fixture"), so this classifier and the real relay-report shape never drift apart. Precedence,
+stated explicitly: a nonzero exit (FAILED-OWNED) wins over a simultaneous holdout - the more
+urgent, terminal signal - and a holdout wins over STUCK, since a recorded dissent is a completed
+fact and STUCK is only meaningful for a still-running record (`exitCode === null`). The 300s
+threshold is a named constant (`STUCK_THRESHOLD_SECS`), inclusive at the boundary, with `now`
+injectable per backend-developer's own clock-injection rule - tested at 299s/300s/301s.
+
+Both items' full test suites pass: `test/family-receipts.test.mjs` (8 tests), 
+`test/compassion-states.test.mjs` (11 tests). Full `npm test` (`test/**/*.test.mjs`): 30/30 green,
+including Session A's own 6 peer-pool tests and the pre-existing 5 seat-card tests.
+
+Not built (explicitly out of scope for this item): wiring either panel into `index.html`/`main.ts`
+seat-card markup (a `main.ts` DOM-wiring pass, not part of items 3/4's own file list in build.md
+§2/§4 - both render modules are ready to be called from that wiring, but doing the wiring itself
+risked touching the same shared surface another session's work might also touch mid-flight,
+without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
+here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
