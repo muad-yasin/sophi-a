@@ -301,3 +301,11 @@
   (`test/fixtures/fake-claude.sh`, `mock-relay-chain.mjs`, pulled in from `sophi-a-family-mvp-a`).
   Full `npm test`: 30/30. Not wired into `index.html`/`main.ts` seat cards (see DECISIONS.md for
   why); not merged/pushed.
+- 2026-09-15 - Sophi-A seat-owned families, Session B, F2+F4 (worktree `families-b`, not merged).
+  `src/orchestrator/family/compassionPolicy.js` (pure `decide()`, one restart-with-context per
+  failure, second failed-owned escalates to human, `close` never in the automated allowed set) +
+  `src/orchestrator/family/familyCaps.js` (pure `admit()`, family/seat/global cap hierarchy
+  reusing `peer-pool.js`'s `peersWithinSpendCeiling()`, unpriced-spend degradation). Extends
+  `test/compassion-states.test.mjs` (+2 tests, banned-word list widened) and adds
+  `test/compassion-policy.test.mjs` (14 tests) + `test/family-caps.test.mjs` (12 tests). Full
+  `npm test`: 73/73. `compassionStates.js` and `peer-pool.js` both untouched - not merged/pushed.
