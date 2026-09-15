@@ -17,17 +17,41 @@ import { createFamily, loadFamilies, writeSessionState, writeTurnResult, readSes
 import { admit } from './familyCaps.js';
 import { decide, hashTask } from './compassionPolicy.js';
 import { classify } from '../compassionStates.js';
-import { fanOut, stopAllPeers } from '../peer-pool.js';
+import { fanOut, stopAllPeers, stopPeer } from '../peer-pool.js';
 
 // One manager instance per orchestrator process - the same "one module owns the live map" shape
-// peer-pool.js itself uses for activePeers. sessionId -> { ownerSeat, familyId, peerId }
+// peer-pool.js itself uses for activePeers. Keyed by the composite `${ownerSeat}/${familyId}/
+// ${sessionId}` (Fable security review, MEDIUM M3, 2026-09-16: sessionId alone collided across
+// families sharing an id, letting family_stop/family_close act on a different family's
+// same-named session) -> { peerId }.
 const liveSessions = new Map();
+function liveKey(ownerSeat, familyId, sessionId) {
+  return `${ownerSeat}/${familyId}/${sessionId}`;
+}
+
+// Same safe-segment rule familyMemory.js's own (unexported) assertSafeSegment enforces -
+// duplicated here deliberately (Fable review, HIGH H1, 2026-09-16): familyRef() built `dir` via a
+// raw join() with no validation, and F1's own familyDirOf() only validates when `dir` is *absent*
+// - so passing a pre-built `dir` silently bypassed F1's already-reviewed path-traversal fix for
+// every F7 call site. Validating here, before any join(), closes the regression without touching
+// F1's file (same small-duplication shape the old peer-pool.js/claudeCodeSubprocess.js safeEnv()
+// copies were, before F0 deduped them - acceptable for a two-line regex check, unlike that larger
+// security-boundary allowlist).
+const SAFE_SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+function assertSafeSegment(name, value) {
+  if (typeof value !== 'string' || !SAFE_SEGMENT_RE.test(value) || value.includes('..')) {
+    throw new Error(`${name}: "${value}" is not a valid identifier (alphanumeric/._- only, no path separators, no "..")`);
+  }
+  return value;
+}
 
 // familiesRoot is accepted end-to-end (test-only override, same convention as F0's
 // SOPHIA_FAMILIES_CONFIG_PATH) so tests can isolate a temp directory instead of touching the
 // real .families/ tree - undefined in every real call site, which falls through to F1's own
 // defaultFamiliesRoot().
 function familyRef(ownerSeat, familyId, familiesRoot) {
+  assertSafeSegment('ownerSeat', ownerSeat);
+  assertSafeSegment('familyId', familyId);
   const dir = join(familiesRoot ?? defaultFamiliesRoot(), ownerSeat, familyId);
   return { ownerSeat, familyId, dir };
 }
@@ -63,7 +87,9 @@ function writeMeta(family, sessionId, meta) {
  * `.families/` directories created otherwise.
  */
 export function familyCreate({ ownerSeat, familyId, brief, plan, humanClick, familiesRoot }) {
-  if (!humanClick) {
+  if (humanClick !== true) {
+    // Fable review, LOW L1: `!humanClick` let a truthy-but-wrong-typed value ("false", 1, {})
+    // slip through - matches the existing select_winner/family_close convention of `!== true`.
     throw new Error('family_create refused: humanClick:true is required (Q1 - a family is created only by a human)');
   }
   return createFamily({ ownerSeat, familyId, brief, plan }, familiesRoot ?? defaultFamiliesRoot());
@@ -139,6 +165,12 @@ export async function familyDispatch({ ownerSeat, familyId, sessionId, task, run
 
   return new Promise(resolve => {
     let settled = false;
+    // Set by familyStop/familyClose (Fable review, MEDIUM M1, 2026-09-16): a manual stop/close
+    // kills the real peer subprocess, which still eventually fires its own terminal peer.* event
+    // (stopThisPeer -> finish -> emit('peer.idle', ...)) - without this guard, finalize() below
+    // would silently overwrite the human's 'stopped'/'closed' state with 'idle'/'failed-owned'
+    // moments later. externalOutcome, once set, wins; finalize() becomes a pure cleanup no-op.
+    let externalOutcome = null;
     // `emit` here is the exact callback fanOut() closes over for the one peer THIS call spawns
     // (peer-pool.js's spawnPeer builds a fresh handleLine/finish closure per invocation) - no
     // peerId filter is needed or even reliable: a manual/Stop-All peer.idle
@@ -153,6 +185,14 @@ export async function familyDispatch({ ownerSeat, familyId, sessionId, task, run
         pendingHandle = detail?.sessionId ?? sessionHandle;
       }
       if (settled) return;
+      if (externalOutcome) {
+        // The subprocess's own terminal event arrived after an explicit Stop/Close already wrote
+        // the terminal state - just clean up the live-session entry, never overwrite that state.
+        settled = true;
+        liveSessions.delete(liveKey(ownerSeat, familyId, sessionId));
+        resolve({ ok: externalOutcome !== 'failed-owned', status: externalOutcome, peerId: peerIdRef.current });
+        return;
+      }
       if (type === 'peer.idle') {
         settled = true;
         finalize('idle', null);
@@ -166,7 +206,7 @@ export async function familyDispatch({ ownerSeat, familyId, sessionId, task, run
     const peerIdRef = { current: null };
 
     function finalize(outcome, errorDetail) {
-      liveSessions.delete(sessionId);
+      liveSessions.delete(liveKey(ownerSeat, familyId, sessionId));
       const turn = priorTurnCount + 1; // writeTurnResult requires a positive integer, 1-based
       const runRecord = outcome === 'failed-owned'
         ? { exitCode: 1, lastOutputAt: null, holdout: null }
@@ -208,12 +248,15 @@ export async function familyDispatch({ ownerSeat, familyId, sessionId, task, run
       peerIdRef.current = dispatched[0] ?? null;
       if (!peerIdRef.current) {
         settled = true;
-        liveSessions.delete(sessionId);
+        liveSessions.delete(liveKey(ownerSeat, familyId, sessionId));
         writeSessionState(family, { sessionId, runtime, status: 'stopped', planItem, handle: sessionHandle, turnCount: priorTurnCount });
         resolve({ ok: false, reason: 'fanOut dispatched zero peers (cap reached)', status: 'stopped' });
         return;
       }
-      liveSessions.set(sessionId, { ownerSeat, familyId, peerId: peerIdRef.current });
+      liveSessions.set(liveKey(ownerSeat, familyId, sessionId), {
+        peerId: peerIdRef.current,
+        stopWith: outcome => { externalOutcome = outcome; },
+      });
     } catch (err) {
       settled = true;
       resolve({ ok: false, reason: err.message, status: existing.ok ? existing.status : 'created' });
@@ -221,21 +264,43 @@ export async function familyDispatch({ ownerSeat, familyId, sessionId, task, run
   });
 }
 
-/** Operator Stop on one family session - same clean semantics as a seat's Stop. */
+/**
+ * Operator Stop on one family session - same clean semantics as a seat's Stop. Fable review,
+ * MEDIUM M1: this used to only rewrite state.json without ever stopping the real subprocess,
+ * which kept running write-capable and could overwrite 'stopped' with its own later result. Now
+ * calls stopPeer() and arms the dispatch's own externalOutcome guard first, so the eventual
+ * peer.idle from the kill is absorbed as cleanup, never as a second, contradicting state write.
+ */
 export function familyStop({ ownerSeat, familyId, sessionId, familiesRoot }) {
-  const entry = liveSessions.get(sessionId);
-  if (!entry) return { ok: false, reason: 'no live session with that id' };
-  liveSessions.delete(sessionId);
+  // Validate before the liveSessions lookup, not only inside familyRef() below - the early
+  // "no live session" return must not become a way to skip id validation entirely (H1 follow-up:
+  // the no-live-entry path never reached familyRef() before, so a traversal id first hit here).
+  assertSafeSegment('ownerSeat', ownerSeat);
+  assertSafeSegment('familyId', familyId);
+  const key = liveKey(ownerSeat, familyId, sessionId);
+  const entry = liveSessions.get(key);
+  if (!entry) return { ok: false, reason: 'no live session with that id in this family' };
+  entry.stopWith('stopped');
+  stopPeer(entry.peerId);
   writeSessionState(familyRef(ownerSeat, familyId, familiesRoot), { sessionId, runtime: 'claude-code', status: 'stopped' });
   return { ok: true };
 }
 
-/** Close is human-only, independent of compassionPolicy.decide() (B's documented Q2 reading). */
+/**
+ * Close is human-only, independent of compassionPolicy.decide() (B's documented Q2 reading).
+ * Same M1 fix as familyStop: if a turn is still live on this session, stop the real subprocess
+ * before writing 'closed', instead of leaving it running to silently reopen the session later.
+ */
 export function familyClose({ ownerSeat, familyId, sessionId, humanClick, familiesRoot }) {
-  if (!humanClick) {
+  if (humanClick !== true) {
     throw new Error('family_close refused: humanClick:true is required - close is a human-only action, never automated');
   }
-  liveSessions.delete(sessionId);
+  const key = liveKey(ownerSeat, familyId, sessionId);
+  const entry = liveSessions.get(key);
+  if (entry) {
+    entry.stopWith('closed');
+    stopPeer(entry.peerId);
+  }
   writeSessionState(familyRef(ownerSeat, familyId, familiesRoot), { sessionId, runtime: 'claude-code', status: 'closed' });
   return { ok: true };
 }

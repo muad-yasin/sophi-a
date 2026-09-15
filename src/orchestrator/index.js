@@ -493,14 +493,28 @@ function handleFamilyList(ws, { ownerSeat }) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_list.result', families }));
 }
 
+// Fable security review, MEDIUM M2, 2026-09-16: familyDispatch/familyStop can throw synchronously
+// (e.g. assertSafeSegment on a malformed id) or, for the async dispatch path, reject - neither
+// was ever caught here, so a single malformed WS message from an authenticated client crashed the
+// whole orchestrator (an unhandled rejection is fatal by default on current Node). Every family_*
+// handler now replies with a refusal instead, matching handleFamilyCreate/handleFamilyClose's
+// existing try/catch shape.
 async function handleFamilyDispatch(ws, wss, { ownerSeat, familyId, sessionId, task, runtime, planItem }) {
-  const result = await familyDispatch({ ownerSeat, familyId, sessionId, task, runtime, planItem }, familyEmit(wss));
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ...result }));
+  try {
+    const result = await familyDispatch({ ownerSeat, familyId, sessionId, task, runtime, planItem }, familyEmit(wss));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ...result }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ok: false, reason: err.message }));
+  }
 }
 
 function handleFamilyStop(ws, { ownerSeat, familyId, sessionId }) {
-  const result = familyStop({ ownerSeat, familyId, sessionId });
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ...result }));
+  try {
+    const result = familyStop({ ownerSeat, familyId, sessionId });
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ...result }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ok: false, reason: err.message }));
+  }
 }
 
 function handleFamilyClose(ws, wss, { ownerSeat, familyId, sessionId, humanClick }) {

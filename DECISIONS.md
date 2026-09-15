@@ -1825,3 +1825,68 @@ later step in this same session's work, not done as part of F7 itself.
 commands are actually wired, same convention as the existing `fan_out`/`stop_peer` test), all
 against real fake-claude subprocess spawns through the real `fanOut()`, no mocking of
 `node:child_process`. Full `npm test`: 127/127 green (117 from A+B's merge + 10 new).
+
+## 2026-09-16: F7 security-review fixes (Fable 5.1 review of 4ec6309)
+
+Real review, not a rubber stamp: H1 was a genuine regression of A's own already-reviewed
+path-traversal fix, and M1-M3 were real correctness gaps, not style nits. Each fixed with its own
+proving test, same discipline A and B's own review responses used.
+
+**H1 (HIGH) - `familyRef()` bypassed F1's path-traversal guard.** `familyManager.js` built
+`family.dir` itself via a raw `join()` with no validation, and F1's `familyDirOf()` only validates
+`ownerSeat`/`familyId` when `dir` is *absent* - so every F7 call site silently bypassed the MEDIUM
+fix A's own review already closed in `familyMemory.js`. An authenticated WS client sending
+`family_close`/`family_dispatch`/`family_stop` with a `familyId` like `"../../../../tmp/x"` could
+make the orchestrator create directories and write files anywhere it had permission to, under a
+fixed filename. Fixed by duplicating the same safe-segment check (`assertSafeSegment`) directly in
+`familyManager.js`, called before any `join()` - including in `familyStop`'s early-return path,
+which the first fix pass missed (the "no live session" return never reached `familyRef()` at all,
+so a traversal id slipped past validation there specifically - caught by writing the proving test
+against exactly this function, not just against `familyDispatch`). Same small-duplication shape as
+the pre-F0 `peer-pool.js`/`claudeCodeSubprocess.js` `safeEnv()` copies - acceptable here since it's
+a two-line regex, not a larger security boundary.
+
+**M1 (MEDIUM) - `familyStop`/`familyClose` never stopped the real subprocess.** Both only rewrote
+`state.json`; the real `claude` process kept running write-capable, and its own later terminal
+event (`peer.idle`/`peer.problem`) would overwrite the human's `stopped`/`closed` state -
+`familyStopAll` was the only one of the three that actually called `stopAllPeers()`. Fixed:
+`familyStop`/`familyClose` now call `stopPeer()` directly, and arm a per-dispatch `externalOutcome`
+guard (a callback stored on the live-session entry) so the killed peer's own eventual `peer.idle`
+is absorbed as pure cleanup rather than a second, contradicting state write. Proven live: a test
+stops a real `setInterval`-staying-alive fake-claude peer, asserts `stopped` immediately, then
+waits past the point the kill's own terminal event would normally have fired, and asserts the
+state is still `stopped`.
+
+**M2 (MEDIUM) - a malformed family_dispatch/family_stop WS message could crash the orchestrator.**
+Neither handler in `index.js` caught a throw (sync validation) or rejection (the async dispatch
+path) - an unhandled rejection is fatal by default on current Node, so one bad message from an
+authenticated client took down the whole process. Fixed: both handlers now `try/catch` and reply
+with a refusal, matching `handleFamilyCreate`/`handleFamilyClose`'s existing shape. Proven by a
+source-grep test, same convention as the WS-wiring test above.
+
+**M3 (MEDIUM) - `liveSessions` was keyed by `sessionId` alone, not scoped per family.** Two
+families using the same session id (a real, foreseeable case - session ids aren't required to be
+globally unique, only unique within a family) collided: the second dispatch's live-session entry
+silently overwrote the first's, so `familyStop`/`familyClose` on the *first* family's session could
+never reach it again, or worse, `familyStop` given the *second* family's identity would still find
+and stop the first family's live peer. Fixed: `liveSessions` is now keyed by the composite
+`${ownerSeat}/${familyId}/${sessionId}`; `familyStop` on a session id that isn't live *for that
+family* returns a clean refusal rather than silently touching a different family's session. Proven
+by a test dispatching the same session id under two different families and asserting a
+cross-family stop is refused with the correct family's session left untouched.
+
+**L1 (LOW, also fixed)** - `familyCreate`'s `humanClick` check used `!humanClick` (a truthiness
+check) instead of `=== true`, inconsistent with `familyClose`'s own convention and with
+`select_winner`'s existing pattern this whole gate is modeled on. Not an access-control bypass (the
+per-launch auth token is the real gate here), just brought in line.
+
+**Not changed, named rather than fixed (Fable's own LOW/INFO items, correctly low-priority)**: L2
+(the humanClick gate lives only in `familyManager.js`, not in `familyMemory.js` itself - by design,
+documented there already, no other in-repo caller bypasses it); L3 (the sidecar meta file trusts
+its own content shape - local-file-only trust, `.families/` is orchestrator-owned); L4 (the
+caller-supplied `caps` parameter is never reached over the real WS path, so F4's `admit()` doesn't
+gate a real dispatch yet - already documented in the code as a known, not-yet-wired path); I4
+(`familyManagerRestartRecovery` is exported but not yet called from `index.js` startup - real gap,
+named here for whoever wires process startup next, not silently left unstated).
+
+4 new tests (`test/family-manager.test.mjs`), full `npm test`: 131/131 green.

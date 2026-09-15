@@ -153,7 +153,7 @@ setInterval(() => {}, 1000);
   assert.equal(familyLiveSessionCount(), 1, 'one family session is live before Stop All');
 
   const { stopped } = familyStopAll();
-  assert.ok(stopped.includes('s1'));
+  assert.ok(stopped.includes('plan-1/stopall-test/s1'), `stopped list carries the composite ownerSeat/familyId/sessionId key (got: ${stopped.join(', ')})`);
   assert.equal(familyLiveSessionCount(), 0);
 
   await dispatchPromise.catch(() => {}); // let the killed child's promise settle; not asserted further
@@ -182,4 +182,97 @@ test('the family_create/list/dispatch/stop/close WS commands are actually wired 
   assert.match(src, /msg\.cmd === 'family_close'/, 'family_close command is wired');
   assert.match(src, /from '\.\/family\/familyManager\.js'/, 'index.js imports familyManager.js');
   assert.match(src, /export function stopAll\(\) \{[\s\S]{0,600}familyStopAll\(\)/, 'stopAll() also stops family sessions - Stop All must mean all');
+});
+
+// --- Fable security review fixes (2026-09-16), each with its own proving test ---
+
+test('H1 fix: familyDispatch/familyStop/familyClose all refuse a path-traversal ownerSeat/familyId, writing nothing to disk', async () => {
+  const before = existsSync(familiesRoot) ? new Set() : new Set(); // familiesRoot may not exist yet in a fresh tmp dir
+  const evilFamilyId = '../../../../tmp/family-manager-h1-traversal-check';
+
+  await assert.rejects(
+    () => familyDispatch({ ownerSeat: 'plan-1', familyId: evilFamilyId, sessionId: 's1', task: 't', familiesRoot }),
+    /familyId:.*not a valid identifier/,
+  );
+  assert.throws(
+    () => familyStop({ ownerSeat: 'plan-1', familyId: evilFamilyId, sessionId: 's1', familiesRoot }),
+    /familyId:.*not a valid identifier/,
+  );
+  assert.throws(
+    () => familyClose({ ownerSeat: 'plan-1', familyId: evilFamilyId, sessionId: 's1', humanClick: true, familiesRoot }),
+    /familyId:.*not a valid identifier/,
+  );
+  assert.equal(existsSync(join(tmp, 'tmp', 'family-manager-h1-traversal-check')), false, 'nothing was ever written outside familiesRoot');
+});
+
+test('M1 fix: familyStop actually kills the real subprocess, and the state it writes is not later overwritten by the killed peer\'s own terminal event', async () => {
+  writeFileSync(claudePath, `#!/usr/bin/env node
+console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: 'stayalive-m1' }));
+setInterval(() => {}, 1000);
+`);
+  chmodSync(claudePath, 0o755);
+
+  familyCreate({ ownerSeat: 'plan-1', familyId: 'm1-stop-test', humanClick: true, familiesRoot });
+  const dispatchPromise = familyDispatch({ ownerSeat: 'plan-1', familyId: 'm1-stop-test', sessionId: 's1', task: 'long', familiesRoot });
+
+  const start = Date.now();
+  while (familyLiveSessionCount() < 1 && Date.now() - start < 3000) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+  assert.equal(familyLiveSessionCount(), 1);
+
+  const stopResult = familyStop({ ownerSeat: 'plan-1', familyId: 'm1-stop-test', sessionId: 's1', familiesRoot });
+  assert.equal(stopResult.ok, true);
+
+  const family = { ownerSeat: 'plan-1', familyId: 'm1-stop-test', dir: join(familiesRoot, 'plan-1', 'm1-stop-test') };
+  const immediatelyAfter = readSession(family, 's1');
+  assert.equal(immediatelyAfter.status, 'stopped');
+
+  // Give the killed subprocess's own terminal peer.* event (from watchdog/SIGTERM handling) time
+  // to arrive - before the fix, this would overwrite 'stopped' with 'idle'/'failed-owned'.
+  await dispatchPromise.catch(() => {});
+  await new Promise(r => setTimeout(r, 200));
+  const after = readSession(family, 's1');
+  assert.equal(after.status, 'stopped', 'the human Stop state survives the killed peer\'s own later terminal event');
+});
+
+test('M3 fix: two families sharing the same sessionId do not collide in familyStop', async () => {
+  writeFileSync(claudePath, `#!/usr/bin/env node
+console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: 'stayalive-m3' }));
+setInterval(() => {}, 1000);
+`);
+  chmodSync(claudePath, 0o755);
+
+  familyCreate({ ownerSeat: 'plan-1', familyId: 'family-x', humanClick: true, familiesRoot });
+  familyCreate({ ownerSeat: 'plan-1', familyId: 'family-y', humanClick: true, familiesRoot });
+  const dispatchX = familyDispatch({ ownerSeat: 'plan-1', familyId: 'family-x', sessionId: 's1', task: 'x', familiesRoot });
+
+  const start = Date.now();
+  while (familyLiveSessionCount() < 1 && Date.now() - start < 3000) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  // family-y never dispatched sessionId "s1" - stopping it there must be a clean no-op refusal,
+  // never an accidental stop of family-x's live "s1".
+  const wrongFamilyStop = familyStop({ ownerSeat: 'plan-1', familyId: 'family-y', sessionId: 's1', familiesRoot });
+  assert.equal(wrongFamilyStop.ok, false);
+  assert.equal(familyLiveSessionCount(), 1, 'family-x\'s live session was not touched by a same-id stop on a different family');
+
+  const rightFamilyStop = familyStop({ ownerSeat: 'plan-1', familyId: 'family-x', sessionId: 's1', familiesRoot });
+  assert.equal(rightFamilyStop.ok, true);
+  await dispatchX.catch(() => {});
+});
+
+test('M2 fix: handleFamilyDispatch and handleFamilyStop in index.js both catch a throw/rejection instead of crashing the process', () => {
+  const src = readFileSync(join(process.cwd(), 'src', 'orchestrator', 'index.js'), 'utf8');
+  assert.match(
+    src,
+    /async function handleFamilyDispatch\([^)]*\) \{\s*try \{[\s\S]{0,400}\} catch \(err\) \{/,
+    'handleFamilyDispatch wraps familyDispatch in try/catch',
+  );
+  assert.match(
+    src,
+    /function handleFamilyStop\([^)]*\) \{\s*try \{[\s\S]{0,300}\} catch \(err\) \{/,
+    'handleFamilyStop wraps familyStop in try/catch',
+  );
 });
