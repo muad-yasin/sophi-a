@@ -2275,6 +2275,13 @@ body {
    rules) --- explicitly overrides the old 3-tile-column `#grid.grid` rule near the top of this
    file, which no longer describes this layout (its named grid-areas target ids that are now
    nested inside the rails, not direct grid children, so it was only ever accidentally close). */
+/* Real bug, found live at fullscreen/maximized window size (Muad's own screenshots): #grid is a
+   flex child of body (body is display:flex/flex-direction:column) but never claimed the
+   remaining vertical space - it only sized to its own content's natural height. At a small
+   window that coincidentally looked full; maximized on a large display it left a large dead
+   black void below the header. flex:1 + min-height:0 (so the grid can still shrink correctly for
+   its own children's overflow rules) fixes it - grid-template-rows: minmax(0,1fr) inside was
+   already correct, it just never had a real parent height to fill. */
 #grid.grid {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr) 340px;
@@ -2282,6 +2289,8 @@ body {
   grid-template-areas: none;
   gap: 0;
   padding: 0;
+  flex: 1;
+  min-height: 0;
   background:
     radial-gradient(ellipse 900px 520px at 50% -10%, rgba(227, 178, 60, 0.14), transparent 70%),
     var(--bg);

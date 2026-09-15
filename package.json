@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "node --test \"test/**/*.test.mjs\"",
-    "package:orchestrator": "esbuild src/orchestrator/index.js --bundle --platform=node --format=esm --outfile=dist-orchestrator/index.js --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" && cp src/orchestrator/seats.json dist-orchestrator/seats.json",
+    "package:orchestrator": "esbuild src/orchestrator/index.js --bundle --platform=node --format=esm --outfile=dist-orchestrator/index.js --banner:js=\"import { createRequire as __sophiaCreateRequire } from 'module'; const require = __sophiaCreateRequire(import.meta.url);\" && cp src/orchestrator/seats.json dist-orchestrator/seats.json",
     "prepublishOnly": "echo 'REFUSING: this package is not for npm publish.' >&2 && exit 1"
   },
   "dependencies": {
