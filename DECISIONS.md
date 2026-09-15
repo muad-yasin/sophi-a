@@ -1394,3 +1394,30 @@ exist in THCMCP), no change to `seats.json`, and the private relay is still wher
 work landed first - thcmcp-cb re-curates it into THCMCP, so for a few hours the two engines
 differ (THCMCP lacks v2 until that lands). The resolver does not try to pick the "newer" one;
 that would be guessing.
+
+## 2026-09-15: "Family" MVP polish - hub-and-spoke stays, "family" is UI framing, not fan-out capability
+
+Council-planned (`relay/runs/2026-09-15T18-55-34-601Z/build.md`, unanimous sign-off, $0.031),
+Muad's ask relayed by thcmcp-66/sophi-a-ed. Decision, stated plainly:
+
+(a) **`src/orchestrator/peer-pool.js`'s `fanOut()` guard is kept, unchanged** - only the `cnc` seat
+may call `fanOut()`, enforced by the existing test pinning the exact throw `'Fan-out only allowed
+from cnc seat'` for any other caller. Verified directly against the real source and the real test
+this session, not assumed: `peer-pool.js:264` throws that exact string; `test/peer-pool.test.mjs`
+asserts it for a `plan-1` caller. No line of `peer-pool.js` changed by this decision - `git diff
+master -- src/orchestrator/peer-pool.js` is empty.
+
+(b) **"Family" means a seat's supervised worker agents under the existing mechanism - UI framing,
+not fan-out capability.** `plan-1..3` and any future Advisor/Emissary seat get a read-only view of
+worker agents that exist because `cnc` fanned them out, never a fan-out path of their own. This
+MVP is a cnc-only coordinator: `cnc` stays the only coordinator, full stop.
+
+(c) **Reopening hub-and-spoke (per-seat fan-out) is explicitly deferred to Muad, post-playtest -
+not decided here.** Reasoning on record from the planning council: reopening it in a polish pass
+would multiply the stop-mechanism/spend-cap surface across 8 seats with no offline-testable
+payoff, and would silently break peer-pool-v1's already-tested invariant (6 green tests as of this
+entry, including `fanOut()`'s exact-message guard).
+
+No code change to `peer-pool.js` itself in this entry - this is a decision record only. Built as
+part of Session A (this session) of the family-MVP's 3-session split; Session B (receipts panel +
+compassion states) and Session C (TODO pill) build on top of this decision without reopening it.

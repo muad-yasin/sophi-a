@@ -270,3 +270,17 @@
   `.grid.is-cold .seat-card:not(.seat-card-static)` out-ranked the focused opacity, so the whole
   Emissary overlay rendered at 0.6 - fixed by excluding `.seat-card-unwired`. Verified in a running
   dev build in Chrome: rail 0.7, focused 1, panel shown, Escape and Back to home both close it.
+- 2026-09-15 - "Family" MVP polish, Session A, items 1+2 (build.md §5.1/§5.2 of
+  `relay/runs/2026-09-15T18-55-34-601Z/build.md`, unanimous council sign-off, $0.031). Item 1,
+  offline-first acceptance harness: `test/fixtures/fake-claude.sh` (env-controllable exit
+  code/delay/marker/stdout, no networking tool in its own source) + `test/fixtures/
+  mock-relay-chain.mjs` (all-approve/one-holdout/malformed-json-critic scenarios, `signoff`/
+  `holdout` shaped like relay's real report.json) + `test/fixtures/fixture-selftest.test.mjs` (11
+  tests, all offline). Item 2, family-model decision record: `DECISIONS.md`'s new 2026-09-15
+  entry, no code change to `peer-pool.js` (`git diff c566d2a -- src/orchestrator/peer-pool.js`
+  empty - the plan's own literal wording, `git diff master`, is unsatisfiable since peer-pool.js
+  doesn't exist on master yet; diffed against this branch's own starting commit instead, flagged
+  to sophi-a-ed/thcmcp-66). `npm test`: 22/22 green (11 pre-existing + 11 new; the plan's "17/17"
+  figure didn't match the real pre-existing count of 11, noted honestly rather than silently
+  reconciled). Built in worktree `../sophi-a-family-mvp-a`, branch `sophi-a-family-mvp-a` off
+  `peer-pool-v1` @ c566d2a. Not merged - Muad's call per the plan's own open decisions.
