@@ -212,17 +212,17 @@ const CONFIGURABLE_SEAT_IDS = ["cnc", "advisor"] as const;
 // for this list; keep the two in sync manually, there is no shared-module setup between this
 // Tauri frontend and the Node orchestrator sidecar yet. xai/Grok is deliberately excluded by
 // standing product policy - do not add it back without asking first.
-const ALLOWED_PROVIDERS: { id: string; label: string }[] = [
-  { id: "anthropic", label: "Anthropic (Claude / Fable)" },
-  { id: "openai", label: "OpenAI" },
-  { id: "google", label: "Google (Gemini)" },
-  { id: "mistral", label: "Mistral" },
-  { id: "deepseek", label: "DeepSeek" },
-  { id: "groq", label: "Groq" },
-  { id: "cohere", label: "Cohere" },
-  { id: "openrouter", label: "OpenRouter" },
-  { id: "together", label: "Together" },
-  { id: "zai", label: "Z.ai" },
+const ALLOWED_PROVIDERS: { id: string; label: string; envVar: string }[] = [
+  { id: "anthropic", label: "Anthropic (Claude / Fable)", envVar: "ANTHROPIC_API_KEY" },
+  { id: "openai", label: "OpenAI", envVar: "OPENAI_API_KEY" },
+  { id: "google", label: "Google (Gemini)", envVar: "GOOGLE_API_KEY" },
+  { id: "mistral", label: "Mistral", envVar: "MISTRAL_API_KEY" },
+  { id: "deepseek", label: "DeepSeek", envVar: "DEEPSEEK_API_KEY" },
+  { id: "groq", label: "Groq", envVar: "GROQ_API_KEY" },
+  { id: "cohere", label: "Cohere", envVar: "COHERE_API_KEY" },
+  { id: "openrouter", label: "OpenRouter", envVar: "OPENROUTER_API_KEY" },
+  { id: "together", label: "Together", envVar: "TOGETHER_API_KEY" },
+  { id: "zai", label: "Z.ai", envVar: "ZAI_API_KEY" },
 ];
 
 const connErrorEl = document.getElementById("conn-error")!;
@@ -2415,7 +2415,7 @@ async function buildSetupProviderList() {
 
     const input = document.createElement("input");
     input.type = "password";
-    input.placeholder = alreadySet.has(p.id) ? "•••••••• (change)" : "paste key";
+    input.placeholder = alreadySet.has(p.id) ? "•••••••• (change)" : p.envVar;
     input.setAttribute("aria-label", `${p.label} API key`);
 
     const saveBtn = document.createElement("button");
@@ -2429,7 +2429,7 @@ async function buildSetupProviderList() {
         const stillSet = await refreshSetProviders();
         badge.textContent = stillSet.has(p.id) ? "SET" : "NOT SET";
         badge.dataset.set = String(stillSet.has(p.id));
-        input.placeholder = stillSet.has(p.id) ? "•••••••• (change)" : "paste key";
+        input.placeholder = stillSet.has(p.id) ? "•••••••• (change)" : p.envVar;
       } catch (err) {
         debugLog(`set_api_key(${p.id}) failed: ${String(err)}`);
       }
@@ -2438,6 +2438,45 @@ async function buildSetupProviderList() {
     item.append(label, input, saveBtn, badge);
     list.appendChild(item);
   }
+}
+
+// Setup drawer's model chips (setup-drawer.png reference: "Claude Sonnet 5 / GPT-5 / Gemini 2.5
+// Pro / DeepSeek V4") - a second, real affordance for cnc's existing provider/model fields, not
+// a separate mocked control. Clicking a chip drives the exact same real command the home
+// header's own select/input already send.
+function syncModelChips() {
+  const cnc = tileEl("cnc");
+  const select = cnc?.querySelector<HTMLSelectElement>('[data-role="provider-select"]');
+  const modelInput = cnc?.querySelector<HTMLInputElement>('[data-role="model-input"]');
+  // an untouched model-input has no real .value yet, only its placeholder ("claude-sonnet-5") -
+  // fall back to that so the matching default chip still shows active before any real edit.
+  const currentModel = modelInput?.value || modelInput?.placeholder || "";
+  document.querySelectorAll<HTMLButtonElement>(".setup-model-chip").forEach((chip) => {
+    const active = chip.dataset.provider === select?.value && chip.dataset.model === currentModel;
+    chip.setAttribute("aria-checked", String(active));
+  });
+}
+
+function setupModelChips() {
+  const cnc = tileEl("cnc");
+  const select = cnc?.querySelector<HTMLSelectElement>('[data-role="provider-select"]');
+  const modelInput = cnc?.querySelector<HTMLInputElement>('[data-role="model-input"]');
+
+  document.querySelectorAll<HTMLButtonElement>(".setup-model-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const provider = chip.dataset.provider!;
+      const model = chip.dataset.model!;
+      if (select) select.value = provider;
+      if (modelInput) modelInput.value = model;
+      sendCommand({ cmd: "configure", seatId: "cnc", provider });
+      sendCommand({ cmd: "configure", seatId: "cnc", model });
+      const badge = cnc?.querySelector<HTMLElement>('[data-role="chat-only-badge"]');
+      if (badge) badge.hidden = provider === "anthropic";
+      syncModelChips();
+    });
+  });
+
+  syncModelChips();
 }
 
 function setupSetupPanel() {
@@ -2455,6 +2494,7 @@ function setupSetupPanel() {
     panel.hidden = false;
     toggle.setAttribute("aria-expanded", "true");
     void buildSetupProviderList();
+    syncModelChips();
   };
   const close = () => {
     panel.hidden = true;
@@ -2543,6 +2583,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupGlancePopover();
   setupGlobalOverlayKeys();
   setupStarterPills();
+  setupModelChips();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {

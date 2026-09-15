@@ -183,14 +183,27 @@
 
       <section class="setup-section">
         <h3>Command and Control seat</h3>
-        <p class="setup-hint">Pick the home model - the one that's always talking to you in the center. <code>cnc</code> and all three building seats are built specifically to run real Claude Code - your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
+        <p class="setup-hint">The model that always talks to you in the center. Change it any time from the center header too.</p>
+        <!-- A second, real affordance for the exact same control the home header already has -
+             clicking a chip sends the same {cmd:'configure', seatId:'cnc', ...} commands the
+             header's own provider/model fields send (setupModelChips() in main.ts), it doesn't
+             invent a fixed 4-model list the backend can't actually honor: every one of these
+             four maps to a real, already-supported provider+model pair. -->
+        <div class="setup-model-chips" id="setup-model-chips" role="radiogroup" aria-label="Command and Control model">
+          <button type="button" class="setup-model-chip" data-provider="anthropic" data-model="claude-sonnet-5">Claude Sonnet 5</button>
+          <button type="button" class="setup-model-chip" data-provider="openai" data-model="gpt-5">GPT-5</button>
+          <button type="button" class="setup-model-chip" data-provider="google" data-model="gemini-2.5-pro">Gemini 2.5 Pro</button>
+          <button type="button" class="setup-model-chip" data-provider="deepseek" data-model="deepseek-v4">DeepSeek V4</button>
+        </div>
+        <p class="setup-hint"><code>cnc</code> and all three building seats are built specifically to run real Claude Code - your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
       </section>
 
       <section class="setup-section">
         <h3>Claude Code CLI · build seats</h3>
         <div class="setup-cli-row">
-          <button type="button" id="setup-check-cli" class="btn">Check</button>
+          <span class="setup-cli-command">claude --version</span>
           <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">NOT CHECKED YET</span>
+          <button type="button" id="setup-check-cli" class="btn">Check</button>
         </div>
         <p id="setup-cli-install-hint" class="setup-hint setup-cli-install-hint" hidden>
           Don't have it yet? It installs in one line -

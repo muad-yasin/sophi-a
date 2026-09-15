@@ -1023,12 +1023,17 @@ body {
   margin-top: calc(-1 * var(--sp-2));
 }
 
+/* gold mono-uppercase eyebrow, matching every other section label in the app ("PLANNING SEATS",
+   "COMMAND AND CONTROL") and setup-drawer.png's own headers - was a plain white bold h3 before,
+   which didn't match this app's own established heading convention anywhere else. */
 .setup-section h3 {
-  font-family: var(--font-chrome);
-  font-size: var(--font-chrome-size);
-  font-weight: var(--font-chrome-weight);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin: 0 0 var(--sp-2);
-  color: var(--text-primary);
+  color: var(--gold);
 }
 
 .setup-hint {
@@ -1057,6 +1062,41 @@ body {
   gap: var(--sp-3);
 }
 
+.setup-cli-command {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.setup-model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+}
+
+.setup-model-chip {
+  font-family: var(--font-chrome);
+  font-size: 12px;
+  padding: 6px var(--sp-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.setup-model-chip:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.setup-model-chip[aria-checked="true"] {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+  color: var(--text-primary);
+}
+
 .setup-cli-status {
   font-size: 12px;
   color: var(--text-secondary);
@@ -1079,9 +1119,13 @@ body {
   gap: var(--sp-2);
 }
 
+/* was a 3-column grid for 4 real children (label/input/save-button/status badge) - the badge
+   silently wrapped onto its own implicit row below, which is what made every provider row look
+   like it had its status on a separate line instead of inline (setup-drawer.png reference has it
+   on the same row) - a real layout bug, not a deliberate simplification. */
 .setup-provider-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   gap: var(--sp-2);
   align-items: center;
 }
