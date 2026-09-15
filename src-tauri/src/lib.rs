@@ -296,6 +296,18 @@ fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
 
     let mut command = Command::new(&node_command);
     command.arg(&entry).current_dir(&cwd).stdout(Stdio::piped()).stderr(Stdio::piped());
+    // Muad's explicit call (2026-09-15): a public/released build of Sophi-A must never let the
+    // cnc/build-N seats fall back to the operator's own claude.ai subscription login - it must
+    // require a real ANTHROPIC_API_KEY, same as every other provider. cfg!(debug_assertions) is
+    // this codebase's existing, already-trusted dev/release distinction (see resolve()'s own
+    // dev-fallback gate above) - mirrored here rather than inventing a second flag. The
+    // orchestrator side (adapters/claudeCodeSubprocess.js) reads this to add `--bare` (Claude
+    // Code's own documented flag: "Anthropic auth is strictly ANTHROPIC_API_KEY ... OAuth and
+    // keychain are never read") and to refuse to spawn at all without a key, rather than silently
+    // falling back to whatever's on the machine.
+    if !cfg!(debug_assertions) {
+        command.env("SOPHIA_REQUIRE_API_KEY", "1");
+    }
     if let Some(relay) = &relay_path {
         // Overrides the orchestrator/adapters' own `RELAY_PATH || ../relay` default (PLAN.md
         // "What 'reuses relay's backend' means, precisely") with the path this chain resolved,

@@ -130,3 +130,9 @@ Automated packaging and delivery (once `npm run tauri build` is wired and signed
 a download-page-per-purchase flow instead of by-hand email, regional pricing, and a public
 "if it becomes a business" pledge mechanism if the author wants to mirror `plan-shop.md`'s 0.7
 percent pattern here too - none of that is decided or designed, only named as plausible next steps.
+
+**Website-wallet idea (2026-09-15):** a Steam-style stored-balance wallet on sower-industries.de
+(Stripe top-up, non-cashable, spendable across every product including this one) is floated as a
+possible future way to pay for Sophi-A seat usage without individually sourcing provider API
+keys. Not scoped, not designed - full writeup lives in `THCMCP/Review/FLAGSHIP-IDEAS.md`, this is
+a pointer only.

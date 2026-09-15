@@ -291,6 +291,14 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Same real-control-in-the-wrong-place pattern as the earlier Copy/Export/Smoke-run fixes: a
+   collapsed rail card shows name/status/one-line-detail only in every Claude Design reference,
+   never a running cost figure - that belongs in the focused overlay (which already has its own
+   cost-readout convention), not stacked into the compact resting card. */
+.seat-card:not(.is-focused) .cost-ticker {
+  display: none;
+}
+
 /* color is never the sole carrier of status - a text badge always accompanies the glow ring */
 .status-badge {
   font-family: var(--font-chrome);
@@ -2466,15 +2474,28 @@ body {
   align-self: flex-end;
 }
 
-.seat-card .tile-output {
+/* Real bug Muad caught live: seat output now renders as real markdown (marked/highlight.js -
+   headings, paragraphs, code blocks), so a multi-paragraph reply is several block-level <p>/<pre>
+   elements, not one text run - white-space:nowrap only clips inline overflow, it does nothing to
+   stop each block child from stacking on its own line. A collapsed rail card showed the model's
+   whole reply, one paragraph per line, instead of a one-line preview. Line-clamp works on the
+   rendered block content as a whole regardless of how many child elements it contains. */
+.seat-card:not(.is-focused) .tile-output {
   margin: 0;
   font-family: var(--font-body);
   font-size: 12px;
   color: var(--text-placeholder);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.seat-card:not(.is-focused) .tile-output * {
+  display: inline;
+  margin: 0;
+  padding: 0;
 }
 
 .seat-card .pick-badge {

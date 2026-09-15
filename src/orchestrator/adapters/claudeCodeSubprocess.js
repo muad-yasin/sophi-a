@@ -90,6 +90,15 @@ const RESTRICTED_ARGS = [
   '--permission-prompts', 'none',
 ];
 
+// Muad's explicit call (2026-09-15): a public/released Sophi-A build must never let cnc/build-N
+// ride the operator's own claude.ai subscription login - the same way every other provider needs
+// a real key, this must too. src-tauri/src/lib.rs sets SOPHIA_REQUIRE_API_KEY only on a release
+// build (cfg!(debug_assertions)), never a dev one, so a contributor running `npm run tauri dev`
+// keeps today's convenience unchanged. `--bare` is Claude Code's own documented flag for this
+// exact case ("Anthropic auth is strictly ANTHROPIC_API_KEY ... OAuth and keychain are never
+// read" - verified via `claude --help`, not assumed).
+const REQUIRE_API_KEY = process.env.SOPHIA_REQUIRE_API_KEY === '1';
+
 // One session id per seat, so later turns continue the same claude-code conversation via
 // --resume rather than starting a fresh one each time (PLAN.md: "held open interactively" means
 // a fresh short-lived process per turn, continuity carried by --resume).
@@ -111,7 +120,18 @@ function workdirFor(seatConfig) {
  * @param {(type: string, detail?: any) => void} emit
  */
 export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
-  const args = ['-p', task, '--output-format', 'stream-json', '--verbose', ...RESTRICTED_ARGS];
+  if (REQUIRE_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    emit('seat.start');
+    emit('seat.problem',
+      `seat ${seatId}: this build requires a real Anthropic API key (Setup → provider keys) - ` +
+      `it will not fall back to a claude.ai subscription login`);
+    return;
+  }
+  const args = [
+    '-p', task, '--output-format', 'stream-json', '--verbose',
+    ...(REQUIRE_API_KEY ? ['--bare'] : []),
+    ...RESTRICTED_ARGS,
+  ];
   const existingSessionId = sessionIds.get(seatId);
   if (existingSessionId) args.push('--resume', existingSessionId);
 
