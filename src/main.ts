@@ -260,21 +260,34 @@ function sendCommand(cmd: Record<string, unknown>) {
   }
 }
 
-// "timeout" reads as "timed out" on the badge - everywhere else (dataset.status, the CSS
-// selectors, Status itself) keeps the plain "timeout" token; this is display text only.
+// Title Case on the badge, matching every reference screenshot (idle-empty.png: "Idle",
+// focused-plan-needs-you.png: "Working", focused-build-error.png: "Degraded") - everywhere else
+// (dataset.status, the CSS selectors, Status itself) keeps the plain lowercase token, this is
+// display text only. "problem" reads as "Degraded" specifically because that's the real-world
+// meaning (a provider/process fault), not a debate outcome - see the seat-error-banner copy.
 const STATUS_LABELS: Record<Status, string> = {
-  idle: "idle",
-  working: "working",
-  problem: "problem",
-  timeout: "timed out",
+  idle: "Idle",
+  working: "Working",
+  problem: "Degraded",
+  timeout: "Timed out",
 };
+
+// cnc's own status line reads richer than every other seat's badge (design-handoff §4: "ready ·
+// nothing delegated" / "orchestrating N seats" next to COMMAND AND CONTROL) - real copy, not a
+// literal delegation count (this repo has no per-turn dispatch-count tracking yet), but it never
+// claims a specific number, so it stays honest.
+function homeStatusText(status: Status): string {
+  if (status === "working") return "orchestrating";
+  if (status === "problem") return "degraded";
+  return "ready · nothing delegated";
+}
 
 function setStatus(seatId: string, status: Status) {
   const tile = tileEl(seatId);
   if (!tile) return;
   tile.dataset.status = status;
   const badge = tile.querySelector('[data-role="badge"]');
-  if (badge) badge.textContent = STATUS_LABELS[status];
+  if (badge) badge.textContent = seatId === "cnc" ? homeStatusText(status) : STATUS_LABELS[status];
   setControlsEnabled(tile, status);
   updateDegradedCount();
 }
@@ -730,16 +743,19 @@ function setColdRailState(cold: boolean) {
     const output = tile.querySelector<HTMLElement>('[data-role="output"]');
     if (cold) {
       glyph?.setAttribute("data-status", "offline");
-      if (badge) badge.textContent = "offline";
+      // Matches cold-load.png exactly: the state line reads "Waiting for orchestrator" (not a
+      // separate "Offline" word - the reference never shows that word at all in this state) and
+      // the detail line is a literal em dash, since there's nothing to report yet.
+      if (badge) badge.textContent = "Waiting for orchestrator";
       if (output) {
-        output.textContent = "Waiting for orchestrator…";
+        output.textContent = "—";
         output.classList.add("placeholder");
       }
     } else {
       glyph?.removeAttribute("data-status");
-      if (badge) badge.textContent = tile.dataset.status ?? "idle";
+      if (badge) badge.textContent = STATUS_LABELS[(tile.dataset.status as Status) ?? "idle"];
       if (output && output.classList.contains("placeholder")) {
-        output.textContent = "Waiting for output…";
+        output.textContent = "Waiting for a task";
       }
     }
   }
@@ -765,6 +781,8 @@ function showConnected() {
   document.querySelector<HTMLElement>('[data-role="idle-hero"]')!.hidden = false;
   const needsLine = document.getElementById("needs-pill-line1");
   if (needsLine) needsLine.textContent = "◆ All quiet";
+  const cncBadge = tileEl("cnc")?.querySelector<HTMLElement>('[data-role="badge"]');
+  if (cncBadge) cncBadge.textContent = homeStatusText((tileEl("cnc")?.dataset.status as Status) ?? "idle");
 }
 
 function showConnecting() {
@@ -776,6 +794,10 @@ function showConnecting() {
   document.querySelector<HTMLElement>('[data-role="idle-hero"]')!.hidden = true;
   const needsLine = document.getElementById("needs-pill-line1");
   if (needsLine) needsLine.textContent = "● Orchestrator connecting";
+  // cnc reads "offline" during cold-load same as every other seat (cold-load.png reference) -
+  // the richer "ready · nothing delegated" copy only applies once actually connected.
+  const cncBadge = tileEl("cnc")?.querySelector<HTMLElement>('[data-role="badge"]');
+  if (cncBadge) cncBadge.textContent = "offline";
 }
 
 function showConnectionError() {
@@ -2527,6 +2549,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const tile = tileEl(seatId);
     if (tile && !tile.dataset.status) tile.dataset.status = "idle";
     if (tile) setControlsEnabled(tile, (tile.dataset.status as Status) || "idle");
+    const badge = tile?.querySelector<HTMLElement>('[data-role="badge"]');
+    const st = (tile!.dataset.status as Status) || "idle";
+    if (badge) badge.textContent = seatId === "cnc" ? homeStatusText(st) : STATUS_LABELS[st];
   }
   updateDegradedCount();
   showConnecting();
