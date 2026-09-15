@@ -1492,3 +1492,91 @@ seat-card markup (a `main.ts` DOM-wiring pass, not part of items 3/4's own file 
 risked touching the same shared surface another session's work might also touch mid-flight,
 without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
 here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
+
+## 2026-09-15: Sophi-A Seat Families, Session A - F1 (family memory) + F0 (flag/caps/fanOut generalization)
+
+Council-planned (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`, revising
+`relay/Docs/SophiA-Seat-Families-Plan.md`), Muad's reversal of the 2026-09-15 peer-pool-only
+decision, dispatched overnight by thcmcp-66. Session A is the only session allowed to touch
+`peer-pool.js`; F2-F10 are other sessions' scope, built against this session's §2 contracts only.
+
+**F1 - `src/orchestrator/family/familyMemory.js`.** Implements the plan's exact contract
+(`createFamily`/`loadFamilies`/`writeSessionState`/`writeTurnResult`/`readSession`) plus the
+council's memory-drift fix (§b "Memory-drift risk", §d.7): `loadFamilies()` recomputes each
+family's ledger view fresh from `sessions/*/turns/*.result.json` on every call and compares it
+against a caller-supplied `cache` Map; a mismatch means the recomputed view wins unconditionally
+and exactly one `family.notice` fires per family, never per row. `state.json`'s enum is the
+council-corrected one (`created, running, idle, stopped, failed-owned, stuck, holdout,
+needs-human, unreadable, interrupted, closed`). Atomic writes are temp-then-rename in the same
+directory; a corrupt or missing `state.json` reads back as `{ok:false, status:'unreadable'}`,
+never a thrown exception. `.families` added to `.gitignore` (same reasoning as `.workdirs`/`runs`
+already there).
+
+**Deviation, recorded per backend-developer's rule 12** (a design-level asymmetry doesn't have to
+be fixed by the change that found it): `deriveLedgerView()` silently skips an individual corrupt
+`*.result.json` file inside an otherwise-readable session, rather than surfacing it the way a
+corrupt `state.json` surfaces as `unreadable`. This is narrower and quieter than the plan's own
+"nothing is ever discarded, only marked" receipts invariant (§2.5) technically wants. Not fixed
+here because it's a one-line gap with no test coverage of its own yet, not because it's
+unimportant - named as a real reopen candidate for F3 (`familyLedger.js`, Session C), which
+already owns the richer receipts rendering this would feed into.
+
+**F0 - `families.config.json`, `src/orchestrator/family/familyConfig.js`,
+`src/orchestrator/envRestrictions.js`, `peer-pool.js` (extended, not rewritten).**
+
+1. **The `safeEnv()`/`RESTRICTED_ARGS` de-duplication** (council fix, closing named regression
+   risk (3) from the peer-pool plan's own §0): both `claudeCodeSubprocess.js` and `peer-pool.js`
+   carried byte-identical independent copies before this session - confirmed by diffing them
+   directly, not assumed. Both now import from the new `src/orchestrator/envRestrictions.js`;
+   neither defines its own copy (`test/env-restrictions.test.mjs`'s source-grep proves it). This
+   is a **G6 human-stop-gate file** per the plan's §7 - its content is unchanged from what both
+   call sites already carried, not edited beyond the extraction itself.
+2. **`families.config.json`** ships with `enabled: false` (G1: "the shipped file stays false") and
+   one row per real seat in `seats.json` (`cnc` enabled, everyone else disabled) - the plan's own
+   §2.2 example showed only 3 seats as illustrations; this extends to the full real roster since
+   `familyConfig.js`'s loader needs a real row per seat to have anything meaningful to clamp/check.
+3. **`familyConfig.js`** loads and validates the config: missing file → `FLAG_OFF_CONFIG` (never a
+   crash), invalid JSON → `{ok:false, error}` (never a throw), an unsupported `runtimes` value
+   (anything outside `claude-code`/`chat`/`council`) or an unsupported `providers` value (checked
+   against the real `providers.js` `isAllowedProvider()`, not a second hand-kept list - closes
+   "no xai anywhere" at config-load time) → `{ok:false, error}`, per-seat caps above the global
+   ones are clamped and logged once per seat per process.
+4. **`fanOut()`'s own fail-safe ordering** (the council's specific architecture fix, §b
+   "Flag/reversal guards"): a **recorded interpretation deviation** from the plan's most literal
+   reading. The plan's revised text says the cnc-identity check must run "strictly before any
+   families.config.json read... so that a missing file, a corrupt file, or any future
+   config-loading error can never change the throw for a non-cnc caller." Read as literally
+   "check identity before touching the filesystem at all," that would make a non-`cnc` seat
+   permanently unable to fan out even with the flag on and its own row enabled - which contradicts
+   §2.2's entire premise. Implemented instead as the guarantee the sentence's own justification
+   actually asks for: `loadFamilyConfig()` never throws (a missing or corrupt file folds into the
+   exact same `FLAG_OFF_CONFIG` fallback), so a non-`cnc` caller gets the exact legacy throw string
+   in all three cases - real flag-off, absent config, and corrupt config - deterministically,
+   never a crash, never a bypass. Verified directly:
+   `test/peer-pool.test.mjs`'s "F0(a)" and "F0(a-corrupt)" tests assert the exact legacy string
+   for a non-`cnc` caller under both an absent and a syntactically-invalid config file. Flagging
+   this reading rather than silently picking one, since a future session should know the literal
+   sentence and the implemented guarantee are not word-for-word the same thing.
+5. **`fanOut(coordinatorSeatId, opts, emit)` keeps its exact signature.** With the flag off (or
+   config absent/corrupt), behavior is byte-for-byte the pre-F0 function - `maxConcurrentPeers`
+   defaults to `DEFAULT_MAX_CONCURRENT_PEERS` (4), `spendCeilingUsd` defaults to `null`, no
+   cap-table lookup happens at all. With the flag on and the calling seat's own row `enabled:true`,
+   `maxConcurrentPeers`/`spendCeilingUsd` default to that seat's own clamped config values instead
+   (still overridable by an explicit caller-supplied value).
+6. **`--resume` capture-and-pass-through, scoped narrowly.** `spawnPeer()` now accepts an optional
+   `resumeSessionId` and appends `--resume <id>` when given; `peer.start`'s emitted detail now
+   also carries the real `session_id` the stream-json `init` line reported. `fanOut()` accepts an
+   optional `opts.sessionHandles` array (parallel to `count`, ignored entirely when the flag is
+   off) so a caller who already has prior session ids can resume them. **Explicitly not built
+   here, and not this session's scope**: persisting/looking up those handles across separate
+   `fanOut()` calls on its own - that is F7's job (`familyManager.js`, a later session), which is
+   expected to read `peer.start`'s `sessionId` and write it via F1's `writeSessionState`, then
+   read it back via `readSession` on the next dispatch. `fanOut()` itself only resumes a handle a
+   caller already supplies; it has no memory of its own peers across calls, same as before F0.
+
+7 net new files (`envRestrictions.js`, `family/familyConfig.js`, `family/familyMemory.js`,
+`families.config.json`, `test/env-restrictions.test.mjs`, `test/family-config.test.mjs`,
+`test/family-memory.test.mjs`), 2 files extended (`claudeCodeSubprocess.js` import-only,
+`peer-pool.js`), `test/peer-pool.test.mjs`'s existing 6 tests unchanged and still green. 73/73
+tests total (46 pre-existing + 27 new), run in chunks per the overnight instruction. Built in
+worktree `../families-a`, branch `families-a` off `master` @ `7bbffcb`. No merge, no push.
