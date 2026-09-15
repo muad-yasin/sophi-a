@@ -111,6 +111,10 @@ test('Decision 1 / Decision 3 - fanOut() never reads or modifies seats.json', as
 test('Decision 2 - a fan-out request from a seat other than cnc spawns zero subprocesses and returns the exact error', async () => {
   writeFakeClaude();
   const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+  // activePeers is module-level state shared with sibling tests in this file; a prior test's
+  // short-lived (non-stayAlive) peer may not have finished exiting yet, so settle to a clean
+  // baseline instead of trusting a snapshot taken mid-cleanup.
+  await waitUntil(() => activePeerCount() === 0, 3000);
   const before = activePeerCount();
 
   assert.throws(
