@@ -208,65 +208,6 @@ body {
   z-index: 20;
 }
 
-/* --- the 3x3 control grid --- */
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  grid-template-rows: auto 1fr;
-  gap: var(--sp-4);
-  flex: 1;
-  min-height: 0;
-  padding: var(--sp-4);
-}
-
-.tile.advisor {
-  grid-column: 1 / span 3;
-  grid-row: 1;
-}
-
-.tile.cnc {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.tile.planner {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.tile.builder {
-  grid-column: 3;
-  grid-row: 2;
-}
-
-/* three planners/builders stack in their column via CSS subgrid-free flexbox wrapper would need
-   a nesting change; simplest correct approach for a static 3-row stack without subgrid support
-   is to let each planner/builder tile occupy one third of its column's height via nth-of-type. */
-.tile.planner,
-.tile.builder {
-  display: flex;
-  flex-direction: column;
-}
-
-#grid.grid {
-  grid-template-areas:
-    "advisor advisor advisor"
-    "plan-1  cnc     build-1"
-    "plan-2  cnc     build-2"
-    "plan-3  cnc     build-3";
-  grid-template-rows: auto 1fr 1fr 1fr;
-}
-
-#tile-advisor { grid-area: advisor; }
-#tile-plan-1 { grid-area: plan-1; }
-#tile-plan-2 { grid-area: plan-2; }
-#tile-plan-3 { grid-area: plan-3; }
-#tile-cnc { grid-area: cnc; }
-#tile-build-1 { grid-area: build-1; }
-#tile-build-2 { grid-area: build-2; }
-#tile-build-3 { grid-area: build-3; }
-
 /* --- tile chrome --- */
 
 .tile {
@@ -1863,11 +1804,18 @@ body {
 
 /* --- header --- */
 
+/* Right column widened 300px -> 340px and header-right-row now wraps (see below): the
+   orchestrator-side merge added three more real header buttons (Stop All/Exports/Cost
+   breakdown alongside History/Setup) - five buttons plus the usage/balance/cost readouts don't
+   fit on one line in 300px at any reasonable button size, and were overflowing left into the
+   gauge in the center column (Muad flagged this directly, verified live before fixing). Kept the
+   body rail's own right column in sync at 340px too (see #grid.grid below) so the header cells
+   still line up with the rail edges under them. */
 .app-header {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 300px;
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
   align-items: stretch;
-  min-height: 96px;
+  min-height: 112px;
   padding: 0 var(--sp-4);
   gap: var(--sp-4);
   border-bottom: 1px solid var(--border);
@@ -1880,6 +1828,12 @@ body {
   justify-content: center;
   min-width: 0;
   gap: var(--sp-1);
+  /* CSS grid tracks don't clip overflowing children by default - at narrow widths the center
+     cell's mockup row (session tabs/todo pill) was overflowing past its own column and visually
+     bleeding into the right cell's real buttons, found testing down to ~1100px. Each cell owns
+     its own column's width now; content that doesn't fit clips instead of spilling into a
+     neighbor. */
+  overflow: hidden;
 }
 
 .app-header-left {
@@ -2060,8 +2014,22 @@ body {
 .header-right-row {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-1);
   margin-top: var(--sp-1);
+  max-width: 340px;
+}
+
+/* five real utility buttons now live here (Stop All/History/Exports/Cost breakdown/Setup) -
+   tighter than .setup-toggle's normal padding so a wrapped pair fits the 340px column without
+   looking like it's fighting the layout; still a real, generous mouse click target, just not the
+   full 44px touch minimum (desktop-only row, not a touch surface). */
+.header-right-row .setup-toggle {
+  padding: 6px var(--sp-2);
+  font-size: 11px;
+  min-height: 32px;
+  white-space: nowrap;
 }
 
 .run-cost-mock {
@@ -2205,7 +2173,7 @@ body {
    nested inside the rails, not direct grid children, so it was only ever accidentally close). */
 #grid.grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 300px;
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: none;
   gap: 0;
