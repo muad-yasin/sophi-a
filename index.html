@@ -25,29 +25,95 @@
         </radialGradient>
       </defs>
     </svg>
+
+    <!-- ===== Header (112px, 3-column, matches the page grid) — design-handoff §1 ===== -->
     <header class="app-header">
-      <div class="app-brand" aria-hidden="true">
-        <img class="app-brand-mark" src="/favicon.svg" alt="" />
-        <span class="app-brand-name">Sophi-A</span>
+      <div class="app-header-cell app-header-left">
+        <div class="app-brand" aria-hidden="true">
+          <img class="app-brand-mark" src="/design/logo-diamond.png" alt="" />
+          <span class="app-brand-text">
+            <span class="app-brand-name">Sophi-A</span>
+            <span class="app-brand-tag">C&amp;C</span>
+          </span>
+        </div>
+        <span class="app-brand-cwd">⌂ ~/Projects/sophi-a</span>
       </div>
-      <div class="app-header-actions">
-        <button type="button" id="stop-all-btn" class="setup-toggle stop-all-btn">
-          Stop All
+
+      <div class="app-header-cell app-header-center">
+        <!-- "needs you" pill: N is real (count of tiles in a problem state); the mechanism has
+             no distinct "needs a blocking answer" signal wired yet (relay/orchestrator gap, not
+             a GUI one) so that half of the count is honestly 0, not invented. -->
+        <button type="button" class="needs-pill" id="needs-pill" aria-haspopup="dialog" aria-expanded="false" aria-controls="glance-popover">
+          <span class="needs-pill-line1"><span id="needs-glyph">◆</span> <span id="needs-count">0</span> seat(s) need you · <span id="degraded-count">0</span> degraded</span>
+          <span class="needs-pill-line2">PRESS TAB</span>
         </button>
-        <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
-          Run history
-        </button>
-        <button type="button" id="exports-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="exports-panel">
-          Recent exports
-        </button>
-        <button type="button" id="cost-breakdown-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="cost-breakdown-panel">
-          Cost breakdown
-        </button>
-        <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
-          Setup
-        </button>
+
+        <!-- Session tabs, Todo pill, and the throughput gauge are static mockups - no backend
+             session/todo/telemetry concept exists yet (design-handoff §1, "mockup"). -->
+        <nav class="session-tabs" aria-label="Sessions (mockup)">
+          <span class="session-tab">1. Private</span>
+          <span class="session-tab">2. Private</span>
+          <span class="session-tab session-tab-active">3. Seat4</span>
+          <span class="session-tab">4. Business</span>
+          <span class="session-tab">5. Dune</span>
+        </nav>
+
+        <div class="header-mid-stack">
+          <div class="todo-pill" aria-label="Todo, priority (mockup)">
+            <span class="todo-pill-label">TODO · PRIORITY</span>
+            <span class="todo-pill-item">Finish one thing</span>
+            <span class="todo-pill-item">Be a little bit better tomorrow</span>
+            <span class="todo-pill-item">Stage</span>
+          </div>
+        </div>
+
+        <svg class="tokmin-gauge" viewBox="0 0 120 70" aria-hidden="true">
+          <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="#1e1e21" stroke-width="8" />
+          <path d="M10 60 A50 50 0 0 1 82 20" fill="none" stroke="url(#gauge-gold)" stroke-width="8" stroke-linecap="round" />
+          <defs>
+            <linearGradient id="gauge-gold" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#f0c75a" />
+              <stop offset="100%" stop-color="#dba52c" />
+            </linearGradient>
+          </defs>
+          <text x="60" y="52" text-anchor="middle" class="tokmin-gauge-text">18.4k tok/min</text>
+        </svg>
+      </div>
+
+      <div class="app-header-cell app-header-right">
+        <div class="usage-mock">CC Sess 14% / Wk 80% / Ctx 50%</div>
+        <div class="or-balance-mock">OR balance €7.77</div>
+        <div class="header-right-row">
+          <span class="run-cost-mock">$0.31 / $5</span>
+          <button type="button" id="stop-all-btn" class="setup-toggle stop-all-btn">
+            Stop All
+          </button>
+          <button type="button" id="history-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="history-panel">
+            History
+          </button>
+          <button type="button" id="exports-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="exports-panel">
+            Exports
+          </button>
+          <button type="button" id="cost-breakdown-toggle" class="setup-toggle history-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="cost-breakdown-panel">
+            Cost breakdown
+          </button>
+          <button type="button" id="setup-toggle" class="setup-toggle" aria-haspopup="dialog" aria-expanded="false" aria-controls="setup-panel">
+            Setup
+          </button>
+        </div>
       </div>
     </header>
+
+    <!-- "At a glance" popover - opens on click of the needs-pill or the Tab key (this screen
+         owns Tab, design-handoff §"Interactions"). Real data: reads every tile's own current
+         name/status, doesn't invent a session concept the backend doesn't have. -->
+    <div id="glance-popover" class="glance-popover" role="dialog" aria-labelledby="glance-popover-title" hidden>
+      <div class="glance-popover-header">
+        <h2 id="glance-popover-title">At a glance</h2>
+        <button type="button" id="glance-close" class="setup-close" aria-label="Close">&times;</button>
+      </div>
+      <ul id="glance-list" class="glance-list"></ul>
+    </div>
 
     <div id="history-panel" class="setup-panel history-panel" role="dialog" aria-labelledby="history-panel-title" hidden>
       <div class="setup-panel-header">
@@ -107,15 +173,20 @@
       <ul id="cost-budgets-list" class="cost-budgets-list"></ul>
     </div>
 
-    <div id="setup-panel" class="setup-panel" role="dialog" aria-labelledby="setup-panel-title" hidden>
+    <!-- Setup drawer - design-handoff §5: 520px, right-anchored, home usable behind it. -->
+    <div id="setup-panel" class="setup-panel setup-drawer" role="dialog" aria-labelledby="setup-panel-title" hidden>
       <div class="setup-panel-header">
         <h2 id="setup-panel-title">Setup</h2>
         <button type="button" id="setup-close" class="setup-close" aria-label="Close setup">&times;</button>
       </div>
 
       <section class="setup-section">
-        <h3>Claude Code CLI</h3>
-        <p class="setup-hint">This is the recommended path, not just one option among many: <code>cnc</code> and all three building seats are built specifically to run real Claude Code - your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
+        <h3>Command and Control seat</h3>
+        <p class="setup-hint">Pick the home model - the one that's always talking to you in the center. <code>cnc</code> and all three building seats are built specifically to run real Claude Code - your own installed, authenticated <code>claude</code>, never a bundled or shared copy.</p>
+      </section>
+
+      <section class="setup-section">
+        <h3>Claude Code CLI · build seats</h3>
         <div class="setup-cli-row">
           <button type="button" id="setup-check-cli" class="btn">Check</button>
           <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">Not checked yet</span>
@@ -127,13 +198,13 @@
       </section>
 
       <section class="setup-section">
-        <h3>Provider API keys</h3>
-        <p class="setup-hint">Only needed for providers you pick for <code>cnc</code>/<code>advisor</code> in their tile's own picker. Keys are stored locally on this machine and never leave it except to that provider's own API.</p>
+        <h3>Provider keys</h3>
+        <p class="setup-hint">Only needed for providers you pick for <code>cnc</code>/<code>advisor</code> in their own picker.</p>
         <ul id="setup-provider-list" class="setup-provider-list"></ul>
       </section>
 
-      <section class="setup-section">
-        <p class="setup-hint">Changed a key? The orchestrator needs a restart to pick it up.</p>
+      <section class="setup-section setup-footer">
+        <p class="setup-hint">No key ever leaves your machine. Changed a key? The orchestrator needs a restart to pick it up.</p>
         <button type="button" id="setup-restart" class="btn btn-send">Restart orchestrator</button>
         <span id="setup-restart-status" class="setup-hint" aria-live="polite"></span>
       </section>
@@ -229,352 +300,433 @@
     </div>
 
     <div id="connecting" class="connecting" role="status">
-      <img class="brand-mark" src="/favicon.svg" alt="" aria-hidden="true" />
+      <img class="brand-mark-cold" src="/design/sophia-portrait.png" alt="" aria-hidden="true" />
       <p>Connecting to orchestrator&hellip;</p>
+      <p class="connecting-sub">The rails come alive once the orchestrator answers - nothing is lost while you wait.</p>
     </div>
 
     <div id="conn-error" class="conn-error" role="alert" hidden>
       <span>Lost connection to the orchestrator. Retrying&hellip;</span>
     </div>
 
+    <!-- Scrim behind a focused seat overlay - never fully hides the home conversation, per
+         design-handoff's "DAW-style solo, not navigation" rationale. -->
+    <div id="focus-scrim" class="focus-scrim" hidden></div>
+
     <main id="grid" class="grid" hidden>
-      <section class="tile advisor" id="tile-advisor" data-seat="advisor">
-        <button class="advisor-toggle" id="advisor-toggle" aria-expanded="false" aria-controls="advisor-body">
-          <span class="tile-name">Advisor</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-          <span class="chevron" aria-hidden="true">&#9662;</span>
-        </button>
-        <div class="advisor-body" id="advisor-body" hidden>
-          <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+      <!-- ===== Left rail - "Planning seats" ===== -->
+      <aside class="rail rail-left" aria-label="Planning seats">
+        <div class="rail-eyebrow">
+          <span>PLANNING SEATS</span>
+          <span class="rail-eyebrow-sub">debate panels</span>
+        </div>
 
-          <div class="seat-config" data-role="seat-config">
-            <label class="seat-config-field">
-              <span class="seat-config-label">Provider</span>
-              <select data-role="provider-select" aria-label="Advisor provider"></select>
-            </label>
-            <label class="seat-config-field">
-              <span class="seat-config-label">Model id</span>
-              <input type="text" data-role="model-input" placeholder="claude-fable-5-1" aria-label="Advisor model id" />
-            </label>
-          </div>
-
-          <form class="task-form" data-role="task-form">
-            <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task to the advisor&hellip;" aria-label="Task for advisor"></textarea>
-            <div class="task-form-actions">
-              <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-              <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-            </div>
-          </form>
-
-          <!-- Phase 1 Step 3 (long-horizon build plan) - [HUMAN STOP]: a real live API call from
-               a new code path. This button only ever gets built and wired here, never clicked by
-               a session - the click itself is the human's own action, logged in DECISIONS.md
-               once done, not something this step's own acceptance test runs or waits on. -->
-          <button type="button" class="btn smoke-run-btn" data-role="smoke-run-btn" disabled
-            title="Sends a tiny real request (~10 tokens, &quot;Say hello&quot;) to confirm this seat actually works">
-            Smoke run
+        <section class="tile planner seat-card" id="tile-plan-1" data-seat="plan-1">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Plan I</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
           </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
 
-          <div class="advisor-actions">
-            <button class="btn btn-accept" data-action="accept" type="button">Accept</button>
-            <button class="btn btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
-          </div>
-
-          <!-- Backlog item 4 (docs/security-prompt-injection.md S2 forward rule, second
-               candidate): forwards advisor's real last reply into cnc, wrapped as untrusted
-               model output, gated behind the same confirm modal plan-N's forward-to-build uses.
-               Deliberately separate from Accept/Dismiss above, which stay inert per S4's own
-               guidance (Accept must carry a structured intent the orchestrator defines, not raw
-               advisor prose) - this button IS that structured intent, named for what it does. -->
-          <button type="button" class="btn forward-btn" data-role="advisor-forward-btn" disabled
-            title="Advisor hasn't replied yet">Forward to cnc</button>
-        </div>
-      </section>
-
-      <section class="tile planner" id="tile-plan-1" data-seat="plan-1">
-        <header class="tile-header">
-          <span class="tile-name">Planner 1</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Planner 1">
-          <option value="">Standard (plan-cheap)</option>
-          <option value="plan-fast">Fast (2 critics, no revisions)</option>
-          <option value="plan-thorough">Thorough (+1 revision round)</option>
-        </select>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Planner 1"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-          </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
-        <div class="cost-panel" data-role="cost-panel" hidden>
-          <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
-          <ul class="cost-row-list" data-role="cost-row-list"></ul>
-          <p class="cost-total" data-role="cost-total"></p>
-        </div>
-        <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
-        <div class="debate-panel" data-role="debate-panel" hidden>
-          <div class="debate-history-row" data-role="debate-history-row">
-            <label class="debate-history-label">History
-              <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
-                <option value="">Live</option>
+            <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Plan I">
+              <option value="">Standard (plan-cheap)</option>
+              <option value="plan-fast">Fast (2 critics, no revisions)</option>
+              <option value="plan-thorough">Thorough (+1 revision round)</option>
+            </select>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Plan I"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
+            <div class="cost-panel" data-role="cost-panel" hidden>
+              <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
+              <ul class="cost-row-list" data-role="cost-row-list"></ul>
+              <p class="cost-total" data-role="cost-total"></p>
+            </div>
+            <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
+            <div class="debate-panel" data-role="debate-panel" hidden>
+              <div class="debate-history-row" data-role="debate-history-row">
+                <label class="debate-history-label">History
+                  <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
+                    <option value="">Live</option>
+                  </select>
+                </label>
+              </div>
+              <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
+              <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
+              <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
+              <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="140" height="140" aria-hidden="true">
+                <g class="council-ring">
+                  <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+                  <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+                  <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+                  <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+                  <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+                </g>
+                <g stroke-linecap="round" stroke-linejoin="round">
+                  <g transform="translate(256 60)">
+                    <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
+                    <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
+                    <line x1="-20" y1="-4" x2="20" y2="-4"/>
+                    <line x1="0" y1="-4" x2="0" y2="19"/>
+                    <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
+                    <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
+                  </g>
+                  <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
+                    <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
+                  </g>
+                  <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
+                    <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                    <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
+                    <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
+                    <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
+                  </g>
+                </g>
+                <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+              </svg>
+              <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
+              <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+              <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
+              <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
+            </div>
+            <div class="forward-row" data-role="forward-row">
+              <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+                <option value="build-1">Build 1</option>
+                <option value="build-2">Build 2</option>
+                <option value="build-3">Build 3</option>
               </select>
-            </label>
-          </div>
-          <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
-          <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
-          <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
-          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
-            <g class="council-ring">
-              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
-              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
-              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
-              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
-              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
-            </g>
-            <g stroke-linecap="round" stroke-linejoin="round">
-              <g transform="translate(256 60)">
-                <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
-                <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
-              </g>
-              <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
-                <line x1="-20" y1="-4" x2="20" y2="-4"/>
-                <line x1="0" y1="-4" x2="0" y2="19"/>
-                <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
-                <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
-              </g>
-              <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
-                <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
-              </g>
-              <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
-                <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-                <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-              </g>
-              <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
-                <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
-                <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
-              </g>
-            </g>
-            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
-          </svg>
-          <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
-          <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
-          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
-          <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
-        </div>
-        <div class="forward-row" data-role="forward-row">
-          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
-            <option value="build-1">Build 1</option>
-            <option value="build-2">Build 2</option>
-            <option value="build-3">Build 3</option>
-          </select>
-          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
-            title="Needs a Council-approved plan first">Forward to build</button>
-        </div>
-      </section>
+              <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+                title="Needs a Council-approved plan first">Forward to build</button>
+            </div>
 
-      <section class="tile planner" id="tile-plan-2" data-seat="plan-2">
-        <header class="tile-header">
-          <span class="tile-name">Planner 2</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Planner 2">
-          <option value="">Standard (plan-cheap)</option>
-          <option value="plan-fast">Fast (2 critics, no revisions)</option>
-          <option value="plan-thorough">Thorough (+1 revision round)</option>
-        </select>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Planner 2"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+            <p class="seat-disclaimer">Reaches Plan I's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
-        <div class="cost-panel" data-role="cost-panel" hidden>
-          <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
-          <ul class="cost-row-list" data-role="cost-row-list"></ul>
-          <p class="cost-total" data-role="cost-total"></p>
-        </div>
-        <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
-        <div class="debate-panel" data-role="debate-panel" hidden>
-          <div class="debate-history-row" data-role="debate-history-row">
-            <label class="debate-history-label">History
-              <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
-                <option value="">Live</option>
+        </section>
+
+        <section class="tile planner seat-card" id="tile-plan-2" data-seat="plan-2">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Plan II</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Plan II">
+              <option value="">Standard (plan-cheap)</option>
+              <option value="plan-fast">Fast (2 critics, no revisions)</option>
+              <option value="plan-thorough">Thorough (+1 revision round)</option>
+            </select>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Plan II"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
+            <div class="cost-panel" data-role="cost-panel" hidden>
+              <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
+              <ul class="cost-row-list" data-role="cost-row-list"></ul>
+              <p class="cost-total" data-role="cost-total"></p>
+            </div>
+            <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
+            <div class="debate-panel" data-role="debate-panel" hidden>
+              <div class="debate-history-row" data-role="debate-history-row">
+                <label class="debate-history-label">History
+                  <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
+                    <option value="">Live</option>
+                  </select>
+                </label>
+              </div>
+              <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
+              <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
+              <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
+              <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="140" height="140" aria-hidden="true">
+                <g class="council-ring">
+                  <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+                  <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+                  <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+                  <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+                  <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+                </g>
+                <g stroke-linecap="round" stroke-linejoin="round">
+                  <g transform="translate(256 60)">
+                    <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
+                    <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
+                    <line x1="-20" y1="-4" x2="20" y2="-4"/>
+                    <line x1="0" y1="-4" x2="0" y2="19"/>
+                    <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
+                    <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
+                  </g>
+                  <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
+                    <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
+                  </g>
+                  <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
+                    <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                    <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
+                    <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
+                    <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
+                  </g>
+                </g>
+                <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+              </svg>
+              <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
+              <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+              <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
+              <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
+            </div>
+            <div class="forward-row" data-role="forward-row">
+              <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+                <option value="build-1">Build 1</option>
+                <option value="build-2">Build 2</option>
+                <option value="build-3">Build 3</option>
               </select>
-            </label>
+              <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+                title="Needs a Council-approved plan first">Forward to build</button>
+            </div>
+            <p class="seat-disclaimer">Reaches Plan II's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
-          <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
-          <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
-          <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
-          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
-            <g class="council-ring">
-              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
-              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
-              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
-              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
-              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
-            </g>
-            <g stroke-linecap="round" stroke-linejoin="round">
-              <g transform="translate(256 60)">
-                <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
-                <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
-              </g>
-              <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
-                <line x1="-20" y1="-4" x2="20" y2="-4"/>
-                <line x1="0" y1="-4" x2="0" y2="19"/>
-                <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
-                <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
-              </g>
-              <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
-                <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
-              </g>
-              <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
-                <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-                <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-              </g>
-              <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
-                <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
-                <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
-              </g>
-            </g>
-            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
-          </svg>
-          <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
-          <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
-          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
-          <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
-        </div>
-        <div class="forward-row" data-role="forward-row">
-          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
-            <option value="build-1">Build 1</option>
-            <option value="build-2">Build 2</option>
-            <option value="build-3">Build 3</option>
-          </select>
-          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
-            title="Needs a Council-approved plan first">Forward to build</button>
-        </div>
-      </section>
+        </section>
 
-      <section class="tile planner" id="tile-plan-3" data-seat="plan-3">
-        <header class="tile-header">
-          <span class="tile-name">Planner 3</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Planner 3">
-          <option value="">Standard (plan-cheap)</option>
-          <option value="plan-fast">Fast (2 critics, no revisions)</option>
-          <option value="plan-thorough">Thorough (+1 revision round)</option>
-        </select>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Planner 3"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-          </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
-        <div class="cost-panel" data-role="cost-panel" hidden>
-          <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
-          <ul class="cost-row-list" data-role="cost-row-list"></ul>
-          <p class="cost-total" data-role="cost-total"></p>
-        </div>
-        <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
-        <div class="debate-panel" data-role="debate-panel" hidden>
-          <div class="debate-history-row" data-role="debate-history-row">
-            <label class="debate-history-label">History
-              <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
-                <option value="">Live</option>
+        <section class="tile planner seat-card" id="tile-plan-3" data-seat="plan-3">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Plan III</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <select class="chain-select" data-role="chain-select" aria-label="Chain preset for Plan III">
+              <option value="">Standard (plan-cheap)</option>
+              <option value="plan-fast">Fast (2 critics, no revisions)</option>
+              <option value="plan-thorough">Thorough (+1 revision round)</option>
+            </select>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Plan III"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="cost-toggle" aria-expanded="false">Cost</button>
+            <div class="cost-panel" data-role="cost-panel" hidden>
+              <p class="inspect-empty" data-role="cost-empty">Pricing this seat's chain&hellip;</p>
+              <ul class="cost-row-list" data-role="cost-row-list"></ul>
+              <p class="cost-total" data-role="cost-total"></p>
+            </div>
+            <button type="button" class="inspect-toggle" data-role="debate-toggle" aria-expanded="false">Debate</button>
+            <div class="debate-panel" data-role="debate-panel" hidden>
+              <div class="debate-history-row" data-role="debate-history-row">
+                <label class="debate-history-label">History
+                  <select class="debate-history-select" data-role="debate-history-select" aria-label="Replay a past run for this seat">
+                    <option value="">Live</option>
+                  </select>
+                </label>
+              </div>
+              <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
+              <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
+              <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
+              <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="140" height="140" aria-hidden="true">
+                <g class="council-ring">
+                  <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
+                  <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
+                  <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
+                  <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
+                  <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
+                </g>
+                <g stroke-linecap="round" stroke-linejoin="round">
+                  <g transform="translate(256 60)">
+                    <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
+                    <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
+                    <line x1="-20" y1="-4" x2="20" y2="-4"/>
+                    <line x1="0" y1="-4" x2="0" y2="19"/>
+                    <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
+                    <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
+                  </g>
+                  <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
+                    <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
+                  </g>
+                  <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
+                    <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                    <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
+                  </g>
+                  <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
+                    <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
+                    <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
+                  </g>
+                </g>
+                <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
+              </svg>
+              <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
+              <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
+              <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
+              <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
+            </div>
+            <div class="forward-row" data-role="forward-row">
+              <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
+                <option value="build-1">Build 1</option>
+                <option value="build-2">Build 2</option>
+                <option value="build-3">Build 3</option>
               </select>
-            </label>
+              <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
+                title="Needs a Council-approved plan first">Forward to build</button>
+            </div>
+            <p class="seat-disclaimer">Reaches Plan III's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
-          <p class="debate-replay-banner" data-role="debate-replay-banner" hidden>REPLAY — not live</p>
-          <button type="button" class="council-demo-btn" data-role="council-demo-btn">Try Council demo (simulated)</button>
-          <p class="debate-replay-error" data-role="debate-replay-error" hidden></p>
-          <svg class="council-seal" data-role="debate-seal" viewBox="0 0 512 512" width="80" height="80" aria-hidden="true">
-            <g class="council-ring">
-              <path class="seat" data-provider="together" fill="#7a8fa6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z"/>
-              <path class="seat" data-provider="zai" fill="#8a9a7a" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(72 256 256)"/>
-              <path class="seat" data-provider="cohere" fill="#a68a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(144 256 256)"/>
-              <path class="seat" data-provider="google" fill="#7a90a6" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(216 256 256)"/>
-              <path class="seat" data-provider="openrouter" fill="#9a8a6b" d="M 256 256 L 184.2 58.7 A 210 210 0 0 1 327.8 58.7 Z" transform="rotate(288 256 256)"/>
-            </g>
-            <g stroke-linecap="round" stroke-linejoin="round">
-              <g transform="translate(256 60)">
-                <circle r="22" fill="none" stroke="#a9bacb" stroke-width="12"/>
-                <line x1="0" y1="-30" x2="0" y2="30" stroke="#a9bacb" stroke-width="12"/>
-              </g>
-              <g transform="rotate(72 256 256) translate(256 60) rotate(-72)" fill="none" stroke="#b3c2a8" stroke-width="10">
-                <line x1="-20" y1="-4" x2="20" y2="-4"/>
-                <line x1="0" y1="-4" x2="0" y2="19"/>
-                <path d="M -20 -4 A 8 9 0 0 0 -4 -4" transform="translate(0 8)"/>
-                <path d="M 4 -4 A 8 9 0 0 0 20 -4" transform="translate(0 8)"/>
-              </g>
-              <g transform="rotate(144 256 256) translate(256 60) rotate(-144)">
-                <path d="M 0 -23 L 20 -11.5 L 20 11.5 L 0 23 L -20 11.5 L -20 -11.5 Z" fill="none" stroke="#c4ab8e" stroke-width="10"/>
-              </g>
-              <g transform="rotate(216 256 256) translate(256 60) rotate(-216)">
-                <path d="M -20 0 A 20 20 0 0 1 0 -20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-                <path d="M 20 0 A 20 20 0 0 1 0 20" fill="none" stroke="#a9bfd6" stroke-width="12"/>
-              </g>
-              <g transform="rotate(288 256 256) translate(256 60) rotate(-288)">
-                <circle r="22" fill="none" stroke="#c2b294" stroke-width="10"/>
-                <path d="M 0 -12 L 12 12 L -12 12 Z" fill="none" stroke="#c2b294" stroke-width="10"/>
-              </g>
-            </g>
-            <circle cx="256" cy="256" r="92" fill="url(#council-orb)"/>
-          </svg>
-          <p class="inspect-empty" data-role="debate-empty">No relay run finished for this seat yet.</p>
-          <ul class="debate-signoff-list" data-role="debate-signoff-list"></ul>
-          <ul class="debate-scoreboard-list" data-role="debate-scoreboard-list"></ul>
-          <ul class="debate-failure-list" data-role="debate-failure-list"></ul>
-        </div>
-        <div class="forward-row" data-role="forward-row">
-          <select class="forward-select" data-role="forward-select" disabled aria-label="Forward this plan to">
-            <option value="build-1">Build 1</option>
-            <option value="build-2">Build 2</option>
-            <option value="build-3">Build 3</option>
-          </select>
-          <button type="button" class="btn forward-btn" data-role="forward-btn" disabled
-            title="Needs a Council-approved plan first">Forward to build</button>
-        </div>
-      </section>
+        </section>
 
-      <section class="tile cnc" id="tile-cnc" data-seat="cnc">
-        <header class="tile-header">
-          <span class="tile-name">Command &amp; Control</span>
+        <div class="rail-spacer"></div>
+        <div class="balance-mock">Mistral balance · €12.40</div>
+        <div class="rail-eyebrow rail-eyebrow-extra"><span>EXTRA SEAT</span></div>
+
+        <section class="tile advisor seat-card seat-card-dashed" id="tile-advisor" data-seat="advisor">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Advisor</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+
+            <div class="seat-config" data-role="seat-config">
+              <label class="seat-config-field">
+                <span class="seat-config-label">Provider</span>
+                <select data-role="provider-select" aria-label="Advisor provider"></select>
+              </label>
+              <label class="seat-config-field">
+                <span class="seat-config-label">Model id</span>
+                <input type="text" data-role="model-input" placeholder="claude-fable-5-1" aria-label="Advisor model id" />
+              </label>
+            </div>
+
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task to the advisor&hellip;" aria-label="Task for advisor"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+
+            <!-- Phase 1 Step 3 (long-horizon build plan) - [HUMAN STOP]: a real live API call from
+                 a new code path. This button only ever gets built and wired here, never clicked by
+                 a session - the click itself is the human's own action, logged in DECISIONS.md
+                 once done, not something this step's own acceptance test runs or waits on. -->
+            <button type="button" class="btn smoke-run-btn" data-role="smoke-run-btn" disabled
+              title="Sends a tiny real request (~10 tokens, &quot;Say hello&quot;) to confirm this seat actually works">
+              Smoke run
+            </button>
+
+            <div class="advisor-actions">
+              <button class="btn btn-accept" data-action="accept" type="button">Accept</button>
+              <button class="btn btn-dismiss" data-action="dismiss" type="button">Dismiss</button>
+            </div>
+
+            <!-- Backlog item 4 (docs/security-prompt-injection.md S2 forward rule, second
+                 candidate): forwards advisor's real last reply into cnc, wrapped as untrusted
+                 model output, gated behind the same confirm modal plan-N's forward-to-build uses.
+                 Deliberately separate from Accept/Dismiss above, which stay inert per S4's own
+                 guidance (Accept must carry a structured intent the orchestrator defines, not raw
+                 advisor prose) - this button IS that structured intent, named for what it does. -->
+            <button type="button" class="btn forward-btn" data-role="advisor-forward-btn" disabled
+              title="Advisor hasn't replied yet">Forward to cnc</button>
+            <p class="seat-disclaimer">Reaches Advisor's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
+          </div>
+        </section>
+      </aside>
+
+      <!-- ===== Center - "Command and Control" (home seat) ===== -->
+      <section class="home" id="tile-cnc" data-seat="cnc">
+        <div class="home-header">
+          <div class="home-header-left">
+            <span class="home-eyebrow">COMMAND AND CONTROL</span>
+            <div class="model-picker seat-config" data-role="seat-config">
+              <span class="model-picker-dot" aria-hidden="true"></span>
+              <select data-role="provider-select" aria-label="C&amp;C provider" class="model-picker-select"></select>
+              <input type="text" data-role="model-input" placeholder="claude-sonnet-5" aria-label="C&amp;C model id" class="model-picker-input" />
+              <span class="chat-only-badge" data-role="chat-only-badge" hidden>Chat only &mdash; no file access</span>
+            </div>
+          </div>
           <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-
-        <div class="seat-config" data-role="seat-config">
-          <label class="seat-config-field">
-            <span class="seat-config-label">Provider</span>
-            <select data-role="provider-select" aria-label="C&amp;C provider"></select>
-          </label>
-          <label class="seat-config-field">
-            <span class="seat-config-label">Model id</span>
-            <input type="text" data-role="model-input" placeholder="claude-sonnet-5" aria-label="C&amp;C model id" />
-          </label>
-          <span class="chat-only-badge" data-role="chat-only-badge" hidden>Chat only &mdash; no file access</span>
+          <span class="home-status-line" data-role="badge">idle</span>
         </div>
 
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Command and Control"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+        <div class="home-conversation">
+          <!-- Idle hero - shown while output still carries the placeholder text/class. -->
+          <div class="home-idle-hero" data-role="idle-hero">
+            <img class="home-portrait home-portrait-idle" src="/design/sophia-portrait.png" alt="Sophi-A" />
+            <div class="home-idle-copy">
+              <span class="home-nameplate">Sophi-A</span>
+              <h1 class="home-headline">What are we building?</h1>
+              <p class="home-sub">Talk to your home seat. Delegate to the planning rail when you want the panel to argue it out first, or to the build rail when it's time to write code.</p>
+              <div class="home-starters">
+                <button type="button" class="starter-pill" data-role="starter">Plan a migration, argued before it's built</button>
+                <button type="button" class="starter-pill" data-role="starter">Review a diff across three labs</button>
+                <button type="button" class="starter-pill" data-role="starter">Just talk something through</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- The live turn - a small portrait + name + status sits above the single message
+               slot (setOutput/echoTask's existing single-slot model - see main.ts). -->
+          <div class="home-turn">
+            <img class="home-portrait home-portrait-mini" src="/design/sophia-portrait.png" alt="" aria-hidden="true" />
+            <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+          </div>
+        </div>
+
+        <form class="composer" data-role="task-form">
+          <textarea class="composer-input task-input" data-role="task-input" rows="2" placeholder="Talk to Claude&hellip;" aria-label="Talk to Sophi-A"></textarea>
+          <div class="composer-row">
+            <div class="composer-delegate">
+              <span class="composer-delegate-label">Delegate</span>
+              <button type="button" class="delegate-pill" title="Dispatches to the planning rail - not wired in this pass, mirrors Advisor's own 'inert for slice 1' precedent">Debate it · 3 planning seats</button>
+              <button type="button" class="delegate-pill" title="Dispatches to the build rail - not wired in this pass">Swarm it · build seats</button>
+            </div>
+            <div class="composer-actions">
+              <button type="button" class="composer-attach" title="Attach (mockup)" aria-label="Attach">+</button>
+              <button type="submit" class="btn btn-send composer-send" data-role="send-btn">Send to Claude</button>
+              <button type="button" class="composer-mic" title="Voice (mockup)" aria-label="Voice input">●</button>
+              <button type="button" class="btn btn-stop composer-stop" data-role="stop-btn" disabled hidden>Stop</button>
+            </div>
           </div>
         </form>
 
@@ -586,157 +738,209 @@
         </button>
       </section>
 
-      <section class="tile builder" id="tile-build-1" data-seat="build-1">
-        <header class="tile-header">
-          <span class="tile-name">Builder 1</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="pick-badge" data-role="pick-badge" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Builder 1"></textarea>
-          <div class="compare-trigger" data-role="compare-trigger">
-            <label><input type="checkbox" data-role="also-build-2" /> also run on Builder 2</label>
-            <label><input type="checkbox" data-role="also-build-3" /> also run on Builder 3</label>
-          </div>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-          </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
-        <div class="inspect-panel" data-role="inspect-panel" hidden>
-          <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
-          <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
-          <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
-
-          <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
-               shown above into advisor or cnc. Binary detection and the 4,000-token warning are
-               real backend rejections/checks (index.js's forwardArtifact,
-               compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
-               renders what the server already decided. -->
-          <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
-            <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
-            <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
-            <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
-              <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
-            </label>
-            <div class="artifact-forward-controls">
-              <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
-                <option value="advisor">Advisor</option>
-                <option value="cnc">cnc</option>
-              </select>
-              <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
-            </div>
-          </div>
-
-          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
-            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
-            <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
-            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
-          </div>
+      <!-- ===== Right rail - "Build seats" (mirror of the left rail) ===== -->
+      <aside class="rail rail-right" aria-label="Build seats">
+        <div class="rail-eyebrow">
+          <span>BUILD SEATS</span>
+          <span class="rail-eyebrow-sub">agent swarms</span>
         </div>
-      </section>
 
-      <section class="tile builder" id="tile-build-2" data-seat="build-2">
-        <header class="tile-header">
-          <span class="tile-name">Builder 2</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="pick-badge" data-role="pick-badge" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Builder 2"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-          </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
-        <div class="inspect-panel" data-role="inspect-panel" hidden>
-          <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
-          <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
-          <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
-
-          <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
-               shown above into advisor or cnc. Binary detection and the 4,000-token warning are
-               real backend rejections/checks (index.js's forwardArtifact,
-               compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
-               renders what the server already decided. -->
-          <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
-            <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
-            <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
-            <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
-              <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
-            </label>
-            <div class="artifact-forward-controls">
-              <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
-                <option value="advisor">Advisor</option>
-                <option value="cnc">cnc</option>
-              </select>
-              <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
+        <section class="tile builder seat-card seat-card-reverse" id="tile-build-1" data-seat="build-1">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Build I</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="pick-badge" data-role="pick-badge" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
             </div>
-          </div>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build I"></textarea>
+              <div class="compare-trigger" data-role="compare-trigger">
+                <label><input type="checkbox" data-role="also-build-2" /> also run on Build II</label>
+                <label><input type="checkbox" data-role="also-build-3" /> also run on Build III</label>
+              </div>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
+            <div class="inspect-panel" data-role="inspect-panel" hidden>
+              <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
+              <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
+              <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
 
-          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
-            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
-            <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
-            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
-          </div>
-        </div>
-      </section>
+              <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
+                   shown above into advisor or cnc. Binary detection and the 4,000-token warning are
+                   real backend rejections/checks (index.js's forwardArtifact,
+                   compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
+                   renders what the server already decided. -->
+              <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
+                <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
+                <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
+                <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
+                  <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
+                </label>
+                <div class="artifact-forward-controls">
+                  <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
+                    <option value="advisor">Advisor</option>
+                    <option value="cnc">cnc</option>
+                  </select>
+                  <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
+                </div>
+              </div>
 
-      <section class="tile builder" id="tile-build-3" data-seat="build-3">
-        <header class="tile-header">
-          <span class="tile-name">Builder 3</span>
-          <span class="cost-ticker" data-role="cost-ticker" hidden></span>
-          <span class="pick-badge" data-role="pick-badge" hidden></span>
-          <span class="status-badge" data-role="badge">idle</span>
-        </header>
-        <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
-        <form class="task-form" data-role="task-form">
-          <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Builder 3"></textarea>
-          <div class="task-form-actions">
-            <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
-            <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
-          </div>
-        </form>
-        <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
-        <div class="inspect-panel" data-role="inspect-panel" hidden>
-          <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
-          <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
-          <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
-
-          <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
-               shown above into advisor or cnc. Binary detection and the 4,000-token warning are
-               real backend rejections/checks (index.js's forwardArtifact,
-               compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
-               renders what the server already decided. -->
-          <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
-            <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
-            <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
-            <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
-              <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
-            </label>
-            <div class="artifact-forward-controls">
-              <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
-                <option value="advisor">Advisor</option>
-                <option value="cnc">cnc</option>
-              </select>
-              <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
+              <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+                <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+                <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
+                <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+              </div>
             </div>
+            <p class="seat-disclaimer">Reaches Build I's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
+        </section>
 
-          <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
-            <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
-            <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
-            <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+        <section class="tile builder seat-card seat-card-reverse" id="tile-build-2" data-seat="build-2">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Build II</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="pick-badge" data-role="pick-badge" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build II"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
+            <div class="inspect-panel" data-role="inspect-panel" hidden>
+              <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
+              <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
+              <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
+
+              <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
+                   shown above into advisor or cnc. Binary detection and the 4,000-token warning are
+                   real backend rejections/checks (index.js's forwardArtifact,
+                   compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
+                   renders what the server already decided. -->
+              <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
+                <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
+                <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
+                <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
+                  <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
+                </label>
+                <div class="artifact-forward-controls">
+                  <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
+                    <option value="advisor">Advisor</option>
+                    <option value="cnc">cnc</option>
+                  </select>
+                  <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
+                </div>
+              </div>
+
+              <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+                <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+                <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
+                <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+              </div>
+            </div>
+            <p class="seat-disclaimer">Reaches Build II's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+
+        <section class="tile builder seat-card seat-card-reverse" id="tile-build-3" data-seat="build-3">
+          <button type="button" class="seat-card-summary" data-role="seat-card-summary" aria-expanded="false">
+            <span class="seat-glyph" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Build III</span>
+              <span class="cost-ticker" data-role="cost-ticker" hidden></span>
+              <span class="pick-badge" data-role="pick-badge" hidden></span>
+              <span class="status-badge" data-role="badge">idle</span>
+              <p class="tile-output" data-role="output">Waiting for output&hellip;</p>
+            </span>
+          </button>
+          <div class="seat-detail" data-role="seat-detail">
+            <div class="seat-detail-actions">
+              <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <form class="task-form" data-role="task-form">
+              <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build III"></textarea>
+              <div class="task-form-actions">
+                <button type="submit" class="btn btn-send" data-role="send-btn">Send</button>
+                <button type="button" class="btn btn-stop" data-role="stop-btn" disabled>Stop</button>
+              </div>
+            </form>
+            <button type="button" class="inspect-toggle" data-role="inspect-toggle" aria-expanded="false">Inspect changes</button>
+            <div class="inspect-panel" data-role="inspect-panel" hidden>
+              <p class="inspect-empty" data-role="inspect-empty">No comparison run yet for this seat.</p>
+              <ul class="inspect-file-list" data-role="inspect-file-list"></ul>
+              <pre class="inspect-diff" data-role="inspect-diff" hidden></pre>
+
+              <!-- Backlog item 8 (relay run 2026-09-10T23-20-49-005Z): forward the file currently
+                   shown above into advisor or cnc. Binary detection and the 4,000-token warning are
+                   real backend rejections/checks (index.js's forwardArtifact,
+                   compareSnapshot.js's inspectArtifact), not just UI courtesies - this row only
+                   renders what the server already decided. -->
+              <div class="artifact-forward-row" data-role="artifact-forward-row" hidden>
+                <p class="artifact-forward-warning" data-role="artifact-binary-warning" hidden>Text assets only - this file is binary.</p>
+                <p class="artifact-forward-warning" data-role="artifact-token-warning" hidden></p>
+                <label class="artifact-truncate-label" data-role="artifact-truncate-label" hidden>
+                  <input type="checkbox" data-role="artifact-truncate-checkbox" checked /> Truncate to fit before forwarding
+                </label>
+                <div class="artifact-forward-controls">
+                  <select class="forward-select" data-role="artifact-forward-select" aria-label="Forward this artifact to">
+                    <option value="advisor">Advisor</option>
+                    <option value="cnc">cnc</option>
+                  </select>
+                  <button type="button" class="btn forward-btn" data-role="artifact-forward-btn">Forward</button>
+                </div>
+              </div>
+
+              <div class="inspect-pick-actions" data-role="inspect-pick-actions" hidden>
+                <button type="button" class="btn btn-send" data-role="pick-btn">Pick this one</button>
+                <button type="button" class="btn" data-role="ask-advisor-btn">Ask advisor</button>
+                <button type="button" class="btn btn-stop" data-role="delete-workdir-btn">Delete workdir</button>
+              </div>
+            </div>
+            <p class="seat-disclaimer">Reaches Build III's own agents only. It cannot message another seat or another session — only your home seat dispatches.</p>
+          </div>
+        </section>
+
+        <div class="rail-spacer"></div>
+        <div class="balance-mock">GPT-5 balance · $8.15</div>
+        <div class="rail-eyebrow rail-eyebrow-extra"><span>EXTRA SEAT</span></div>
+
+        <!-- Emissary has no backend seat yet (an outbound-drafting seat, not part of SEAT_IDS /
+             the orchestrator today) - per the task's own instruction, this is placeholder-only:
+             real shape and copy, no click handler, no WS wiring, nothing to fake. -->
+        <section class="tile seat-card seat-card-dashed seat-card-static" id="tile-emissary" data-seat="emissary">
+          <div class="seat-card-summary" aria-disabled="true">
+            <span class="seat-glyph" data-status="offline" aria-hidden="true"></span>
+            <span class="seat-card-text">
+              <span class="tile-name">Emissary</span>
+              <span class="status-badge">offline</span>
+              <p class="tile-output">Outbound-drafting seat — not wired in this build.</p>
+            </span>
+          </div>
+        </section>
+      </aside>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

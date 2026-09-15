@@ -277,6 +277,19 @@ function setStatus(seatId: string, status: Status) {
   const badge = tile.querySelector('[data-role="badge"]');
   if (badge) badge.textContent = STATUS_LABELS[status];
   setControlsEnabled(tile, status);
+  updateDegradedCount();
+}
+
+// Header "needs you" pill (design-handoff §1): the degraded half is real, counted from every
+// seat's own current status. The "needs you" half stays a static 0 - there's no orchestrator
+// signal yet for "a seat is holding a blocking question," so it's left honest rather than mocked.
+function updateDegradedCount() {
+  const el = document.getElementById("degraded-count");
+  const pill = document.getElementById("needs-pill");
+  if (!el) return;
+  const n = SEAT_IDS.filter((id) => tileEl(id)?.dataset.status === "problem").length;
+  el.textContent = String(n);
+  pill?.classList.toggle("is-alert", n > 0);
 }
 
 // Phase 1 Step 1/2 (long-horizon build plan): seatId -> ready, from the orchestrator's real
@@ -447,6 +460,7 @@ function setOutput(seatId: string, text: string) {
   if (!output) return;
   renderSeatOutput(output, text);
   output.classList.remove("placeholder");
+  if (seatId === "cnc") hideHomeIdleHero();
 }
 
 // A visual record of what the operator asked for, since seat.output/seat.idle only ever carry
@@ -462,6 +476,15 @@ function echoTask(seatId: string, task: string) {
   if (!output) return;
   output.textContent = `> ${task}`;
   output.classList.remove("placeholder");
+  if (seatId === "cnc") hideHomeIdleHero();
+}
+
+// Design-handoff §4: the center's idle hero (large portrait + headline + starters) gives way to
+// the live turn once there's real content - driven off the same single output slot every other
+// seat already uses, not a new state machine.
+function hideHomeIdleHero() {
+  const hero = document.querySelector<HTMLElement>('[data-role="idle-hero"]');
+  if (hero) hero.hidden = true;
 }
 
 function handleSeatEvent(evt: SeatEvent) {
@@ -801,25 +824,171 @@ function scheduleReconnect() {
   setTimeout(connect, delay);
 }
 
-function setupAdvisorToggle() {
-  const toggle = document.getElementById("advisor-toggle");
-  const body = document.getElementById("advisor-body");
-  if (!toggle || !body) return;
-  toggle.addEventListener("click", () => {
-    const expanded = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!expanded));
-    body.hidden = expanded;
-  });
-}
-
 function setupAdvisorActions() {
   // Inert for slice 1, per PLAN.md: the affordance exists, the behavior is a later slice.
   document.querySelectorAll(".advisor-actions .btn").forEach((btn) => {
+    btn.addEventListener("click", () => closeFocusedSeat());
+  });
+}
+
+// --- Focused-seat overlay (design-handoff §"Interactions") ---
+// One mechanism, three entry points: clicking a rail card, a "back to home" button, or an
+// "at a glance" row all resolve to the same focus/unfocus pair. A focused seat's own
+// .seat-detail (task form, config, debate/cost/inspect panels - all pre-existing, untouched)
+// is simply revealed via CSS on the already-live DOM node; nothing is cloned or moved.
+
+const FOCUSABLE_SEAT_IDS = ["plan-1", "plan-2", "plan-3", "advisor", "build-1", "build-2", "build-3"] as const;
+let focusedSeatId: string | null = null;
+
+function focusSeat(seatId: string) {
+  if (!(FOCUSABLE_SEAT_IDS as readonly string[]).includes(seatId)) return;
+  const tile = tileEl(seatId);
+  if (!tile) return;
+  if (focusedSeatId && focusedSeatId !== seatId) unfocusTile(focusedSeatId);
+  focusedSeatId = seatId;
+  tile.classList.add("is-focused");
+  tile.querySelector('[data-role="seat-card-summary"]')?.setAttribute("aria-expanded", "true");
+  const scrim = document.getElementById("focus-scrim");
+  if (scrim) scrim.hidden = false;
+  closeGlancePopover();
+}
+
+function unfocusTile(seatId: string) {
+  const tile = tileEl(seatId);
+  if (!tile) return;
+  tile.classList.remove("is-focused");
+  tile.querySelector('[data-role="seat-card-summary"]')?.setAttribute("aria-expanded", "false");
+}
+
+function closeFocusedSeat() {
+  if (!focusedSeatId) return;
+  unfocusTile(focusedSeatId);
+  focusedSeatId = null;
+  const scrim = document.getElementById("focus-scrim");
+  if (scrim) scrim.hidden = true;
+}
+
+function setupFocusOverlay() {
+  for (const seatId of FOCUSABLE_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    const summary = tile?.querySelector<HTMLButtonElement>('[data-role="seat-card-summary"]');
+    summary?.addEventListener("click", () => {
+      if (focusedSeatId === seatId) closeFocusedSeat();
+      else focusSeat(seatId);
+    });
+    tile?.querySelector('[data-role="back-home"]')?.addEventListener("click", () => closeFocusedSeat());
+  }
+  document.getElementById("focus-scrim")?.addEventListener("click", () => closeFocusedSeat());
+}
+
+// --- "At a glance" popover - lists every real seat's own current name/status, jump-to-focus. ---
+
+function closeGlancePopover() {
+  const popover = document.getElementById("glance-popover");
+  const pill = document.getElementById("needs-pill");
+  if (popover) popover.hidden = true;
+  pill?.setAttribute("aria-expanded", "false");
+}
+
+function renderGlancePopover() {
+  const list = document.getElementById("glance-list");
+  if (!list) return;
+  list.innerHTML = "";
+  for (const seatId of SEAT_IDS) {
+    const tile = tileEl(seatId);
+    if (!tile) continue;
+    const name = tile.querySelector(".tile-name")?.textContent ?? seatId;
+    const status = tile.dataset.status ?? "idle";
+    const li = document.createElement("li");
+    li.className = "glance-row";
+    const glyph = document.createElement("span");
+    glyph.className = "seat-glyph seat-glyph-inline";
+    glyph.dataset.status = status;
+    const label = document.createElement("span");
+    label.className = "glance-row-name";
+    label.textContent = name;
+    const stateEl = document.createElement("span");
+    stateEl.className = "glance-row-status";
+    stateEl.textContent = status;
+    li.append(glyph, label, stateEl);
+    if ((FOCUSABLE_SEAT_IDS as readonly string[]).includes(seatId)) {
+      li.classList.add("glance-row-clickable");
+      li.addEventListener("click", () => {
+        closeGlancePopover();
+        focusSeat(seatId);
+      });
+    }
+    list.appendChild(li);
+  }
+}
+
+function openGlancePopover() {
+  const popover = document.getElementById("glance-popover");
+  const pill = document.getElementById("needs-pill");
+  if (!popover) return;
+  renderGlancePopover();
+  popover.hidden = false;
+  pill?.setAttribute("aria-expanded", "true");
+}
+
+function setupGlancePopover() {
+  const pill = document.getElementById("needs-pill");
+  const closeBtn = document.getElementById("glance-close");
+  pill?.addEventListener("click", () => {
+    const popover = document.getElementById("glance-popover");
+    if (popover?.hidden === false) closeGlancePopover();
+    else openGlancePopover();
+  });
+  closeBtn?.addEventListener("click", () => closeGlancePopover());
+}
+
+// Tab toggles the glance popover globally (this screen owns Tab); Escape closes whatever
+// overlay is open, most-specific first - a focused seat, then the glance popover, then Setup/
+// history. Always a soft, non-destructive dismiss (design-handoff §"Interactions").
+function setupGlobalOverlayKeys() {
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      const grid = document.getElementById("grid");
+      if (grid?.hidden) return; // not connected yet - nothing to show
+      e.preventDefault();
+      const popover = document.getElementById("glance-popover");
+      if (popover?.hidden === false) closeGlancePopover();
+      else openGlancePopover();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (focusedSeatId) {
+        closeFocusedSeat();
+        return;
+      }
+      const popover = document.getElementById("glance-popover");
+      if (popover && !popover.hidden) {
+        closeGlancePopover();
+        return;
+      }
+      const setupPanel = document.getElementById("setup-panel");
+      if (setupPanel && !setupPanel.hidden) {
+        document.getElementById("setup-close")?.dispatchEvent(new MouseEvent("click"));
+        return;
+      }
+      const historyPanel = document.getElementById("history-panel");
+      if (historyPanel && !historyPanel.hidden) {
+        document.getElementById("history-close")?.dispatchEvent(new MouseEvent("click"));
+      }
+    }
+  });
+}
+
+// Starter prompts (design-handoff §4) - real, small behavior: fills the composer, doesn't send.
+function setupStarterPills() {
+  const cnc = tileEl("cnc");
+  const input = cnc?.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+  cnc?.querySelectorAll<HTMLButtonElement>('[data-role="starter"]').forEach((btn) => {
     btn.addEventListener("click", () => {
-      const body = document.getElementById("advisor-body");
-      const toggle = document.getElementById("advisor-toggle");
-      if (body) body.hidden = true;
-      if (toggle) toggle.setAttribute("aria-expanded", "false");
+      if (input) {
+        input.value = btn.textContent ?? "";
+        input.focus();
+      }
     });
   });
 }
@@ -2270,7 +2439,6 @@ function setupSetupPanel() {
 window.addEventListener("DOMContentLoaded", () => {
   void initNotifications();
   showConnecting();
-  setupAdvisorToggle();
   setupAdvisorActions();
   setupTaskForms();
   setupStopAllButton();
@@ -2296,6 +2464,10 @@ window.addEventListener("DOMContentLoaded", () => {
   setupCommandPalette();
   setupWizardPanel();
   setupCouncilExplainer();
+  setupFocusOverlay();
+  setupGlancePopover();
+  setupGlobalOverlayKeys();
+  setupStarterPills();
   // Seed every tile's placeholder state explicitly (in case the orchestrator's own status
   // replay races the DOM), even though the HTML already ships with this markup.
   for (const seatId of SEAT_IDS) {
@@ -2303,5 +2475,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (tile && !tile.dataset.status) tile.dataset.status = "idle";
     if (tile) setControlsEnabled(tile, (tile.dataset.status as Status) || "idle");
   }
+  updateDegradedCount();
   connect();
 });
