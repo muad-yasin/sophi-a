@@ -19,6 +19,7 @@ import { estimateChainCost } from './costEstimate.js';
 import { checkAllSeats } from './preflight.js';
 import { listRecordedRuns, readRecordedRun, readRecordedLog } from './run-recorder.js';
 import { accumulate } from './cost-tracker.js';
+import { fanOut, stopPeer, stopAllPeers } from './peer-pool.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -227,6 +228,28 @@ export function startMany(wss, seatIds, task, confirmed) {
     }
   }
   for (const seatId of unique) startSeat(wss, seatId, task);
+}
+
+// Multi-session C&C delegation, v1 (relay/runs/2026-09-15T15-14-29-893Z/deliverable.md). A peer
+// is not a seat - broadcasting a distinct `fanout.*`/`peer.*` event namespace here keeps that
+// real at the wire-protocol level, not just in the module boundary peer-pool.js itself enforces.
+function makePeerEmit(wss) {
+  return (type, detail) => {
+    broadcast(wss, { type, timestamp: Date.now(), ...(detail !== undefined ? { detail } : {}) });
+  };
+}
+
+// Decision 2's own acceptance test: a fan-out request from any seat other than `cnc` spawns zero
+// subprocesses and reports the exact error text back over the wire - never just a server-side
+// console.error a caller can't see, since that would leave the UI with no way to explain why
+// nothing happened.
+export function handleFanOut(wss, seatId, count, task, opts = {}) {
+  try {
+    return fanOut(seatId, { count, task, ...opts }, makePeerEmit(wss));
+  } catch (err) {
+    broadcast(wss, { type: 'fanout.error', timestamp: Date.now(), detail: err.message });
+    return { dispatched: [], notice: err.message };
+  }
 }
 
 // "Plan approved" -> "code exists" (docs/security-prompt-injection.md's S2 forward rule, the
@@ -824,6 +847,15 @@ function main() {
       else if (msg.cmd === 'list_runs') handleListRuns(ws, msg.seatId);
       else if (msg.cmd === 'replay_run') handleReplayRun(ws, msg.seatId, msg.runId);
       else if (msg.cmd === 'get_seat_logs') handleGetSeatLogs(ws, msg.seatId, msg.runId);
+      else if (msg.cmd === 'fan_out') {
+        handleFanOut(wss, msg.seatId, msg.count, msg.task, {
+          maxConcurrentPeers: msg.maxConcurrentPeers,
+          spendCeilingUsd: msg.spendCeilingUsd,
+          estimatedUsdPerPeer: msg.estimatedUsdPerPeer,
+        });
+      }
+      else if (msg.cmd === 'stop_peer') stopPeer(msg.peerId);
+      else if (msg.cmd === 'stop_all_peers') stopAllPeers();
     });
   });
 
