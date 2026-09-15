@@ -479,9 +479,9 @@ function handleFamilyCreate(ws, wss, { ownerSeat, familyId, brief, task, humanCl
   try {
     const family = familyCreate({ ownerSeat, familyId, brief, plan: task, humanClick });
     broadcast(wss, { type: 'family.notice', timestamp: Date.now(), detail: { ownerSeat, familyId, notice: 'family created' } });
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: true, family: { ownerSeat: family.ownerSeat, familyId: family.familyId } }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: true, ownerSeat, familyId, family: { ownerSeat: family.ownerSeat, familyId: family.familyId } }));
   } catch (err) {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: false, reason: err.message }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: false, ownerSeat, familyId, reason: err.message }));
   }
 }
 
@@ -502,18 +502,18 @@ function handleFamilyList(ws, { ownerSeat }) {
 async function handleFamilyDispatch(ws, wss, { ownerSeat, familyId, sessionId, task, runtime, planItem }) {
   try {
     const result = await familyDispatch({ ownerSeat, familyId, sessionId, task, runtime, planItem }, familyEmit(wss));
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ...result }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ownerSeat, familyId, sessionId, ...result }));
   } catch (err) {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ok: false, reason: err.message }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
   }
 }
 
 function handleFamilyStop(ws, { ownerSeat, familyId, sessionId }) {
   try {
     const result = familyStop({ ownerSeat, familyId, sessionId });
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ...result }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ownerSeat, familyId, sessionId, ...result }));
   } catch (err) {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ok: false, reason: err.message }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
   }
 }
 
@@ -521,9 +521,9 @@ function handleFamilyClose(ws, wss, { ownerSeat, familyId, sessionId, humanClick
   try {
     const result = familyClose({ ownerSeat, familyId, sessionId, humanClick });
     broadcast(wss, { type: 'family.session.state', timestamp: Date.now(), detail: { ownerSeat, familyId, sessionId, status: 'closed' } });
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ...result }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ownerSeat, familyId, sessionId, ...result }));
   } catch (err) {
-    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ok: false, reason: err.message }));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
   }
 }
 

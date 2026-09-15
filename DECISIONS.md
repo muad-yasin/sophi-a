@@ -1889,4 +1889,56 @@ gate a real dispatch yet - already documented in the code as a known, not-yet-wi
 (`familyManagerRestartRecovery` is exported but not yet called from `index.js` startup - real gap,
 named here for whoever wires process startup next, not silently left unstated).
 
+## 2026-09-16: Sophi-A Seat Families, Session E - F8 (UI wiring)
+
+Loaded `THCMCP/skills/frontend-developer/SKILL.md` first per the dispatch. Built
+`src/ui/familyPanel.js` (a per-seat "Family" toggle + panel, all five required states: flag-off,
+loading, error, empty, active) and wired it into `index.html`/`main.ts`/`styles.css`.
+
+**Split deliberately for testability, not just organization**: `classifyPanelState()` and
+`describeFamilyPanel()` are pure, DOM-free functions (plain data in, plain data out) - the only
+layer `test/family-panel.test.mjs` exercises, since this repo has no `jsdom` installed and adding
+one for one overnight item felt like the wrong tradeoff. `buildFamilyPanelDom()` is the thin,
+untested-here DOM-building layer main.ts actually calls at runtime - real browser code, verified
+only by a real `vite build` succeeding (it does) and by source-grep tests over the wired-in
+`main.ts`/`index.html`, not by a live Chrome look. **F8's Chrome live-check is the plan's own
+named, accepted offline gap for an unattended overnight run** (§(c) "Two offline gaps named, not
+glossed over") - not verified this pass, deferred to the next session with a browser, same as the
+plan says.
+
+**Deviation from this codebase's own convention, named rather than silently done**: every other
+seat control (Cost/Debate/Inspect panels) is hand-written, duplicated markup per `<section
+id="tile-...">` card in `index.html`. The Family toggle/panel is instead injected via
+`setupFamilyPanels()` in `main.ts` for all seven `FAMILY_SEAT_IDS` (`cnc` + the six
+claude-code-capable rail seats; `advisor` excluded - chat-only runtime, no claude-code path to
+dispatch through, same reasoning F0 already applies at dispatch time; `emissary` excluded - no
+backend seat exists for it at all). Reasoning: seven near-identical hand-copies would be exactly
+the "bug class made representable" the frontend-developer skill's rule 1 warns against - one panel
+touched during review, six forgotten. The same `.inspect-toggle`/`.inspect-panel`-derived CSS
+classes are reused, no new visual language introduced.
+
+**Known, real simplification, named not hidden**: the panel has no live read path into
+`families.config.json` yet, so it cannot proactively show "off for this seat, here's why" before a
+human tries. Every seat's toggle opens and calls `family_list`; a real flag-off/runtime refusal
+only surfaces once a create/dispatch attempt comes back refused (F0's own exact error string),
+shown as this panel's error state - not the proactively-disabled-with-a-reason UX §2.10 describes.
+A future pass needs either a `family_config` read-only WS query or to fold the seat's enabled/
+runtimes row into `family_list`'s own response. Also not built: a family picker (only one family
+per seat is exercised - `family_dispatch`'s composer reads the familyId already loaded from the
+last `family_list`, so a seat with more than one family can't target a specific one from this UI
+yet); the Apply/Forward affordance (F6 never landed, nothing to gate against).
+
+**Also fixed while building this**: `index.js`'s `family_create.result`/`family_dispatch.result`/
+`family_stop.result`/`family_close.result` replies didn't carry `ownerSeat`/`familyId`/`sessionId`
+- the frontend has no way to route a bare `{ok, status, reason}` back to the panel that sent the
+request otherwise. Added to every reply and every error path, both branches.
+
+12 new tests (`test/family-panel.test.mjs`, 8; `test/seat-cards.test.mjs` extended, +4 including a
+literal-`humanClick: true` source check on the `family_create` call site). Full `npm test`:
+143/143 green. `npx vite build` succeeds (real bundling, not just `tsc`). One pre-existing gap in
+this repo's `tsc --noEmit` (a `.js`-module-import declaration-file error, already present against
+`todoPill.ts`'s import of `todoReader.js` before this session) now has a second instance
+(`familyPanel.js`) - not introduced by this change, not fixed here either (a real tsconfig fix,
+out of scope tonight), named for whoever next touches `tsconfig.json`.
+
 4 new tests (`test/family-manager.test.mjs`), full `npm test`: 131/131 green.
