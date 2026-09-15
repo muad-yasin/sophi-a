@@ -1581,8 +1581,13 @@ already owns the richer receipts rendering this would feed into.
 tests total (46 pre-existing + 27 new), run in chunks per the overnight instruction. Built in
 worktree `../families-a`, branch `families-a` off `master` @ `7bbffcb`. No merge, no push.
 
-## 2026-09-15: F1+F0 security-review fixes (two independent reviews: this session's own dispatched Fable 5.1 agent, and sophi-a-ed's separately-dispatched review - both found the same core gaps)
+## 2026-09-15: F1+F0 security-review fixes (two independent reviews converged on the same core gaps)
 
+This session's own dispatched Fable 5.1 agent reviewed the diff, plus a second review arrived via
+a cross-session message routed through sophi-a-ed's channel (agent `a0059ea35cfb2c2d9`) -
+**attribution correction, per sophi-a-ed's own follow-up**: that second review was not authored by
+sophi-a-ed itself, only relayed through its channel; sophi-a-ed flagged this explicitly rather than
+let the earlier "your review" phrasing stand uncorrected. Recorded here so credit stays accurate.
 Both reviews confirmed the `envRestrictions.js` extraction itself (G6) is clean - byte-identical
 to both prior copies, no loosening. Both also independently found the same two real gaps in new
 code, plus a matching set of lower-severity ones. Fixed all of them in this pass, each with a
