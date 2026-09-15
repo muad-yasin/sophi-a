@@ -3,20 +3,47 @@
 # Sophi-A
 
 **Five other labs review your plan before a line of code gets written.** Sophi-A is a Tauri
-desktop shell that runs eight real agent seats at once - one Command & Control chat, one Advisor,
-three planning seats, three building seats (real Claude Code subprocesses) - so a vibecoder gets
-more out of the models and subscriptions they already pay for. Open source (Apache-2.0); bring
-your own Claude Code/API credentials, nothing is resold.
+desktop shell built around one idea: a vibecoder gets more out of the models and subscriptions
+they already pay for by putting *multiple* LLMs from *different labs* to work on the same task
+instead of one model working alone - an **MLLM (multi-LLM) harness**, not a single-model chat
+window with extra panels. It runs eight real agent seats at once: one always-on Command &
+Control home seat, one Advisor, three planning seats, and three building seats (real Claude Code
+subprocesses). Open source (Apache-2.0); bring your own Claude Code/API credentials, nothing is
+resold.
+
+![Sophi-A's real Command Deck interface](marketing/assets/command-deck-screenshot.png)
+
+*The real app, not a mockup - one home conversation in the center, three planning seats and the
+Advisor on the left, three build seats and Emissary on the right, each reachable without ever
+leaving the home conversation.*
+
+## The MLLM debate
 
 What makes this different from a parallel-session manager like conductor.build or Nimbalyst: the
 three planning seats don't run more copies of the same agent racing to the same answer. Each one
-spawns a real council chain on The High Council MCP, the public engine (`RELAY_PATH` overrides, see `CLAUDE.md`) where one model drafts a plan and
-critic seats from five *other* labs - Qwen, GLM, Cohere, Gemini, Llama, never Grok - grade it
-blind, the draft gets revised against their objections, and the run ends either with unanimous
-sign-off or a `report.json` naming exactly which lab refused and why. That cross-lab argument -
+spawns a real council chain on The High Council MCP, the public engine (`RELAY_PATH` overrides,
+see `CLAUDE.md`) where one model drafts a plan and critic seats from five *other* labs - Qwen,
+GLM, Cohere, Gemini, Llama, never Grok - grade it blind, independently, on the record. The draft
+gets revised against their objections, and the run ends either with unanimous sign-off or a
+`report.json` naming exactly which lab refused and why. That cross-lab argument -
 **"The High Council,"** see `brand/HIGH_COUNCIL.md` - happens *before* any building seat writes
 code, and the receipts stay in the run folder. Full comparison against what else exists in this
 category: `docs/market-positioning.md`.
+
+## The GUI: a multi-LLM vibecoder harness, not a chat window
+
+The interface above (the "Command Deck") is built around a real hierarchy, not a grid of equal
+tiles: the **home seat is always the resting, default view** - whichever model you pick to talk to
+in the center is the one you're always talking to, the same way opening a chat app drops you into
+your main conversation rather than a directory of contacts. The **planning and build seats sit in
+fixed rails on either side**, always reachable, never requiring you to leave or lose the home
+conversation to check on one - clicking a rail seat brings its full detail (the debate panel above,
+a build seat's own task form) into a focused view without ever hiding the center. A side seat's
+own controls reach *its own* agents only; it never commands another seat or another session -
+stated as visible product copy on every focused seat's own detail panel, not just enforced
+silently. The home seat is the one place delegation happens outward: "have the planning seats
+argue about this" or "have the build seats swarm this" are things you ask your home seat, not
+things a side seat does to another side seat.
 
 ## Running it
 
@@ -29,6 +56,12 @@ Or skip the setup: a packaged build exists (`v0.1.0` - Windows NSIS installer, L
 built for real by GitHub Actions) for **€20 one-time**, no subscription - buy it, run it, bring
 your own provider keys. [Get it here.](https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03) Source
 stays free either way; paying buys convenience, not the code.
+
+**A packaged/release build always needs a real Anthropic API key** for the Command & Control and
+build seats (Setup → provider keys) - it never falls back to whatever `claude` CLI login happens
+to already be on the machine, by design. Running from source (`npm run tauri dev`) keeps using
+your own already-authenticated `claude` CLI session for those two seat types, same as always;
+only a built/released binary draws this line.
 
 Read `PLAN.md` in full before touching architecture; `CLAUDE.md` is the fuller orientation doc
 (also served as `AGENTS.md`) for any agent - human or model - picking up work in this repo.

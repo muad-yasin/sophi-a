@@ -82,6 +82,23 @@
     margin: 0 auto 28px;
   }
   .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero-screenshot {
+    display: block;
+    width: 100%;
+    max-width: 980px;
+    margin: 40px auto 0;
+    border-radius: 14px;
+    border: 1px solid rgba(227, 178, 60, 0.18);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.55);
+  }
+  .hero-screenshot-caption {
+    margin: 14px auto 0;
+    max-width: 620px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
   .btn {
     font-family: var(--font-chrome);
     font-weight: 600;
@@ -352,6 +369,8 @@
            secret audit (DECISIONS.md) came back clean. -->
       <a class="btn btn-secondary" href="https://github.com/muad-yasin/sophi-a" rel="noopener">Read the source</a>
     </div>
+    <img class="hero-screenshot" src="assets/command-deck-screenshot.png" alt="Sophi-A's real Command Deck interface: a home Command &amp; Control seat in the center, three planning seats and the Advisor on the left, three build seats and Emissary on the right, all idle and waiting for a task." />
+    <p class="hero-screenshot-caption">The real app, not a mockup - eight live seats around one home conversation.</p>
   </div>
 </header>
 
