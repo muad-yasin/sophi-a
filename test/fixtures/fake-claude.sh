@@ -18,7 +18,19 @@ if [ "$delay" != "0" ]; then
 fi
 
 if [ -n "${FAKE_CLAUDE_MARKER:-}" ]; then
-  printf '%s\n' "$*" > "$FAKE_CLAUDE_MARKER"
+  # Security-review fix (fable-5.1 review of 8005602, item 1): only ever write under the OS
+  # tmpdir - a test fixture writing to an arbitrary caller-supplied path is a real hazard even
+  # though every current caller happens to pass a tmpdir path already.
+  tmproot="${TMPDIR:-/tmp}"
+  real_marker=$(readlink -f "$FAKE_CLAUDE_MARKER" 2>/dev/null || printf '%s' "$FAKE_CLAUDE_MARKER")
+  real_tmproot=$(readlink -f "$tmproot" 2>/dev/null || printf '%s' "$tmproot")
+  case "$real_marker" in
+    "$real_tmproot"/*) printf '%s\n' "$*" > "$FAKE_CLAUDE_MARKER" ;;
+    *)
+      echo "fake-claude: refusing FAKE_CLAUDE_MARKER outside $tmproot: $FAKE_CLAUDE_MARKER" >&2
+      exit 1
+      ;;
+  esac
 fi
 
 printf '%s\n' "${FAKE_CLAUDE_STDOUT:-fake-claude: no real model was called}"

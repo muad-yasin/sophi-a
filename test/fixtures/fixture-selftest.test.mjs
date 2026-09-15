@@ -48,10 +48,13 @@ test('fake-claude.sh honors FAKE_CLAUDE_DELAY_SECS (short delay, kept fast for t
   assert.ok(Date.now() - start >= 250, 'fake-claude.sh did not actually sleep');
 });
 
-test('fake-claude.sh makes no outbound network call - no networking tool invoked by its own source', () => {
-  // Ground-truth check on the artifact itself (verification-and-critique's rule), not a claim: a
-  // shell script with no curl/wget/nc/fetch/dns invocation anywhere in its source has no way to
-  // reach the network, full stop - stronger than trying to sniff live traffic from a unit test.
+test('fake-claude.sh makes no outbound network call - no known networking tool named in source', () => {
+  // Ground-truth check on the artifact itself (verification-and-critique's rule), not a claim:
+  // this greps for a fixed list of common networking invocations (curl/wget/nc/fetch/etc) and
+  // finds none. That is evidence, not a proof of unreachability - the check doesn't rule out
+  // every conceivable way a shell script could reach the network (a bare /dev/tcp redirect, a
+  // renamed binary, a future edit adding one), only that none of the obvious ones are present
+  // (security-review fix, fable-5.1 review of 8005602, item 2: the prior comment overclaimed).
   const src = readFileSync(fakeClaude, 'utf8');
   assert.doesNotMatch(src, /\b(curl|wget|\bnc\b|netcat|fetch\(|http\.request|https\.request)\b/);
 });

@@ -277,10 +277,17 @@
   mock-relay-chain.mjs` (all-approve/one-holdout/malformed-json-critic scenarios, `signoff`/
   `holdout` shaped like relay's real report.json) + `test/fixtures/fixture-selftest.test.mjs` (11
   tests, all offline). Item 2, family-model decision record: `DECISIONS.md`'s new 2026-09-15
-  entry, no code change to `peer-pool.js` (`git diff c566d2a -- src/orchestrator/peer-pool.js`
-  empty - the plan's own literal wording, `git diff master`, is unsatisfiable since peer-pool.js
-  doesn't exist on master yet; diffed against this branch's own starting commit instead, flagged
-  to sophi-a-ed/thcmcp-66). `npm test`: 22/22 green (11 pre-existing + 11 new; the plan's "17/17"
-  figure didn't match the real pre-existing count of 11, noted honestly rather than silently
-  reconciled). Built in worktree `../sophi-a-family-mvp-a`, branch `sophi-a-family-mvp-a` off
-  `peer-pool-v1` @ c566d2a. Not merged - Muad's call per the plan's own open decisions.
+  entry, no code change to `peer-pool.js`. At the time this was built, `peer-pool-v1` (and
+  therefore `peer-pool.js`) hadn't merged into master yet, so the plan's literal acceptance
+  wording (`git diff master -- src/orchestrator/peer-pool.js`) was unsatisfiable - verified
+  instead against this branch's own starting commit (`git diff c566d2a -- ...`, empty), flagged to
+  sophi-a-ed/thcmcp-66. **Update, post-merge (peer-pool-v1 -> master @ 0a9674b):** `peer-pool.js`
+  is on master now, so `git diff master -- src/orchestrator/peer-pool.js` is both literally
+  checkable and empty - the plan's original wording and DECISIONS.md's own text are now both
+  accurate as written; this note exists only to explain why an earlier version of this entry
+  talked about an "unsatisfiable" command that no longer applies. `npm test`: 22/22 green at build
+  time (11 pre-existing + 11 new; the plan's "17/17" figure didn't match the real pre-existing
+  count of 11, noted honestly rather than silently reconciled) - 27/27 after the post-merge rebase
+  (16 pre-existing + 11 new). Built in worktree `../sophi-a-family-mvp-a`, branch
+  `sophi-a-family-mvp-a`, rebased onto `master` @ 0a9674b after Muad approved the peer-pool-v1
+  merge. Not merged - Muad's call.
