@@ -225,7 +225,6 @@ const ALLOWED_PROVIDERS: { id: string; label: string }[] = [
   { id: "zai", label: "Z.ai" },
 ];
 
-const connectingEl = document.getElementById("connecting")!;
 const connErrorEl = document.getElementById("conn-error")!;
 const gridEl = document.getElementById("grid")!;
 
@@ -291,7 +290,7 @@ function updateDegradedCount() {
   // always 0, so the only real-vs-not distinction is degraded > 0 or not.
   const degraded = SEAT_IDS.filter((id) => tileEl(id)?.dataset.status === "problem").length;
   line.textContent =
-    degraded === 0 ? "◆ All quiet" : `◆ 0 seat(s) need you · ${degraded} degraded`;
+    degraded === 0 ? "◆ All quiet" : `◆ 0 seats need you · ${degraded} degraded`;
   pill?.classList.toggle("is-alert", degraded > 0);
 }
 
@@ -717,20 +716,69 @@ function setupCostBreakdownPanel() {
 
 const RECONNECT_DELAYS_MS = [500, 1000, 2000, 4000, 8000, 8000, 8000];
 
+// Cold-load (design-handoff §"States"): the whole shell stays visible from first paint - only
+// the home seat's own cold-hero shows, every rail seat reads "offline" until the WebSocket
+// handshake actually completes. Real state throughout, driven off the real connection lifecycle,
+// not a separate fullscreen mock screen.
+function setColdRailState(cold: boolean) {
+  for (const seatId of SEAT_IDS) {
+    if (seatId === "cnc") continue;
+    const tile = tileEl(seatId);
+    if (!tile) continue;
+    const glyph = tile.querySelector<HTMLElement>(".seat-glyph");
+    const badge = tile.querySelector<HTMLElement>('[data-role="badge"]');
+    const output = tile.querySelector<HTMLElement>('[data-role="output"]');
+    if (cold) {
+      glyph?.setAttribute("data-status", "offline");
+      if (badge) badge.textContent = "offline";
+      if (output) {
+        output.textContent = "Waiting for orchestrator…";
+        output.classList.add("placeholder");
+      }
+    } else {
+      glyph?.removeAttribute("data-status");
+      if (badge) badge.textContent = tile.dataset.status ?? "idle";
+      if (output && output.classList.contains("placeholder")) {
+        output.textContent = "Waiting for output…";
+      }
+    }
+  }
+}
+
+function setColdComposerState(cold: boolean) {
+  const cnc = tileEl("cnc");
+  const input = cnc?.querySelector<HTMLTextAreaElement>('[data-role="task-input"]');
+  const sendBtn = cnc?.querySelector<HTMLButtonElement>('[data-role="send-btn"]');
+  if (input) {
+    input.disabled = cold;
+    input.placeholder = cold ? "Waiting for the orchestrator…" : "Talk to Claude…";
+  }
+  if (sendBtn) sendBtn.disabled = cold;
+}
+
 function showConnected() {
-  connectingEl.hidden = true;
   connErrorEl.hidden = true;
-  gridEl.hidden = false;
+  gridEl.classList.remove("is-cold");
+  setColdRailState(false);
+  setColdComposerState(false);
+  document.querySelector<HTMLElement>('[data-role="cold-hero"]')!.hidden = true;
+  document.querySelector<HTMLElement>('[data-role="idle-hero"]')!.hidden = false;
+  const needsLine = document.getElementById("needs-pill-line1");
+  if (needsLine) needsLine.textContent = "◆ All quiet";
 }
 
 function showConnecting() {
-  connectingEl.hidden = false;
   connErrorEl.hidden = true;
-  gridEl.hidden = true;
+  gridEl.classList.add("is-cold");
+  setColdRailState(true);
+  setColdComposerState(true);
+  document.querySelector<HTMLElement>('[data-role="cold-hero"]')!.hidden = false;
+  document.querySelector<HTMLElement>('[data-role="idle-hero"]')!.hidden = true;
+  const needsLine = document.getElementById("needs-pill-line1");
+  if (needsLine) needsLine.textContent = "● Orchestrator connecting";
 }
 
 function showConnectionError() {
-  connectingEl.hidden = true;
   connErrorEl.hidden = false;
   // keep the grid visible if it was already showing real data - a lost connection after a
   // successful session should not blank out everything the operator was already looking at.
@@ -2337,7 +2385,7 @@ async function buildSetupProviderList() {
 
     const badge = document.createElement("span");
     badge.className = "setup-provider-badge";
-    badge.textContent = alreadySet.has(p.id) ? "set" : "not set";
+    badge.textContent = alreadySet.has(p.id) ? "SET" : "NOT SET";
     badge.dataset.set = String(alreadySet.has(p.id));
 
     const input = document.createElement("input");
@@ -2354,7 +2402,7 @@ async function buildSetupProviderList() {
         await invoke("set_api_key", { provider: p.id, key: input.value });
         input.value = "";
         const stillSet = await refreshSetProviders();
-        badge.textContent = stillSet.has(p.id) ? "set" : "not set";
+        badge.textContent = stillSet.has(p.id) ? "SET" : "NOT SET";
         badge.dataset.set = String(stillSet.has(p.id));
         input.placeholder = stillSet.has(p.id) ? "•••••••• (change)" : "paste key";
       } catch (err) {
@@ -2441,7 +2489,6 @@ function setupSetupPanel() {
 
 window.addEventListener("DOMContentLoaded", () => {
   void initNotifications();
-  showConnecting();
   setupAdvisorActions();
   setupTaskForms();
   setupStopAllButton();
@@ -2479,5 +2526,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (tile) setControlsEnabled(tile, (tile.dataset.status as Status) || "idle");
   }
   updateDegradedCount();
+  showConnecting();
   connect();
 });

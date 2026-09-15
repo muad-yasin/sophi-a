@@ -177,8 +177,9 @@
     <div id="setup-panel" class="setup-panel setup-drawer" role="dialog" aria-labelledby="setup-panel-title" hidden>
       <div class="setup-panel-header">
         <h2 id="setup-panel-title">Setup</h2>
-        <button type="button" id="setup-close" class="setup-close" aria-label="Close setup">&times;</button>
+        <button type="button" id="setup-close" class="setup-close setup-close-text" aria-label="Close setup">Close</button>
       </div>
+      <p class="setup-hint setup-drawer-sub">Your home seat stays usable behind this.</p>
 
       <section class="setup-section">
         <h3>Command and Control seat</h3>
@@ -189,7 +190,7 @@
         <h3>Claude Code CLI · build seats</h3>
         <div class="setup-cli-row">
           <button type="button" id="setup-check-cli" class="btn">Check</button>
-          <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">Not checked yet</span>
+          <span id="setup-cli-status" class="setup-cli-status" data-state="unknown">NOT CHECKED YET</span>
         </div>
         <p id="setup-cli-install-hint" class="setup-hint setup-cli-install-hint" hidden>
           Don't have it yet? It installs in one line -
@@ -299,12 +300,6 @@
       </div>
     </div>
 
-    <div id="connecting" class="connecting" role="status">
-      <img class="brand-mark-cold" src="/design/sophia-portrait.png" alt="" aria-hidden="true" />
-      <p>Connecting to orchestrator&hellip;</p>
-      <p class="connecting-sub">The rails come alive once the orchestrator answers - nothing is lost while you wait.</p>
-    </div>
-
     <div id="conn-error" class="conn-error" role="alert" hidden>
       <span>Lost connection to the orchestrator. Retrying&hellip;</span>
     </div>
@@ -313,7 +308,12 @@
          design-handoff's "DAW-style solo, not navigation" rationale. -->
     <div id="focus-scrim" class="focus-scrim" hidden></div>
 
-    <main id="grid" class="grid" hidden>
+    <!-- design-handoff §"States", cold-load: the whole shell (header/rails/composer) is visible
+         from first paint, not hidden behind a separate fullscreen screen - only the home seat's
+         portrait shows real content while every rail seat reads "offline"/"waiting" (real seat
+         status wiring, not a mock: main.ts's showConnecting()/showConnected() drive #grid's
+         .is-cold class, which every rail glyph/status text below keys off). -->
+    <main id="grid" class="grid is-cold" data-role="grid">
       <!-- ===== Left rail - "Planning seats" ===== -->
       <aside class="rail rail-left" aria-label="Planning seats">
         <div class="rail-eyebrow">
@@ -690,8 +690,17 @@
         </div>
 
         <div class="home-conversation">
+          <!-- Cold-load hero - shown only until the WebSocket handshake completes once
+               (main.ts's showConnected()). Real state, not a mock: it's driven off the actual
+               connection lifecycle, same as every rail seat's "offline" glyph. -->
+          <div class="home-cold-hero" data-role="cold-hero">
+            <img class="home-portrait home-portrait-idle home-portrait-cold" src="/design/sophia-portrait.png" alt="Sophi-A" />
+            <p class="home-cold-title">Connecting to orchestrator&hellip;</p>
+            <p class="home-cold-sub">Your home seat comes online first. Side seats wake as the orchestrator reports them.</p>
+          </div>
+
           <!-- Idle hero - shown while output still carries the placeholder text/class. -->
-          <div class="home-idle-hero" data-role="idle-hero">
+          <div class="home-idle-hero" data-role="idle-hero" hidden>
             <div class="home-portrait-block">
               <img class="home-portrait home-portrait-idle" src="/design/sophia-portrait.png" alt="Sophi-A" />
               <span class="home-nameplate">Sophi-A</span>
@@ -763,6 +772,16 @@
             <div class="seat-detail-actions">
               <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
             </div>
+            <!-- Shown purely via CSS when this tile's real status is "problem" (existing
+                 seat.problem WS event) - copy is deliberately generic, not fabricated specifics
+                 (an exit code, a signal) the way the design reference mocks one - the real detail
+                 is whatever seat.problem's own text says, already shown in the output line above.
+                 No restart button: no restart command exists in the orchestrator today (only
+                 start/stop), so one isn't faked here. -->
+            <div class="seat-error-banner">
+              <p class="seat-error-banner-title">✕ SEAT DEGRADED — INFRASTRUCTURE, NOT DISAGREEMENT</p>
+              <p class="seat-error-banner-sub">This seat's Claude Code process stopped unexpectedly. This is a provider/process fault, not a debate outcome.</p>
+            </div>
             <form class="task-form" data-role="task-form">
               <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build I"></textarea>
               <div class="compare-trigger" data-role="compare-trigger">
@@ -825,6 +844,10 @@
             <div class="seat-detail-actions">
               <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
             </div>
+            <div class="seat-error-banner">
+              <p class="seat-error-banner-title">✕ SEAT DEGRADED — INFRASTRUCTURE, NOT DISAGREEMENT</p>
+              <p class="seat-error-banner-sub">This seat's Claude Code process stopped unexpectedly. This is a provider/process fault, not a debate outcome.</p>
+            </div>
             <form class="task-form" data-role="task-form">
               <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build II"></textarea>
               <div class="task-form-actions">
@@ -882,6 +905,10 @@
           <div class="seat-detail" data-role="seat-detail">
             <div class="seat-detail-actions">
               <button type="button" class="back-home-btn" data-role="back-home">Back to home · Esc</button>
+            </div>
+            <div class="seat-error-banner">
+              <p class="seat-error-banner-title">✕ SEAT DEGRADED — INFRASTRUCTURE, NOT DISAGREEMENT</p>
+              <p class="seat-error-banner-sub">This seat's Claude Code process stopped unexpectedly. This is a provider/process fault, not a debate outcome.</p>
             </div>
             <form class="task-form" data-role="task-form">
               <textarea class="task-input" data-role="task-input" rows="2" placeholder="Send a task&hellip;" aria-label="Task for Build III"></textarea>
