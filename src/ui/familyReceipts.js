@@ -18,6 +18,18 @@
 // to notice. (That list is not repeated verbatim in this comment on purpose - the test file
 // itself is the one place it lives, so this comment can't drift out of sync with it.)
 
+// gp-77's real Fable-5.1 security review of this branch (2026-09-15) flagged the absolute local
+// filesystem path being shown directly in the UI as a low-severity finding. The row's own
+// artifactPath stays absolute (familyLedger.js needs the real path to check existsSync against),
+// but the rendered label is shortened to the part starting at `.workdirs/peers/...` - the full
+// path is still reachable via a title tooltip (DOM render) or left in the row data (text render),
+// never hidden, just not the loudest thing on screen.
+function shortArtifactLabel(artifactPath) {
+  const marker = '.workdirs/peers/';
+  const idx = artifactPath.indexOf(marker);
+  return idx === -1 ? artifactPath : artifactPath.slice(idx);
+}
+
 /**
  * Build a `<section>` DOM fragment for one seat's family-receipts panel, ready to append into
  * that seat's card. Never throws on an empty row list - renders an explicit "no family activity
@@ -67,8 +79,8 @@ export function renderFamilyReceipts(rows) {
     if (row.artifactPath) {
       const link = document.createElement('span');
       link.className = 'family-receipts-artifact';
-      link.textContent = row.artifactPath;
-      link.title = 'On-disk artifact for this row';
+      link.textContent = shortArtifactLabel(row.artifactPath);
+      link.title = row.artifactPath; // full absolute path on hover, never hidden - just not the loudest thing on screen
       item.appendChild(link);
     }
 
@@ -81,5 +93,5 @@ export function renderFamilyReceipts(rows) {
 /** Plain-text render of one seat's family receipts, for tests/headless checks with no DOM. */
 export function renderFamilyReceiptsText(rows) {
   if (!rows || rows.length === 0) return 'No family activity yet this session.';
-  return rows.map(r => `${r.task} - ${r.outcome} (${new Date(r.timestamp).toLocaleTimeString()})${r.artifactPath ? ' @ ' + r.artifactPath : ''}`).join('\n');
+  return rows.map(r => `${r.task} - ${r.outcome} (${new Date(r.timestamp).toLocaleTimeString()})${r.artifactPath ? ' @ ' + shortArtifactLabel(r.artifactPath) : ''}`).join('\n');
 }

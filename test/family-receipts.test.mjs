@@ -16,6 +16,12 @@ import { createHash } from 'node:crypto';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fakeClaudeSrc = join(repoRoot, 'test', 'fixtures', 'fake-claude.sh');
+// gp-77's real Fable-5.1 security review (2026-09-15) flagged that a missing fixture here must
+// never silently fall through to whatever `claude` binary happens to be on the real PATH - fail
+// loudly instead, before any subprocess spawn, rather than risk a real invocation in a test.
+if (!existsSync(fakeClaudeSrc)) {
+  throw new Error(`family-receipts.test.mjs: fixture missing at ${fakeClaudeSrc} - refusing to fall through to a real claude on PATH`);
+}
 
 const tmp = mkdtempSync(join(tmpdir(), 'family-receipts-test-'));
 const binDir = join(tmp, 'bin');
@@ -81,9 +87,11 @@ test('a real 2-peer fan-out through peer-pool produces 2 family-receipt rows, ea
   const task = `family-receipts-${Date.now()}`;
 
   // Real finding, worth recording rather than worked around: peer-pool.js's own safeEnv()
-  // forwards only a fixed allowlist (PATH/HOME/LANG/.../ANTHROPIC_API_KEY) to the spawned
-  // child - a deliberate security boundary (docs/security-prompt-injection.md). FAKE_CLAUDE_*
-  // env vars are NOT in that allowlist, so a real fanOut() call can never actually drive
+  // forwards only a fixed non-secret allowlist (PATH/HOME/LANG/...) plus ANTHROPIC_API_KEY via
+  // its own separate conditional (peer-pool.js:29, not part of SAFE_ENV_KEYS itself - a real key
+  // IS forwarded to peer subprocesses, since a peer's whole job is running `claude` for real) -
+  // a deliberate security boundary either way (docs/security-prompt-injection.md). FAKE_CLAUDE_*
+  // env vars are on neither path, so a real fanOut() call can never actually drive
   // fake-claude.sh's success/failure output via those knobs - only its own default behavior
   // (a fixed placeholder line, not valid stream-json) is reachable this way. Widening
   // SAFE_ENV_KEYS to make an offline test more convenient would weaken a real security

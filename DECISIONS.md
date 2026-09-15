@@ -1429,9 +1429,12 @@ self-report, never a second thing written to disk (source-grep test in
 `familyLedger.js`). Named here rather than silently reworded to match the plan's prose.
 
 **Second real finding, discovered while writing the acceptance test:** `peer-pool.js`'s own
-`safeEnv()` forwards only a fixed allowlist (`PATH`/`HOME`/`LANG`/.../`ANTHROPIC_API_KEY`) to the
-spawned child - a deliberate security boundary from `docs/security-prompt-injection.md`. Session
-A's `FAKE_CLAUDE_*` env knobs are not on that allowlist, so a real `fanOut()` call can never
+`safeEnv()` forwards only a fixed non-secret allowlist (`PATH`/`HOME`/`LANG`/...) plus
+`ANTHROPIC_API_KEY` via its own separate conditional (`peer-pool.js:29`, not part of
+`SAFE_ENV_KEYS` itself - a real key genuinely is forwarded, since a peer's whole job is running
+`claude` for real) to the spawned child - a deliberate security boundary either way, from
+`docs/security-prompt-injection.md`. Session A's `FAKE_CLAUDE_*` env knobs are on neither path, so
+a real `fanOut()` call can never
 actually drive `fake-claude.sh`'s scripted success/failure output - only its own default output
 (a fixed placeholder line, not valid stream-json) is reachable through a real fan-out. Widening
 `SAFE_ENV_KEYS` to make an offline test more convenient would weaken a real security boundary for

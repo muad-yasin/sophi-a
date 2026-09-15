@@ -41,6 +41,13 @@ function outcomeFor(type, detail) {
   // 'failure owned' language deliberately matches compassionCopy.js's FAILED-OWNED state
   // (item 4) - the same real near-miss this whole MVP generalizes: a failure is shown
   // verbatim, never silently retried or summarized away.
+  //
+  // UNTRUSTED CONTENT: `message` below can contain subprocess stderr/error text that ultimately
+  // traces back to a peer's own (model-controlled) run - flagged by gp-77's real Fable-5.1
+  // security review of this branch (2026-09-15). The resulting `outcome` string is rendered via
+  // textContent only (familyReceipts.js), never re-parsed or re-injected into any prompt - if a
+  // future caller ever needs to forward `outcome` into a model prompt, it must be wrapped as
+  // untrusted data first, the same way relay reply text is wrapped elsewhere in this app.
   const message = typeof detail?.detail === 'string' ? detail.detail : JSON.stringify(detail?.detail ?? null);
   if (type === 'peer.problem') return `failure owned: ${message}`;
   if (type === 'peer.timeout') return `failure owned: ${message}`;
