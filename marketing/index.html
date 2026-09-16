@@ -456,41 +456,36 @@
 <section>
   <div class="wrap">
     <h2>Get Sophi-A</h2>
-    <!-- Shop-card treatment ported from SMO's real "BUY AD-PARDON" purchase card - the one place
-         in that game with the same job this section has here (a one-time real-money purchase
-         decision). Source: Assets/Scripts/Editor/Shop/ShopScreenBuilder.cs +
-         Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html in ~/Projects/SMO. Colors,
-         shadows and the shine-sweep timing below are the real measured values from that handoff,
-         not approximated. The top stripe was later removed in SMO itself (developer's own note:
-         "reads as a detached line above the corners") but kept here per Muad's explicit call -
-         reproduce the original card as asked, not SMO's own later revision. -->
+    <!-- The €20 packaged-build Stripe offer is retired (Muad's direct confirmation, 2026-09-16 -
+         same change already made in README.md commit bb853b3 and sower-industries.de/sophi-a/
+         commit 85e0e05). This card keeps the same visual treatment (ported from SMO's real
+         "BUY AD-PARDON" purchase card) but now points at the real, honest state: source-only,
+         not yet playtested or released, no purchase flow. -->
     <div class="shop-card">
       <div class="shop-card-stripe"></div>
-      <p class="shop-card-overline">Support Sophi-A</p>
+      <p class="shop-card-overline">Sophi-A</p>
       <div class="shop-card-price-wrap">
         <span class="shop-card-price-halo" aria-hidden="true"></span>
-        <p class="shop-card-price">€20</p>
+        <p class="shop-card-price">Free</p>
       </div>
-      <p class="shop-card-subtext">One-time purchase, no subscription</p>
+      <p class="shop-card-subtext">Source only, Apache-2.0 - no purchase flow</p>
       <hr class="shop-card-divider" />
       <div class="shop-card-bullet">
-        <span class="shop-card-icon-plate" aria-hidden="true">♥</span>
+        <span class="shop-card-icon-plate" aria-hidden="true">⚙</span>
         <div>
-          <p class="shop-card-bullet-title">Support the developer</p>
-          <p class="shop-card-bullet-body">Every purchase funds continued development of Sower Industries.</p>
+          <p class="shop-card-bullet-title">Real desktop app</p>
+          <p class="shop-card-bullet-body">A Tauri desktop harness powered by The High Council, run from source with your own provider keys.</p>
         </div>
       </div>
       <div class="shop-card-bullet">
-        <span class="shop-card-icon-plate" aria-hidden="true">⚡</span>
+        <span class="shop-card-icon-plate" aria-hidden="true">◐</span>
         <div>
-          <p class="shop-card-bullet-title">Skip the setup</p>
-          <p class="shop-card-bullet-body">Source stays free either way - this buys a working build, not the code.</p>
+          <p class="shop-card-bullet-title">Pre-release</p>
+          <p class="shop-card-bullet-body">Not yet playtested or released - no packaged build, no purchase, nothing resold.</p>
         </div>
       </div>
-      <!-- Real Stripe payment link, created by hand in the Sower Industries dashboard 2026-09-10
-           (Sophi-A product, 20,00 EUR, status Aktiv - plink_1UE7ypFQRVJYIrwWGRvohB8g). -->
-      <a class="shop-card-buy" href="https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03" rel="noopener">
-        Get the packaged build — €20
+      <a class="shop-card-buy" href="https://github.com/muad-yasin/sophi-a" rel="noopener">
+        View on GitHub
       </a>
     </div>
   </div>
