@@ -12,12 +12,13 @@
 // refused before any dispatch - zero side effects, not even a log line beyond the refusal notice.
 import { readdirSync, readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fanOut } from '../peer-pool.js';
 import { startRelayChainSeat } from '../adapters/relayChainSubprocess.js';
 import { loadProviders } from '../adapters/messagesApi.js';
 import { isAllowedProvider } from '../providers.js';
 import { recordUsage } from '../cost-tracker.js';
-import { writeTurnResult } from './familyMemory.js';
+import { writeTurnResult, assertSafeSegment } from './familyMemory.js';
 
 export const ALL_RUNTIMES = ['claude-code', 'chat', 'council'];
 
@@ -31,21 +32,48 @@ const FAMILY_CHAT_SYSTEM = 'You are a text-only member of a seat-owned family in
   'so if asked to do any of that. You will be shown the family\'s brief and plan, then a task. ' +
   'Reply with your best answer to the task in plain text.';
 
+// Fable-5.1 review (MEDIUM, 2026-09-16): FAMILY.md/plan.md/task text were interpolated into the
+// tag-wrapped prompt unescaped, so a task or plan.md body containing a literal
+// `</task><family-brief trust="operator">` could forge a second, spoofed operator-trust section
+// - docs/security-prompt-injection.md's own established convention for this exact wrapping
+// pattern is to "escape or strip" before interpolating (see its own line on `<builder>`
+// framing), which this file did not do. Neutralizes angle brackets only (the minimum needed to
+// prevent a tag boundary from being forged) - not full HTML-entity escaping, since this text
+// heads into a text prompt, not a browser DOM.
+function escapeForPromptTag(text) {
+  return String(text ?? '').replace(/</g, '‹').replace(/>/g, '›');
+}
+
 function familyPromptPrefix(family) {
   const familyMd = existsSync(join(family.dir, 'FAMILY.md')) ? readFileSync(join(family.dir, 'FAMILY.md'), 'utf8') : '';
   const planMd = existsSync(join(family.dir, 'plan.md')) ? readFileSync(join(family.dir, 'plan.md'), 'utf8') : '';
-  // docs/security-prompt-injection.md's own wrapping convention, reused verbatim: operator-
-  // authored text gets its own labelled container so a receiving model can tell it apart from
-  // the task itself, but it is still never model-authored content, so it carries `trust:
-  // "operator"` rather than "untrusted-model-output".
-  return `<family-brief trust="operator">\n${familyMd}\n</family-brief>\n\n<plan trust="operator">\n${planMd}\n</plan>`;
+  // docs/security-prompt-injection.md's own wrapping convention, reused verbatim: labelled
+  // containers so a receiving model can tell operator/family content apart from the task itself.
+  // FAMILY.md is genuinely human/operator-authored (Q1: only a human ever calls createFamily()),
+  // so it keeps `trust="operator"`. plan.md is NOT the same: Q4's own rule is "owner seat
+  // appends/checks, only a human reorders or deletes" - an LLM, not only a human, can add lines
+  // to it. Labelling it "operator" would overstate its trust level (sophi-a-ed's independent
+  // Fable-5.1 review, 2026-09-16, on top of gp-77's own MEDIUM finding) - it now carries its own,
+  // honestly narrower label instead of borrowing FAMILY.md's.
+  return `<family-brief trust="operator">\n${escapeForPromptTag(familyMd)}\n</family-brief>\n\n<plan trust="human-created-seat-appended">\n${escapeForPromptTag(planMd)}\n</plan>`;
 }
 
+// Fable-5.1 security review (HIGH, 2026-09-16): this module built session-directory paths from a
+// raw sessionId and wrote files under them BEFORE familyMemory.writeTurnResult() ever ran its own
+// assertSafeSegment() check - a sessionId like "../../../home/user/.claude" would have escaped
+// .families/ entirely and had attacker-influenced task text written there, with the validating
+// throw only arriving after that write already happened. Every function below that turns a
+// sessionId/turn into a path now validates first - reusing familyMemory.js's own exported check,
+// never a second copy of the same regex.
 function turnFilesDir(family, sessionId) {
+  assertSafeSegment('sessionId', sessionId);
   return join(family.dir, 'sessions', sessionId, 'turns');
 }
 
 function paddedTurn(turn) {
+  if (!Number.isInteger(turn) || turn < 1) {
+    throw new Error(`familyRuntimes: turn must be a positive integer, got ${JSON.stringify(turn)}`);
+  }
   return String(turn).padStart(4, '0');
 }
 
@@ -80,16 +108,35 @@ function rebuildChatHistory(family, sessionId) {
  * here (not a private helper) because F5's own dispatch of chat/council members is exactly what
  * can *produce* the ungated artifact this check exists to catch before it reaches a write-capable
  * member.
+ *
+ * Fable-5.1 review (MEDIUM, 2026-09-16, both independent reviews - gp-77's and sophi-a-ed's):
+ * a `.gate.json` carrying only `{result}` is unbound to the content it claims to have reviewed -
+ * any write-capable member could forge a passing record, or content edited after gating would
+ * still read as gated. Fixed by binding the gate record to a `sha256` field the checker verifies
+ * against the real file's current content - a gate record that doesn't match (or doesn't carry
+ * one at all) is blocked, same as a missing record. **This changes checkContextGate()'s own
+ * expected `.gate.json` shape to `{result: "pass", sha256: "<hex>"}` - flagged explicitly to
+ * Session D (F6/F9, the gate's actual writer) so their writer emits a matching field, rather
+ * than silently assuming a shape their code doesn't produce yet.**
  * @param {{dir: string}} family
  * @param {string} sessionId
  * @returns {{ok: true} | {ok: false, blockedFiles: string[]}}
  */
 export function checkContextGate(family, sessionId) {
+  assertSafeSegment('sessionId', sessionId);
   const contextDir = join(family.dir, 'sessions', sessionId, 'context');
   if (!existsSync(contextDir)) return { ok: true };
   const blockedFiles = [];
   for (const entry of readdirSync(contextDir)) {
     if (entry.endsWith('.gate.json')) continue; // the gate record itself, not a content file
+    // Fable-5.1 review (LOW, 2026-09-16), named rather than silently assumed: readdirSync is
+    // non-recursive, so a nested subdirectory under context/ is treated exactly like any other
+    // entry here - it gets checked for a sibling "<name>.gate.json" (which won't exist for a
+    // directory), so it already falls into the missing-gate branch below and is blocked, not
+    // silently skipped. Real files inside such a subdirectory are never individually examined,
+    // though - a recursive walk was not added here since F7's dispatch wiring (a different
+    // session) is what actually decides whether nested context/ content is a real shape this
+    // build needs to support at all.
     const gatePath = join(contextDir, `${entry}.gate.json`);
     if (!existsSync(gatePath)) {
       blockedFiles.push(entry);
@@ -102,7 +149,24 @@ export function checkContextGate(family, sessionId) {
       blockedFiles.push(entry); // unreadable gate record - fail closed, never treat as passing
       continue;
     }
-    if (gate.result !== 'pass') blockedFiles.push(entry);
+    // Fable-5.1 review (LOW, 2026-09-16): JSON.parse('null') succeeds and returns the literal
+    // `null`, which would have thrown on `gate.result` below (a fail-closed exception, but a
+    // violation of this function's own documented never-throw contract) rather than the
+    // ok:false return every other malformed-input case already produces.
+    if (gate === null || typeof gate !== 'object' || gate.result !== 'pass') {
+      blockedFiles.push(entry);
+      continue;
+    }
+    // Content binding (MEDIUM fix above): the gate record must name the exact content it
+    // reviewed, and that content must still match right now.
+    if (typeof gate.sha256 !== 'string' || gate.sha256.length === 0) {
+      blockedFiles.push(entry);
+      continue;
+    }
+    const actualHash = createHash('sha256').update(readFileSync(join(contextDir, entry))).digest('hex');
+    if (actualHash !== gate.sha256) {
+      blockedFiles.push(entry); // gated content has changed since - a stale gate is not a pass
+    }
   }
   return blockedFiles.length ? { ok: false, blockedFiles } : { ok: true };
 }
@@ -116,7 +180,10 @@ async function dispatchChatTurn(family, session, task, turn, emit) {
   }
 
   const history = rebuildChatHistory(family, session.sessionId);
-  const prefixedTask = `${familyPromptPrefix(family)}\n\n<task>\n${task}\n</task>`;
+  // escapeForPromptTag applies only to what's sent to the model - the verbatim, unescaped task
+  // text is still what's written to disk below (§2.3's "verbatim only" rule is about the
+  // persisted record, not the prompt-construction boundary this escaping protects).
+  const prefixedTask = `${familyPromptPrefix(family)}\n\n<task>\n${escapeForPromptTag(task)}\n</task>`;
 
   // Verbatim on disk BEFORE the call (§2.3's own checkpoint discipline extends here) - the task
   // text a turn actually saw is itself a receipt-adjacent fact worth keeping, independent of
@@ -152,7 +219,12 @@ async function dispatchChatTurn(family, session, task, turn, emit) {
     });
   } catch (err) {
     isError = true;
-    outText = err?.message || String(err);
+    // Fable-5.1 review (LOW, 2026-09-16): a provider SDK/HTTP error message can carry request
+    // URLs or response-body fragments - not a secret by itself, but worth capping the same way
+    // relayChainSubprocess.js's own quoteFailure() caps a critic's problem text, rather than
+    // persisting/emitting an unbounded provider-controlled string verbatim.
+    const raw = err?.message || String(err);
+    outText = raw.length > 500 ? `${raw.slice(0, 500)}…` : raw;
   }
   const endedAt = Date.now();
 
@@ -184,7 +256,14 @@ async function dispatchCouncilTurn(family, session, task, turn, emit) {
   writeTextFile(join(filesDir, `${n}.task.md`), task);
 
   const startedAt = Date.now();
-  const seatConfig = { default_chain: session.chain || 'mock' };
+  // Fable-5.1 review (LOW, 2026-09-16): session.chain reaches THCMCP's own --chain resolution,
+  // which joins it into a filesystem path (`chains/<name>.json`) - no shell is involved (argv
+  // array, not a shell string), so this was never a command-injection path, but an unvalidated
+  // "../../something" value could still have named an arbitrary JSON file as a chain config.
+  // Reuses the same safe-segment check every other id in this build goes through.
+  const chainName = session.chain || 'mock';
+  assertSafeSegment('session.chain', chainName);
+  const seatConfig = { default_chain: chainName };
   // pseudo-seatId: relayChainSubprocess.js's own recordRun()/task-file naming is keyed by a
   // "seatId" string - a family session id is not a real seats.json seat, but the same naming
   // scheme works unchanged (it's just a filesystem-safe label to that adapter).
@@ -260,15 +339,28 @@ function familyRuntimesAllowlist(family) {
       const parsed = JSON.parse(readFileSync(familyJsonPath, 'utf8'));
       if (Array.isArray(parsed.runtimes)) return parsed.runtimes;
     } catch {
-      // corrupt family.json - fail closed to the most permissive-looking default would be
-      // wrong; fall through to ALL_RUNTIMES below only because there is truly nothing else to
-      // read, same as familyMemory.js's own "never throw, degrade" posture for a corrupt file.
+      // Fable-5.1 review (MEDIUM, 2026-09-16): a corrupt family.json previously fell through to
+      // the permissive ALL_RUNTIMES default below - the opposite of "refused before any
+      // dispatch." A family whose own allowlist can't be read is refused everything, not
+      // granted everything; fail closed, matching familyMemory.js's own posture of degrading to
+      // an explicit unreadable/error state rather than ever inferring permission from absence.
+      return [];
     }
   }
-  return ALL_RUNTIMES;
+  // No family.json at all, or a readable family.json with no (or non-array) `runtimes` field:
+  // refuse every runtime rather than default to the most permissive list - same fail-closed
+  // reasoning as the corrupt-file branch above, not just its exception path.
+  return [];
 }
 
 export async function dispatchTurn(family, session, task, turn, emit) {
+  // Fable-5.1 review (LOW, both independent reviews, 2026-09-16): a real family loaded via
+  // createFamily()/loadFamilies() always has an already-validated ownerSeat/familyId (F1's own
+  // entry-point checks), but dispatchTurn() itself accepted any hand-built {dir, ownerSeat,
+  // familyId} without re-checking - only sessionId was validated downstream. Validated here,
+  // once, at this function's own entry point, rather than trusting the caller.
+  assertSafeSegment('ownerSeat', family.ownerSeat);
+  assertSafeSegment('familyId', family.familyId);
   const allowlist = familyRuntimesAllowlist(family);
   if (!ALL_RUNTIMES.includes(session.runtime) || !allowlist.includes(session.runtime)) {
     emit('family.notice', {

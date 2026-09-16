@@ -36,6 +36,20 @@ function usageText(usage) {
   return `$${(usage.usd || 0).toFixed(2)}`;
 }
 
+// relayChainSubprocess.js's own quoteFailure() pattern, reused: cap length and frame as quoted
+// third-party text, so an upstream error string (which this ledger never authored and cannot
+// vet) reads as quoted external content rather than this product's own prose - the same reason
+// that pattern exists there. Fable-5.1 review (LOW, sophi-a-ed's independent review, 2026-09-16):
+// familyLedger.js rendered errorText/verify.command verbatim and uncapped, so an upstream error
+// string that happened to coincidentally match one of the forbidden-phrase-test's own banned
+// substrings would render unguarded - capping and quoting doesn't make that impossible, but it
+// does make the rendered text legible as a third party's words, not this system's own claim.
+const DETAIL_PREVIEW_CHARS = 240;
+function quoteDetail(text) {
+  const truncated = text.length > DETAIL_PREVIEW_CHARS ? `${text.slice(0, DETAIL_PREVIEW_CHARS)}…` : text;
+  return `"${truncated}"`;
+}
+
 function outcomeText(row) {
   const failed = row.isError === true || (typeof row.exitCode === 'number' && row.exitCode !== 0);
   if (failed) {
@@ -43,7 +57,7 @@ function outcomeText(row) {
     // the same real near-miss this whole build generalizes: a failure is shown verbatim, never
     // silently retried or summarized away.
     const detail = typeof row.errorText === 'string' ? row.errorText : (typeof row.result === 'string' ? row.result : `exit code ${row.exitCode}`);
-    return `failure owned: ${detail}`;
+    return `failure owned: ${quoteDetail(detail)}`;
   }
   // §2.5: "verify.command is operator-named, fixed per family or per task, never model-
   // generated... Absent -> verify: null, rendered 'not verified', never 'passed'."

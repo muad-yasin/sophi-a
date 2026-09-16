@@ -108,7 +108,7 @@ test('a family dir with 3 real turn fixtures (one verified, one failure owned, o
     const rows = familyReceiptRows(family);
     assert.equal(rows.length, 3);
     assert.ok(rows.some(r => r.outcome === 'verified by npm test'));
-    assert.ok(rows.some(r => r.outcome === 'failure owned: TypeError: cannot read property of undefined'));
+    assert.ok(rows.some(r => r.outcome === 'failure owned: "TypeError: cannot read property of undefined"'));
     assert.ok(rows.some(r => r.outcome === 'not verified' && r.usage === '~32 tokens'));
 
     const counts = familyReceiptCounts(family);
