@@ -1,6 +1,6 @@
 [package]
 name = "cnc-harness"
-version = "0.1.0"
+version = "0.2.0"
 description = "cnc-harness slice 1 - the command-and-control shell"
 authors = ["Sower Industries"]
 license = "Apache-2.0"
