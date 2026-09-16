@@ -45,9 +45,17 @@ export function defaultFamiliesRoot() {
 // join() call. Neither caller-side validation existed before this fix - a familyId like
 // "../../../home/user/.claude" would have escaped .families/ entirely. Applied at every public
 // entry point that accepts a raw id, not just createFamily.
-const SAFE_SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+//
+// Exported (F3+F5's own Fable-5.1 review, HIGH, 2026-09-16): familyRuntimes.js built its own
+// session-directory paths (turns/, context/) from a raw sessionId before ever calling into a
+// function here that would validate it - the same escape this module already closed, reopened
+// one file over. Exporting this one check rather than duplicating the regex/logic a second time
+// keeps there being exactly one definition of "a safe path segment" in this codebase (backend-
+// developer's own "one source of truth" rule) - a second, drifting copy is a worse fix than a
+// one-line export.
+export const SAFE_SEGMENT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-function assertSafeSegment(name, value) {
+export function assertSafeSegment(name, value) {
   if (typeof value !== 'string' || !SAFE_SEGMENT_RE.test(value) || value.includes('..')) {
     throw new Error(`${name}: "${value}" is not a valid identifier (alphanumeric/._- only, no path separators, no "..")`);
   }
