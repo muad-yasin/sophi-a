@@ -19,7 +19,12 @@ export const COMPASSION_COPY = {
   stuck: {
     color: 'blue',
     label: 'Stuck',
-    summary: 'No output for X minutes; the human chooses: wait, stop, or restart.',
+    // Bug fix, 2026-09-16 (caught by an independent overnight bug-audit pass, verified directly
+    // against this file): this literally said "No output for X minutes" - an unfilled
+    // placeholder, not real copy. 5 minutes mirrors compassionStates.js's own
+    // STUCK_THRESHOLD_SECS (300s, itself a named placeholder pending playtest tuning) - keep the
+    // two in sync by hand until they're unified into one shared constant.
+    summary: 'No output for 5 minutes; the human chooses: wait, stop, or restart.',
     revealActionLabel: null, // no reveal action - STUCK has no verbatim artifact yet, only a choice
   },
   holdout: {
