@@ -13,7 +13,7 @@ import { WebSocketServer } from 'ws';
 import { startClaudeCodeSeat, stopClaudeCodeSeat } from './adapters/claudeCodeSubprocess.js';
 import { startMessagesApiSeat, clearHistory } from './adapters/messagesApi.js';
 import { startRelayChainSeat, resolveRelayPath } from './adapters/relayChainSubprocess.js';
-import { isAllowedProvider } from './providers.js';
+import { isAllowedProvider, effectiveInvocationMode } from './providers.js';
 import { writeCompareSnapshot, changedSinceSnapshot, diffAgainstSnapshot, currentFileHash, inspectArtifact, listWorkdirFiles } from './compareSnapshot.js';
 import { estimateChainCost } from './costEstimate.js';
 import { checkAllSeats } from './preflight.js';
@@ -80,17 +80,11 @@ function makeEmit(wss, seatId) {
   };
 }
 
-// `cnc`'s native invocation_mode is claude-code-subprocess (Anthropic only - real tool use, file
-// edits, --resume continuity). PLAN.md's second 2026-09-09 addendum makes `cnc` (and `advisor`,
-// already messages-api) provider-selectable: when a seat declares `provider` and it isn't
-// `anthropic`, a claude-code-subprocess seat falls back to messages-api - a real chat seat on
-// that provider, honestly without tool-use/file-editing, never a faked equivalent coding agent.
-function effectiveInvocationMode(seat) {
-  if (seat.invocation_mode === 'claude-code-subprocess' && seat.provider && seat.provider !== 'anthropic') {
-    return 'messages-api';
-  }
-  return seat.invocation_mode;
-}
+// effectiveInvocationMode moved to providers.js (security-review fix 2026-09-16) so
+// preflight.js's readiness check can derive from the same live rule this dispatch path uses,
+// instead of keeping two independent readings of it. Re-exported here for anything that already
+// imports it from index.js.
+export { effectiveInvocationMode };
 
 // docs/security-prompt-injection.md S1/P1 persistence sweep: a builder (or cnc) can write
 // CLAUDE.md/.claude/.mcp.json into its own workdir - .workdirs/ is gitignored, so this never

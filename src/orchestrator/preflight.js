@@ -19,7 +19,7 @@
 // might reach is real added scope this step's acceptance test doesn't ask for.
 import { execFile } from 'node:child_process';
 import { loadProviders } from './adapters/messagesApi.js';
-import { ALLOWED_PROVIDERS } from './providers.js';
+import { ALLOWED_PROVIDERS, envVarForProvider, effectiveInvocationMode } from './providers.js';
 
 const PING_TIMEOUT_MS = 2000;
 
@@ -102,17 +102,46 @@ async function checkEnv(envVar) {
   }
 }
 
+// Security-review fix (2026-09-16): for a seat with a LIVE, reconfigurable `provider` field
+// (cnc/advisor - index.js's CONFIGURABLE_SEAT_IDS), seats.json's static `requires` entry was
+// written for that seat's *original* provider/mode and never updates when the operator
+// reconfigures it via the `configure` command (index.js mutates `seat.provider` in place on the
+// same in-memory seat object this function receives). The real dispatch path
+// (effectiveInvocationMode + messagesApi.js's `seatConfig.provider || 'anthropic'`) always reads
+// the live field, so readiness must too, or a provider swap can leave it checking the wrong
+// binary/env entirely - wrongly blocking a seat that's actually fine, or wrongly passing one
+// that's actually missing its new provider's key.
+//
+// For a seat with no `provider` field at all (plan-1..3, build-1..3 - never in
+// CONFIGURABLE_SEAT_IDS), there is no live value to drift from; seats.json's static `requires`
+// is correct as originally scoped (this file's own header comment) and is used unchanged.
+export function liveRequirement(seat) {
+  if (seat.provider === undefined) return null;
+  const mode = effectiveInvocationMode(seat);
+  if (mode === 'claude-code-subprocess') {
+    return { type: 'binary', name: 'claude' };
+  }
+  const envVar = envVarForProvider(seat.provider);
+  return envVar ? { type: 'env', name: envVar } : null;
+}
+
 /**
- * Check readiness for one seat, per its seats.json `requires` list. Checks in order and
- * returns on the first failure - a seat needing both a binary and a key only reports the first
- * thing actually missing, not every problem at once (matches the wizard's one-line-per-seat
+ * Check readiness for one seat. For a seat with a live, reconfigurable `provider` field
+ * (cnc/advisor), the single requirement actually checked is derived from that live field via
+ * liveRequirement() above, never from seats.json's static `requires` entry, which can go stale
+ * the moment the operator reconfigures the seat. Every other seat still reads its static
+ * `requires` list exactly as before (this step's own documented scope limit). Checks in order
+ * and returns on the first failure - a seat needing both a binary and a key only reports the
+ * first thing actually missing, not every problem at once (matches the wizard's one-line-per-seat
  * display, Phase 1 Step 2).
  * @param {string} seatId
- * @param {{requires?: {type: 'binary'|'env', name: string}[]}} seat - seats.json entry
+ * @param {{provider?: string, requires?: {type: 'binary'|'env', name: string}[]}} seat - seats.json entry
  * @returns {Promise<{seat: string, status: 'ready'|'error', error?: {type: string, detail: string}}>}
  */
 export async function checkSeatReadiness(seatId, seat) {
-  for (const req of seat.requires || []) {
+  const live = liveRequirement(seat);
+  const requirements = live ? [live] : (seat.requires || []);
+  for (const req of requirements) {
     const result = req.type === 'binary' ? await checkBinary(req.name) : await checkEnv(req.name);
     if (result.status === 'error') {
       return { seat: seatId, status: 'error', error: result.error };
