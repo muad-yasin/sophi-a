@@ -1,9 +1,12 @@
-# Seat families (draft - being built overnight 2026-09-15/16, incomplete)
+# Seat families
 
-**Status: WORK IN PROGRESS.** This file is being assembled as Session E (F7/F8/F10) integrates
-Sessions A-D's work. Do not treat anything below as shipped until `SophiA-Seat-Families-OVERNIGHT.md`
-in `relay/Docs/` says so - that is the authoritative morning status, this is the user-facing doc it
-feeds into.
+Behind `families.enabled` (default off). Built overnight 2026-09-15/16; **F1/F0 (memory, config,
+`fanOut()` generalization), F2/F4 (compassion policy, caps), F7 (lifecycle integration + WS
+commands) and F8 (the per-seat Family panel UI) are done and Fable-security-reviewed.** F3
+(receipts v2), F5 (chat/council runtimes as family members), F6/F9 (the security gate) did not
+land this pass - two different real reasons, not glossed over, see `relay/Docs/
+SophiA-Seat-Families-OVERNIGHT.md` for the full per-item status this file summarizes. Not merged
+into `master` yet - G3 is a standing human-stop gate, this is Muad's call.
 
 ## What a family is
 
@@ -50,6 +53,18 @@ a server-side `NNNN.gate.json` with `result:"pass"` - never a client-side disabl
 - **G7** - the `DECISIONS.md` reversal entry - Muad's own words or a verbatim chat quote, never
   written by a session on his behalf.
 - **G8** - enabling a local Ollama reviewer as the real security-gate seat.
+
+## What's actually usable right now
+
+Only the `claude-code` runtime is wired (F5, the `chat`/`council` runtimes, didn't land) - a
+family can dispatch real `claude` CLI subprocess turns via `familyManager.js`'s
+`familyDispatch()`, exposed as the `family_create`/`family_list`/`family_dispatch`/
+`family_stop`/`family_close` WS commands and a "Family" toggle on `cnc` and the six
+claude-code-capable rail seats (`advisor` and `emissary` don't get the toggle - `advisor` has no
+claude-code runtime to dispatch through, `emissary` has no backend seat at all). The receipts
+table F3 would have built doesn't exist yet; the panel instead shows a plain session list
+(id/status/turn count) sourced directly from `family_list`. No security-gate/Apply path exists
+(F6 never landed) - nothing in this build can be made "actionable" yet.
 
 Full source: `relay/Docs/SophiA-Seat-Families-Plan.md`, revised by council at
 `relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`.

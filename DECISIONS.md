@@ -1973,3 +1973,23 @@ throws inside the existing top-level `try/catch` and is silently dropped - avail
 matches this file's existing "ignore a malformed frame rather than crash the whole UI" posture).
 
 2 new tests. Full `npm test`: 146/146 green. `npx vite build` still succeeds.
+
+## PLACEHOLDER - the seat-owned-families reversal, awaiting Muad's own words (G7)
+
+**This entry is deliberately incomplete.** Per the plan's own §7 gate G7 ("the `DECISIONS.md`
+reversal entry - Muad's own words or a verbatim chat quote with attribution") and its §0 close
+("the reopening itself gets its own dated `DECISIONS.md` entry, written by Muad or quoting his
+chat line verbatim - a session must not author that entry as if it were its own call"), no session
+in this overnight build - including this one - has written the actual reversal record. What's
+known and verifiable, without inventing his words: `relay/Docs/SophiA-Seat-Families-Plan.md`'s own
+header states "Muad said yes to seat-owned families in chat on 2026-09-15" and that the 2026-09-15
+`cnc`-only peer-pool decision (`DECISIONS.md`, same date, "hub-and-spoke stays... reopening is
+deferred to Muad") is what's being reopened - but that header is a paraphrase written by a planning
+session, not a verbatim quote, and this session has no direct access to the original chat line.
+
+**Whoever reviews this in the morning (Muad, or a session relaying his own words back verbatim)
+should replace this placeholder with his actual sentence(s) reopening hub-and-spoke, dated and
+attributed** - not a session's summary of what he probably meant. Until that happens, this
+placeholder is the honest state: the reversal is real (the whole F0-F8 build proceeded on
+thcmcp-66's dispatch, itself downstream of Muad's chat approval per multiple sessions' own
+reports), but its canonical, quotable record does not exist yet.
