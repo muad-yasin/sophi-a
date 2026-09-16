@@ -3082,3 +3082,155 @@ body {
   color: inherit;
 }
 
+
+/* ===== Rich status cards (2026-09-16; Claude Design mockup 2026-09-16 11-29-02) =====
+   Three additions, all driven by real orchestrator state (main.ts's setStatus/handleSeatProgress):
+   the "attention" seat status ("Needs you" - a relay external pause or a run that finished
+   without sign-off), the per-seat progress subtitle under the badge, and the DISPATCHED card in
+   the home column. Gold is the mockup's "needs you" color and was already reserved for exactly
+   that (--status-needs, "brand gold - primary actions, focus, 'needs you'" in the token block);
+   every state is carried by a glyph + a word as well, never color alone. */
+
+.tile[data-status="attention"] {
+  box-shadow: inset 0 0 0 2px var(--status-needs);
+}
+
+[data-status="attention"] .status-badge {
+  background: var(--status-needs);
+  color: var(--on-gold);
+}
+
+/* Collapsed rail card: text-only badge like its siblings, in gold like the mockup's "Needs you".
+   `background: transparent` is restated here on purpose: the filled-pill rule above ties the
+   card's own transparent override on specificity and wins by source order, which rendered a
+   solid gold pill on the rail card - caught in the live screenshot, not by reading the CSS. */
+.tile[data-status="attention"] .seat-card-text .status-badge {
+  background: transparent;
+  color: var(--gold-bright);
+}
+
+/* The mockup tints the whole "Needs you" card warm, not just its glyph - a subtle fill plus a
+   gold hairline, so the card reads as the one thing asking for attention even in a grayscale pass. */
+.seat-card[data-status="attention"] {
+  border-color: rgba(227, 178, 60, 0.45);
+  background: rgba(227, 178, 60, 0.05);
+}
+
+.tile[data-status="attention"] .seat-glyph,
+.seat-glyph[data-status="attention"] {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  box-shadow: 0 0 12px var(--gold-glow);
+}
+.tile[data-status="attention"] .seat-glyph::after,
+.seat-glyph[data-status="attention"]::after {
+  content: "◆";
+}
+
+/* Per-seat progress subtitle - the third line of a rail card ("Round 2 of 3 · 1 objection open").
+   Hidden (not blank) whenever the orchestrator has reported nothing for this seat. Single line
+   with an ellipsis: the card is a fixed-width rail item, and the longest real value ("Proposals
+   in · 12 of 12 posted", or a long external-stage label) must not wrap under its neighbour. */
+.seat-progress {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.seat-card-reverse .seat-progress {
+  text-align: right;
+}
+.tile[data-status="attention"] .seat-progress {
+  color: var(--text-tertiary);
+}
+
+/* DISPATCHED card */
+.dispatched-card {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid rgba(227, 178, 60, 0.35);
+  border-radius: var(--radius-card);
+  background: rgba(227, 178, 60, 0.04);
+  max-width: 760px;
+}
+
+.dispatched-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.dispatched-title {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.dispatched-cap {
+  color: var(--text-placeholder);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.dispatched-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.dispatched-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  max-width: 100%;
+}
+
+.dispatched-chip[data-status="attention"] {
+  border-color: rgba(227, 178, 60, 0.5);
+}
+
+.dispatched-chip-glyph {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.dispatched-chip[data-status="attention"] .dispatched-chip-glyph {
+  color: var(--gold-bright);
+}
+
+.dispatched-chip-name {
+  font-family: var(--font-chrome);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.dispatched-chip-sub {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-placeholder);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dispatched-note {
+  margin: var(--sp-2) 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}

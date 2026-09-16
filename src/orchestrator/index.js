@@ -28,12 +28,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
 const seats = JSON.parse(readFileSync(join(here, 'seats.json'), 'utf8'));
 
-// In-memory Map<seatId, 'idle'|'working'|'problem'|'timeout'> - an implementation detail behind
-// the event bus below, not a second source of truth (PLAN.md "Orchestrator core"). 'timeout'
-// added by Phase 2 Step 1: a seat the per-seat watchdog auto-stopped for going silent past its
-// timeout_ms, distinct from 'problem' (the seat's own process reported a real error) so the UI
-// can say "timed out" rather than a generic failure it didn't actually have.
+// In-memory Map<seatId, 'idle'|'working'|'problem'|'timeout'|'attention'> - an implementation
+// detail behind the event bus below, not a second source of truth (PLAN.md "Orchestrator core").
+// 'timeout' added by Phase 2 Step 1: a seat the per-seat watchdog auto-stopped for going silent
+// past its timeout_ms, distinct from 'problem' (the seat's own process reported a real error) so
+// the UI can say "timed out" rather than a generic failure it didn't actually have. 'attention'
+// (2026-09-16, rich status cards): the seat stopped on purpose and is waiting on the operator -
+// a relay external-seat pause or a run that finished without sign-off (relayChainSubprocess.js's
+// needsYou) - the "Needs you" badge, neither working nor degraded.
 const status = new Map(Object.keys(seats).map(id => [id, 'idle']));
+
+// Latest `seat.progress` detail per seat (relay round/objection/proposal counts, or a build
+// seat's files-touched count) - replayed on auth like `status`/`costTotals` so a client that
+// connects mid-run gets the real subtitle, not a blank. Cleared on the seat's next start, since
+// progress is per turn/run. Session-only, same as everything else in this file.
+const progress = new Map();
 
 // Phase 2 Step 2 (cost meter): running per-seat session total, folded via cost-tracker.js's own
 // `accumulate` so the "never fabricate" invariant lives in one place. Session-only, like
@@ -62,6 +71,9 @@ function makeEmit(wss, seatId) {
     else if (type === 'seat.idle') status.set(seatId, 'idle');
     else if (type === 'seat.problem') status.set(seatId, 'problem');
     else if (type === 'seat.timeout') status.set(seatId, 'timeout');
+    else if (type === 'seat.attention') status.set(seatId, 'attention');
+    if (type === 'seat.start') progress.delete(seatId);
+    if (type === 'seat.progress') progress.set(seatId, detail);
     if (type === 'seat.idle' && typeof detail === 'string' && PLANNER_SEAT_IDS.includes(seatId)) {
       lastDeliverable.set(seatId, detail);
     }
@@ -883,6 +895,9 @@ function main() {
           // connects mid-session sees real accumulated numbers, not a reset-looking blank ticker.
           for (const [seatId, total] of costTotals) {
             ws.send(JSON.stringify({ type: 'seat.usage', seatId, timestamp: Date.now(), total }));
+          }
+          for (const [seatId, detail] of progress) {
+            ws.send(JSON.stringify({ type: 'seat.progress', seatId, timestamp: Date.now(), detail }));
           }
         } else {
           ws.close(1008, 'unauthenticated');

@@ -13,6 +13,7 @@ import { root } from '../index.js';
 import { resolveEnginePath } from '../enginePath.js';
 import { recordRun } from '../run-recorder.js';
 import { usageFromReport, stageUsageFromReport } from '../cost-tracker.js';
+import { emptyProgress, foldProgressLines } from '../run-log-progress.js';
 
 const RUN_DISCOVERY_POLL_MS = 250;
 const RUN_DISCOVERY_MAX_ATTEMPTS = 20; // ~5s, matching relay's own start_run tool
@@ -130,6 +131,31 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
     emit('seat.idle', detail);
   }
 
+  // "Needs you" (rich status cards, 2026-09-16): the run stopped on purpose and is waiting on
+  // the operator, which is neither Working nor Degraded. Two real relay signals feed it, and
+  // nothing else does: (a) an `external` seat pause - relay's CLI writes NEEDS-<label>.md into
+  // the run dir and exits 3, resumable only once <label>.md exists (THCMCP CLAUDE.md, "External
+  // seats pause the run"); (b) a run that finished without sign-off - report.json exists,
+  // `passed: false`, with the critics' real objections. (b) used to arrive as seat.problem and
+  // therefore read "Degraded" on the badge, which main.ts's own STATUS_LABELS comment says is
+  // wrong for a debate outcome (it is the operator's decision what happens next, not a fault).
+  // `waitingOn` rides on the progress detail (not the attention detail string) so the subtitle
+  // can say which of the two it is without parsing prose: `{ external: '<label>' }` or
+  // `{ signoff: <open objection count from report.json> }`.
+  function needsYou(detail, waitingOn) {
+    if (finished) return;
+    finished = true;
+    stopTimers();
+    progress = { ...progress, waitingOn };
+    emit('seat.progress', { kind: 'relay', ...progress });
+    emit('seat.attention', detail);
+  }
+
+  // Live progress subtitle - folded from the same run.log lines the tile already streams, emitted
+  // only when a line actually changed a field (run-log-progress.js is pure; the shape is the
+  // `seat.progress` detail contract main.ts reads).
+  let progress = emptyProgress();
+
   function readNewLogLines() {
     const logFile = join(runDir, 'run.log');
     if (!existsSync(logFile)) return [];
@@ -169,12 +195,31 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
       fail(`relay-chain-subprocess seat ${seatId}: no report.json after ${RUN_TIMEOUT_MS / 1000}s (run ${runId})`);
       return;
     }
-    for (const line of readNewLogLines()) {
+    const fresh = readNewLogLines();
+    for (const line of fresh) {
       emit('seat.working');
       // docs/security-prompt-injection.md S3/P2: relay writes critic verdict lines into its own
       // run.log (relay/src/chain.js), so this line can be a critic's own text, unlabelled,
       // reaching the tile live. Prefix it so it never passes for this product's own output.
       emit('seat.output', `relay: ${line}`);
+    }
+    if (fresh.length) {
+      const folded = foldProgressLines(progress, fresh);
+      if (folded.changed) {
+        progress = folded.state;
+        emit('seat.progress', { kind: 'relay', ...progress });
+      }
+    }
+    // (a) external-seat pause: NEEDS-<label>.md is relay's own on-disk signal, checked before the
+    // exit-code branch below because that pause also exits non-zero (3) and would otherwise read
+    // as a crash. The run dir is kept as-is - resuming it is relay's `--resume`, not this adapter's job.
+    const needsFile = readdirSync(runDir).find(name => /^NEEDS-.+\.md$/.test(name));
+    if (needsFile) {
+      const stageLabel = needsFile.slice('NEEDS-'.length, -'.md'.length);
+      needsYou(`relay run ${runId} is waiting on you: the "${stageLabel}" seat is external. ` +
+        `Its prompt is in ${join(runDir, needsFile)}; the run resumes once ${stageLabel}.md is written there.`,
+        { external: stageLabel });
+      return;
     }
     const reportPath = join(runDir, 'report.json');
     if (existsSync(reportPath)) {
@@ -223,7 +268,12 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
           ? readFileSync(deliverablePath, 'utf8')
           : '(report.json passed but no deliverable.md was written)';
         succeed(deliverable);
+      } else if (Array.isArray(report.lastCritique?.failures) && report.lastCritique.failures.length) {
+        // (b) a real no-sign-off outcome with named objections - the operator's call, see needsYou.
+        needsYou(summarizeFailures(report), { signoff: report.lastCritique.failures.length });
       } else {
+        // passed:false with nothing recorded is not a debate outcome anyone can act on - a
+        // provider/engine fault, still honestly Degraded.
         fail(summarizeFailures(report));
       }
       return;

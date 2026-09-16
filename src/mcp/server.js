@@ -79,6 +79,9 @@ function connect() {
     // reading 'working' here forever, and wait_for_idle below would spin past its own timeout
     // waiting for a transition that already happened.
     else if (evt.type === 'seat.timeout') state.status = 'timeout';
+    // Rich status cards (2026-09-16): the seat is parked waiting on the operator (relay external
+    // pause / no sign-off) - a resting state, so wait_for_idle-style pollers must not spin on it.
+    else if (evt.type === 'seat.attention') state.status = 'attention';
     // Phase 2 Step 2 (cost meter): mirrors the orchestrator's own running per-seat total
     // (index.js's makeEmit) - "expose the same numbers via get_seat" per the plan's own wording,
     // not a re-derived figure.
