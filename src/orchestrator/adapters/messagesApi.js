@@ -11,7 +11,39 @@ import { root } from '../index.js';
 import { isAllowedProvider } from '../providers.js';
 import { recordUsage } from '../cost-tracker.js';
 
-const TIMEOUT_MS = 300_000; // 300s, per PLAN.md's status/event model table
+const DEFAULT_TIMEOUT_MS = 300_000; // 300s, per PLAN.md's status/event model table - the fallback
+// when a seat declares no timeout_ms of its own (seats.json's field, e.g. advisor's 120000).
+
+// Security-review fix (2026-09-16), split out as pure, directly-testable helpers - no I/O,
+// no provider/relay dependency, so both defects below are provable offline without a real
+// network call:
+//
+// (1) resolveSeatTimeoutMs: the per-call timeout used to be the hardcoded DEFAULT_TIMEOUT_MS
+//     constant, ignoring seatConfig.timeout_ms entirely (advisor declares 120000 in seats.json;
+//     the call always used 300000 regardless).
+// (2) raceWithTimeout: the old timer only flipped a boolean, checked AFTER the awaited call had
+//     already resolved - a genuinely hung call never resolves, so the flag never gets read and
+//     the seat blocks forever. This races the real call against a timeout that actually REJECTS
+//     (the same pattern preflight.js's checkEnv already uses for its own provider ping), so the
+//     awaiting caller is genuinely unblocked the moment the timeout fires. Named limitation, not
+//     glossed over: relay's own src/providers.js `call()` accepts no AbortSignal, so the
+//     underlying HTTP request to the provider is not itself severed - this stops the
+//     orchestrator from waiting on it and reports the problem promptly (the actual user-facing
+//     symptom being fixed), but the in-flight request may still complete on the network after
+//     this function has already moved on. The orphaned promise is given a no-op catch so it can
+//     never surface as an unhandled rejection later.
+export function resolveSeatTimeoutMs(seatConfig) {
+  return Number.isFinite(seatConfig?.timeout_ms) ? seatConfig.timeout_ms : DEFAULT_TIMEOUT_MS;
+}
+
+export function raceWithTimeout(promise, timeoutMs, timeoutMessage) {
+  promise.catch(() => {}); // see the fix note above
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error(timeoutMessage), { isTimeout: true })), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 const ADVISOR_SYSTEM = 'You are Fable, an advisor watching the command-and-control seat\'s ' +
   'decisions in a multi-agent build harness. You are shown one decision or plan and asked for a ' +
@@ -147,8 +179,7 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
     return;
   }
 
-  let timedOut = false;
-  const timer = setTimeout(() => { timedOut = true; }, TIMEOUT_MS);
+  const timeoutMs = resolveSeatTimeoutMs(seatConfig);
 
   try {
     const { call } = await loadProviders();
@@ -170,7 +201,7 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
     // a truly streaming call. Documented here rather than faked: the whole reply lands as one
     // seat.output once the call resolves. A future slice could add real streaming directly per
     // provider if per-token UI updates turn out to matter.
-    const result = await call(provider, {
+    const callPromise = call(provider, {
       // seatConfig.model is a placeholder identifier for Anthropic seats (PLAN.md "Seat
       // registry": "claude-fable-5-1"); for other providers it's whatever model id that
       // provider expects - passed through as-is, never silently substituted.
@@ -179,12 +210,8 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
       messages,
       maxTokens: 1024,
     });
+    const result = await raceWithTimeout(callPromise, timeoutMs, `${seatId} call timed out after ${timeoutMs / 1000}s`);
 
-    clearTimeout(timer);
-    if (timedOut) {
-      emit('seat.problem', `${seatId} call timed out after ${TIMEOUT_MS / 1000}s`);
-      return;
-    }
     if (seatConfig.chat_history) {
       histories.set(seatId, [...messages, { role: 'assistant', content: result.text }]);
     }
@@ -202,7 +229,8 @@ export async function startMessagesApiSeat(seatId, seatConfig, task, emit, mode)
     emit('seat.output', result.text);
     emit('seat.idle');
   } catch (err) {
-    clearTimeout(timer);
+    // The inner try/finally above already clears its own timer on every path (success, real
+    // call error, or the race's own timeout rejection) - nothing left to clean up here.
     emit('seat.problem', err?.message || String(err));
   }
 }

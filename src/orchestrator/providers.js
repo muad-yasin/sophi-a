@@ -24,3 +24,25 @@ export const ALLOWED_PROVIDERS = [
 export function isAllowedProvider(id) {
   return ALLOWED_PROVIDERS.some(p => p.id === id);
 }
+
+export function envVarForProvider(id) {
+  return ALLOWED_PROVIDERS.find(p => p.id === id)?.envVar;
+}
+
+// `cnc`'s native invocation_mode is claude-code-subprocess (Anthropic only - real tool use, file
+// edits, --resume continuity). PLAN.md's second 2026-09-09 addendum makes `cnc` (and `advisor`,
+// already messages-api) provider-selectable: when a seat declares `provider` and it isn't
+// `anthropic`, a claude-code-subprocess seat falls back to messages-api - a real chat seat on
+// that provider, honestly without tool-use/file-editing, never a faked equivalent coding agent.
+//
+// Moved here (out of index.js, security-review fix 2026-09-16) so preflight.js can derive a
+// seat's readiness requirement from the same live rule index.js's own dispatch path uses,
+// instead of keeping two independent readings of "what does this seat actually need right now" -
+// one of index.js's own hard rules (loose coupling through one composition point; derive, don't
+// duplicate).
+export function effectiveInvocationMode(seat) {
+  if (seat.invocation_mode === 'claude-code-subprocess' && seat.provider && seat.provider !== 'anthropic') {
+    return 'messages-api';
+  }
+  return seat.invocation_mode;
+}

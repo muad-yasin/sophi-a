@@ -85,14 +85,14 @@ outcome this section argued for, just anchored to a different number.
   CNC Harness, €20,00, no payment submitted) - not just read back from the dashboard list. Now
   wired into `marketing/index.html`'s "Get Sophi-A" CTA, replacing the honestly-inert
   coming-soon placeholder from the previous pass.
-- **Delivery mechanism: built, one real gap flagged.** Packaging now exists for real (`v0.1.0`,
-  `PLAN_PACKAGING.md`) - real Windows/Linux installers exist as GitHub Release assets. Fulfillment
-  mails and the copy-pasteable runbook are written: `docs/fulfillment-mails.md`,
+- **Delivery mechanism: built.** Packaging now exists for real (`v0.1.0`, `PLAN_PACKAGING.md`) -
+  real Windows/Linux installers exist as GitHub Release assets. Fulfillment mails and the
+  copy-pasteable runbook are written: `docs/fulfillment-mails.md`,
   `docs/manual-fulfillment-runbook.md` (mirrors `ManualFulfillmentRunbook.md`'s pattern - notice
-  the sale, do the work, send it). **Genuinely unresolved**: the GitHub repo is currently private,
-  so a buyer can't reach the release assets directly - either make the repo public (matches the
-  open-source decision already made) or re-host the two files somewhere reachable without a
-  GitHub login. Author's call, named in the runbook, not assumed either way.
+  the sale, do the work, send it). **Corrected (security/doc-drift review, 2026-09-16): the repo
+  has been public since 2026-09-09** (`DECISIONS.md`'s 2026-09-09 entry, reconfirmed by a later
+  entry) - the private-repo gap this line used to flag as unresolved doesn't exist anymore; a
+  buyer can reach a public repo's release assets directly.
 - **Stripe success page: built.** `sower-industries` now has `/en/sophi-a/next/`, mirroring
   `/plan/next.astro`'s pattern. Once deployed, point the Sophi-A payment link's success URL at
   `https://sower-industries.de/en/sophi-a/next/` - a dashboard action, not done here.

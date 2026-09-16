@@ -18,9 +18,12 @@ WIN_X64_SHA256="1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97
 
 target="${1:?usage: fetch-node-runtime.sh <linux-x64|win-x64>}"
 out_dir="dist-node/${target}"
-rm -rf "$out_dir"
-mkdir -p "$out_dir"
 
+# Security-review fix (2026-09-16): validate $target against the known-targets list BEFORE
+# deleting anything. This used to `rm -rf "$out_dir"` first and validate afterward, so an
+# unrecognized (or malicious, e.g. a path-traversal-shaped) $target got deleted before the script
+# ever noticed it was invalid. Selecting archive/expected_sha256 here doubles as the validation -
+# the `*)` branch below exits before out_dir is ever touched.
 case "$target" in
   linux-x64)
     archive="node-v${NODE_VERSION}-linux-x64.tar.xz"
@@ -35,6 +38,9 @@ case "$target" in
     exit 1
     ;;
 esac
+
+rm -rf "$out_dir"
+mkdir -p "$out_dir"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
