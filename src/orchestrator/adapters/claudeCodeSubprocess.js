@@ -217,6 +217,16 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
 
   armWatchdog();
 
+  // Progress subtitle (rich status cards, 2026-09-16): "N files touched" counted from the CLI's
+  // own stream - every Write/Edit/MultiEdit tool_use block names its target in `input.file_path`
+  // (the same `assistant` lines this handler already reads for text blocks; tool_use blocks were
+  // discarded before). Distinct paths per turn, never a guess; a turn with no file tool calls
+  // simply reports 0. There is no "N agents" figure for a build seat: --tools above never grants
+  // the Agent tool, so a seat has no sub-agents to count - the UI omits it rather than invent one.
+  const FILE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit']);
+  const touched = new Set();
+  let toolCalls = 0;
+
   function handleLine(line) {
     if (!line.trim()) return;
     let msg;
@@ -227,8 +237,16 @@ export function startClaudeCodeSeat(seatId, seatConfig, task, emit) {
       heartbeat = setInterval(() => { if (!finished) emit('seat.working'); }, HEARTBEAT_MS);
     } else if (msg.type === 'assistant') {
       emit('seat.working');
-      const textBlocks = (msg.message?.content || []).filter(b => b.type === 'text');
-      for (const b of textBlocks) emit('seat.output', b.text);
+      const blocks = msg.message?.content || [];
+      for (const b of blocks.filter(b => b.type === 'text')) emit('seat.output', b.text);
+      const toolUses = blocks.filter(b => b.type === 'tool_use');
+      if (toolUses.length) {
+        toolCalls += toolUses.length;
+        for (const t of toolUses) {
+          if (FILE_TOOLS.has(t.name) && typeof t.input?.file_path === 'string') touched.add(t.input.file_path);
+        }
+        emit('seat.progress', { kind: 'claude-code', filesTouched: touched.size, toolCalls });
+      }
     } else if (msg.type === 'result') {
       if (msg.session_id) sessionIds.set(seatId, msg.session_id);
       // Usage hook (Phase 2 Step 2, cost meter): emitted regardless of success/error - a

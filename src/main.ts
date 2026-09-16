@@ -3,6 +3,14 @@ import { renderSeatOutput } from "./seatOutputRender";
 import { initNotifications, notifySeatTransition, notifyBudgetExceeded } from "./seatNotify";
 import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
 import { buildCostBreakdownRows, buildCostBreakdownCsv, costBreakdownCsvFilename } from "./exportCostCsv";
+import {
+  progressSubtitle,
+  dispatchCapLine,
+  dispatchNote,
+  needsPillLine,
+  homeStatusLine,
+  type SeatProgress,
+} from "./seatProgress";
 
 type SeatEventType =
   | "seat.start"
@@ -10,7 +18,19 @@ type SeatEventType =
   | "seat.output"
   | "seat.idle"
   | "seat.problem"
-  | "seat.timeout";
+  | "seat.timeout"
+  | "seat.attention";
+
+// Rich status cards (2026-09-16): the orchestrator's own per-seat progress - relay round/
+// objection/proposal counts folded from run.log (src/orchestrator/run-log-progress.js), or a
+// build seat's files-touched count from the CLI's tool_use stream. Replayed on connect like
+// status/usage, cleared on the seat's next start. Wording lives in src/seatProgress.ts.
+interface SeatProgressEvent {
+  type: "seat.progress";
+  seatId: string;
+  timestamp: number;
+  detail: SeatProgress;
+}
 
 interface SeatEvent {
   type: SeatEventType;
@@ -191,7 +211,11 @@ interface SeatUsageEvent {
   total: UsageTotal;
 }
 
-type Status = "idle" | "working" | "problem" | "timeout";
+// "attention" (2026-09-16): the seat stopped on purpose and is waiting on the operator - the
+// mockup's "Needs you". Fed only by real orchestrator signals (relayChainSubprocess.js's needsYou:
+// an external-seat pause, or a run finished without sign-off); nothing in this file ever sets it
+// on its own.
+type Status = "idle" | "working" | "problem" | "timeout" | "attention";
 
 const SEAT_IDS = [
   "advisor",
@@ -270,16 +294,29 @@ const STATUS_LABELS: Record<Status, string> = {
   working: "Working",
   problem: "Degraded",
   timeout: "Timed out",
+  attention: "Needs you",
 };
 
+function seatStatus(seatId: string): Status {
+  return (tileEl(seatId)?.dataset.status as Status | undefined) ?? "idle";
+}
+
+// Every side seat currently doing something or parked on the operator - what cnc's
+// "orchestrating N seats" counts and what the DISPATCHED card lists. Real tile state only.
+function activeSideSeats(): string[] {
+  return SEAT_IDS.filter((id) => id !== "cnc" && (seatStatus(id) === "working" || seatStatus(id) === "attention"));
+}
+
 // cnc's own status line reads richer than every other seat's badge (design-handoff §4: "ready ·
-// nothing delegated" / "orchestrating N seats" next to COMMAND AND CONTROL) - real copy, not a
-// literal delegation count (this repo has no per-turn dispatch-count tracking yet), but it never
-// claims a specific number, so it stays honest.
+// nothing delegated" / "orchestrating N seats" next to COMMAND AND CONTROL). The N is real now:
+// the count of side seats currently working or waiting on the operator (activeSideSeats).
 function homeStatusText(status: Status): string {
-  if (status === "working") return "orchestrating";
-  if (status === "problem") return "degraded";
-  return "ready · nothing delegated";
+  return homeStatusLine(status, activeSideSeats().length);
+}
+
+function refreshHomeStatus() {
+  const cncBadge = tileEl("cnc")?.querySelector<HTMLElement>('[data-role="badge"]');
+  if (cncBadge && !gridEl.classList.contains("is-cold")) cncBadge.textContent = homeStatusText(seatStatus("cnc"));
 }
 
 function setStatus(seatId: string, status: Status) {
@@ -289,22 +326,93 @@ function setStatus(seatId: string, status: Status) {
   const badge = tile.querySelector('[data-role="badge"]');
   if (badge) badge.textContent = seatId === "cnc" ? homeStatusText(status) : STATUS_LABELS[status];
   setControlsEnabled(tile, status);
+  refreshProgress(seatId);
   updateDegradedCount();
+  refreshHomeStatus();
+  renderDispatched();
 }
 
-// Header "needs you" pill (design-handoff §1): the degraded half is real, counted from every
-// seat's own current status. The "needs you" half stays a static 0 - there's no orchestrator
-// signal yet for "a seat is holding a blocking question," so it's left honest rather than mocked.
+// Header "needs you" pill (design-handoff §1): both halves are real now - "needs you" counts
+// seats in the attention status (a relay external pause or a run finished without sign-off,
+// see the Status comment above), "degraded" counts seats in problem.
 function updateDegradedCount() {
   const line = document.getElementById("needs-pill-line1");
   const pill = document.getElementById("needs-pill");
   if (!line) return;
-  // "needs" (blocking-question count) has no real signal yet (see main.ts comment above) - it's
-  // always 0, so the only real-vs-not distinction is degraded > 0 or not.
-  const degraded = SEAT_IDS.filter((id) => tileEl(id)?.dataset.status === "problem").length;
-  line.textContent =
-    degraded === 0 ? "◆ All quiet" : `◆ 0 seats need you · ${degraded} degraded`;
-  pill?.classList.toggle("is-alert", degraded > 0);
+  const needsYou = SEAT_IDS.filter((id) => seatStatus(id) === "attention").length;
+  const degraded = SEAT_IDS.filter((id) => seatStatus(id) === "problem").length;
+  line.textContent = needsPillLine(needsYou, degraded);
+  pill?.classList.toggle("is-alert", needsYou > 0 || degraded > 0);
+}
+
+// --- Rich status cards: per-seat progress subtitle + the home column's DISPATCHED card ---
+
+const progressCache = new Map<string, SeatProgress>();
+
+// Writes the subtitle only when the text actually changes (frequently-changing display rule),
+// and hides the element outright when there is nothing real to say - never a blank line.
+function refreshProgress(seatId: string) {
+  const el = tileEl(seatId)?.querySelector<HTMLElement>('[data-role="progress"]');
+  if (!el) return;
+  const text = gridEl.classList.contains("is-cold") ? null : progressSubtitle(seatStatus(seatId), progressCache.get(seatId) ?? null);
+  if (text === null) {
+    if (!el.hidden) {
+      el.hidden = true;
+      el.textContent = "";
+    }
+    return;
+  }
+  if (el.textContent !== text) el.textContent = text;
+  el.hidden = false;
+}
+
+function handleSeatProgress(evt: SeatProgressEvent) {
+  progressCache.set(evt.seatId, evt.detail);
+  refreshProgress(evt.seatId);
+  renderDispatched();
+}
+
+function seatDisplayName(seatId: string): string {
+  return tileEl(seatId)?.querySelector(".tile-name")?.textContent?.trim() || seatId;
+}
+
+function renderDispatched() {
+  const card = document.querySelector<HTMLElement>('[data-role="dispatched"]');
+  const capEl = card?.querySelector<HTMLElement>('[data-role="dispatched-cap"]');
+  const chipsEl = card?.querySelector<HTMLElement>('[data-role="dispatched-chips"]');
+  const noteEl = card?.querySelector<HTMLElement>('[data-role="dispatched-note"]');
+  if (!card || !capEl || !chipsEl || !noteEl) return;
+  const active = activeSideSeats();
+  if (active.length === 0 || gridEl.classList.contains("is-cold")) {
+    card.hidden = true;
+    return;
+  }
+  const cap = dispatchCapLine(active.map((id) => progressCache.get(id)).filter((p): p is SeatProgress => !!p));
+  capEl.textContent = cap ?? "";
+  capEl.hidden = cap === null;
+  chipsEl.replaceChildren(
+    ...active.map((id) => {
+      const status = seatStatus(id);
+      const chip = document.createElement("span");
+      chip.className = "dispatched-chip";
+      chip.dataset.status = status;
+      const glyph = document.createElement("span");
+      glyph.className = "dispatched-chip-glyph";
+      glyph.setAttribute("aria-hidden", "true");
+      glyph.textContent = status === "attention" ? "◆" : "◐";
+      const name = document.createElement("span");
+      name.className = "dispatched-chip-name";
+      name.textContent = seatDisplayName(id);
+      const sub = document.createElement("span");
+      sub.className = "dispatched-chip-sub";
+      sub.textContent = progressSubtitle(status, progressCache.get(id) ?? null) ?? STATUS_LABELS[status];
+      chip.append(glyph, name, sub);
+      return chip;
+    }),
+  );
+  const waiting = active.filter((id) => seatStatus(id) === "attention").map(seatDisplayName);
+  noteEl.textContent = dispatchNote(waiting, active.length - waiting.length);
+  card.hidden = false;
 }
 
 // Phase 1 Step 1/2 (long-horizon build plan): seatId -> ready, from the orchestrator's real
@@ -518,6 +626,10 @@ function handleSeatEvent(evt: SeatEvent) {
       tileEl(evt.seatId)?.classList.remove("budget-exceeded");
       budgetNotified.delete(evt.seatId);
       refreshCostTicker(evt.seatId);
+      // Progress is per turn/run - mirrors index.js's own `progress.delete` on seat.start.
+      progressCache.delete(evt.seatId);
+      refreshProgress(evt.seatId);
+      renderDispatched();
       break;
     case "seat.working":
       setStatus(evt.seatId, "working");
@@ -555,6 +667,16 @@ function handleSeatEvent(evt: SeatEvent) {
       setStatus(evt.seatId, "timeout");
       if (evt.detail) setOutput(evt.seatId, evt.detail);
       if (wasWorking) void notifySeatTransition(evt.seatId, "problem");
+      break;
+    }
+    // Rich status cards (2026-09-16): "Needs you" - the seat parked itself on the operator
+    // (relayChainSubprocess.js's needsYou). The detail says exactly what it is waiting for and
+    // goes into the output slot like every other terminal event. Not a "problem" notification:
+    // seatNotify's two outcomes are finished/hit-a-problem, and this is neither - a desktop
+    // notification for it is a real follow-up, not faked through the wrong one here.
+    case "seat.attention": {
+      setStatus(evt.seatId, "attention");
+      if (evt.detail) setOutput(evt.seatId, evt.detail);
       break;
     }
   }
@@ -746,6 +868,7 @@ function setColdRailState(cold: boolean) {
     const glyph = tile.querySelector<HTMLElement>(".seat-glyph");
     const badge = tile.querySelector<HTMLElement>('[data-role="badge"]');
     const output = tile.querySelector<HTMLElement>('[data-role="output"]');
+    refreshProgress(seatId); // hidden while cold (gridEl.is-cold), restored from the cache once warm
     if (cold) {
       glyph?.setAttribute("data-status", "offline");
       // Matches cold-load.png exactly: the state line reads "Waiting for orchestrator" (not a
@@ -784,10 +907,9 @@ function showConnected() {
   setColdComposerState(false);
   document.querySelector<HTMLElement>('[data-role="cold-hero"]')!.hidden = true;
   document.querySelector<HTMLElement>('[data-role="idle-hero"]')!.hidden = false;
-  const needsLine = document.getElementById("needs-pill-line1");
-  if (needsLine) needsLine.textContent = "◆ All quiet";
-  const cncBadge = tileEl("cnc")?.querySelector<HTMLElement>('[data-role="badge"]');
-  if (cncBadge) cncBadge.textContent = homeStatusText((tileEl("cnc")?.dataset.status as Status) ?? "idle");
+  updateDegradedCount();
+  refreshHomeStatus();
+  renderDispatched();
 }
 
 function showConnecting() {
@@ -863,7 +985,8 @@ async function connect() {
         | PreflightResultEvent
         | RunHistoryEvent
         | ReplayResultEvent
-        | SeatUsageEvent;
+        | SeatUsageEvent
+        | SeatProgressEvent;
       if (evt.type === "compare.changes") handleCompareChanges(evt);
       else if (evt.type === "compare.diff") handleCompareDiff(evt);
       else if (evt.type === "artifact.list") handleArtifactList(evt);
@@ -876,6 +999,7 @@ async function connect() {
       else if (evt.type === "run.history") handleRunHistory(evt);
       else if (evt.type === "replay.result") handleReplayResult(evt);
       else if (evt.type === "seat.usage") handleSeatUsage(evt);
+      else if (evt.type === "seat.progress") handleSeatProgress(evt);
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -990,7 +1114,7 @@ function renderGlancePopover() {
     label.textContent = name;
     const stateEl = document.createElement("span");
     stateEl.className = "glance-row-status";
-    stateEl.textContent = status;
+    stateEl.textContent = STATUS_LABELS[status as Status] ?? status;
     li.append(glyph, label, stateEl);
     if ((FOCUSABLE_SEAT_IDS as readonly string[]).includes(seatId)) {
       li.classList.add("glance-row-clickable");

@@ -366,6 +366,7 @@
               <span class="tile-name">Plan I</span>
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -463,6 +464,7 @@
               <span class="tile-name">Plan II</span>
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -558,6 +560,7 @@
               <span class="tile-name">Plan III</span>
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -657,6 +660,7 @@
               <span class="tile-name">Advisor</span>
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -761,6 +765,23 @@
             <img class="home-portrait home-portrait-mini" src="/design/sophia-portrait.png" alt="" aria-hidden="true" />
             <p class="tile-output" data-role="output">Waiting for a task</p>
           </div>
+
+          <!-- DISPATCHED summary (rich status cards, 2026-09-16, Claude Design mockup
+               2026-09-16 11-29-02): shown only while at least one side seat is Working or
+               Needs you, rendered by main.ts's renderDispatched() from real seat statuses and
+               the orchestrator's own seat.progress events. The cap line is the running relay
+               runs' own `chain:`/`cap:` header lines (empty when no relay run has reported
+               them); every chip is a real seat; the note names real seats and never claims a
+               dependency between them. A <div>, not a <section>: test/seat-cards.test.mjs
+               slices a tile to its first </section>. -->
+          <div class="dispatched-card" data-role="dispatched" hidden aria-live="polite">
+            <div class="dispatched-head">
+              <span class="dispatched-title">DISPATCHED</span>
+              <span class="dispatched-cap" data-role="dispatched-cap"></span>
+            </div>
+            <div class="dispatched-chips" data-role="dispatched-chips"></div>
+            <p class="dispatched-note" data-role="dispatched-note"></p>
+          </div>
         </div>
 
         <form class="composer" data-role="task-form">
@@ -796,6 +817,7 @@
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="pick-badge" data-role="pick-badge" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -868,6 +890,7 @@
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="pick-badge" data-role="pick-badge" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
@@ -930,6 +953,7 @@
               <span class="cost-ticker" data-role="cost-ticker" hidden></span>
               <span class="pick-badge" data-role="pick-badge" hidden></span>
               <span class="status-badge" data-role="badge">idle</span>
+              <span class="seat-progress" data-role="progress" hidden></span>
               <p class="tile-output" data-role="output">Waiting for a task</p>
             </span>
           </button>
