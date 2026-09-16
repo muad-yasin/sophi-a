@@ -3030,8 +3030,12 @@ body {
   color: var(--on-gold);
 }
 
-/* Collapsed rail card: text-only badge like its siblings, in gold like the mockup's "Needs you". */
+/* Collapsed rail card: text-only badge like its siblings, in gold like the mockup's "Needs you".
+   `background: transparent` is restated here on purpose: the filled-pill rule above ties the
+   card's own transparent override on specificity and wins by source order, which rendered a
+   solid gold pill on the rail card - caught in the live screenshot, not by reading the CSS. */
 .tile[data-status="attention"] .seat-card-text .status-badge {
+  background: transparent;
   color: var(--gold-bright);
 }
 

@@ -943,9 +943,26 @@ async function connect() {
     port = await invoke<number>("get_orchestrator_port");
     token = await invoke<string>("get_orchestrator_token");
   } catch (err) {
-    debugLog(`invoke(get_orchestrator_port/token) failed: ${String(err)}`);
-    scheduleReconnect();
-    return;
+    // Dev-server-only fallback (2026-09-16): the page opened in a plain browser against
+    // `npm run dev` (no Tauri IPC) can still reach a running orchestrator when the operator
+    // pastes its own port/token into the URL - the same values the shell would hand over, read
+    // from the same tmpdir files the MCP server uses. `import.meta.env.DEV` is a compile-time
+    // constant, so this branch does not exist in a production build; the orchestrator's own
+    // Origin allow-list (http://localhost:1420) and auth token still gate the socket. Exists so
+    // the live seat grid can be verified/screenshotted outside the Tauri shell at all - the C&C
+    // GUI design brief recorded that this used to be impossible.
+    const devParams = import.meta.env.DEV ? new URLSearchParams(location.search) : null;
+    const devPort = Number(devParams?.get("port"));
+    const devToken = devParams?.get("token");
+    if (devParams && devPort > 0 && devToken) {
+      port = devPort;
+      token = devToken;
+      debugLog("dev fallback: connecting with port/token from the URL (no Tauri IPC)");
+    } else {
+      debugLog(`invoke(get_orchestrator_port/token) failed: ${String(err)}`);
+      scheduleReconnect();
+      return;
+    }
   }
 
   const ws = new WebSocket(`ws://127.0.0.1:${port}`);
