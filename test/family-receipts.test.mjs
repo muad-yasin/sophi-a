@@ -1,43 +1,28 @@
 // test/family-receipts.test.mjs
 //
-// Item 3 of Sophi-A's "family" MVP polish (relay/runs/2026-09-15T18-55-34-601Z/build.md §2,
-// handoff.md). Real subprocess spawns via Session A's (cnc-harness-ad) fake `claude` binary
-// fixture (test/fixtures/fake-claude.sh, pulled in from sophi-a-family-mvp-a once item 1
-// landed) on a temp PATH - same technique test/peer-pool.test.mjs already uses, since
-// familyLedger.js is a real consumer of peer-pool's own real fanOut()/emit() path, not a mocked
-// one.
+// Sophi-A seat-owned families, F3 (relay/Docs/SophiA-Seat-Families-Plan.md §2.5; council review
+// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §c). Rewritten for familyLedger.js's F3
+// rewrite: rows now derive from familyMemory.js's on-disk turn receipts (F1's own contract),
+// never from peer-pool's in-memory events - the MVP-polish version of this file tested the old
+// peer-pool-derived familyLedger.js, which no longer exists after F3's rewrite. Real fixtures
+// via familyMemory.js's own createFamily/writeSessionState/writeTurnResult - never hand-built
+// JSON files that could drift from what F1 actually writes.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, copyFileSync, chmodSync, readFileSync, existsSync, rmSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { createFamily, writeSessionState, writeTurnResult } from '../src/orchestrator/family/familyMemory.js';
+import { familyReceiptRows, familyReceiptCounts } from '../src/orchestrator/familyLedger.js';
+import { renderFamilyReceiptsText, renderFamilyReceiptCountsText } from '../src/ui/familyReceipts.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const fakeClaudeSrc = join(repoRoot, 'test', 'fixtures', 'fake-claude.sh');
-// gp-77's real Fable-5.1 security review (2026-09-15) flagged that a missing fixture here must
-// never silently fall through to whatever `claude` binary happens to be on the real PATH - fail
-// loudly instead, before any subprocess spawn, rather than risk a real invocation in a test.
-if (!existsSync(fakeClaudeSrc)) {
-  throw new Error(`family-receipts.test.mjs: fixture missing at ${fakeClaudeSrc} - refusing to fall through to a real claude on PATH`);
-}
 
-const tmp = mkdtempSync(join(tmpdir(), 'family-receipts-test-'));
-const binDir = join(tmp, 'bin');
-mkdirSync(binDir, { recursive: true });
-const claudePath = join(binDir, 'claude');
-copyFileSync(fakeClaudeSrc, claudePath);
-chmodSync(claudePath, 0o755);
-process.env.PATH = `${binDir}:${process.env.PATH}`;
-
-test.after(() => {
-  try { rmSync(tmp, { recursive: true, force: true }); } catch {}
-});
-
-// FORBIDDEN_PHRASES mirrors build.md §2's own list verbatim ("no aggregate/comparative claim of
-// any kind... no 'better than', no 'outperforms', no '% success rate'").
-const FORBIDDEN_PHRASES = ['better than', 'outperforms', '% success rate'];
+// F3's own extension of build.md §2's original list: "% , effective, reliable, and the
+// comparative words" - checked against both source and every rendered/counted string.
+const FORBIDDEN_PHRASES = ['better than', 'outperform', 'success rate', '%', 'effective', 'reliable'];
 
 function dirHash(dirPath) {
   const hash = createHash('sha256');
@@ -59,6 +44,10 @@ function dirHash(dirPath) {
   return hash.digest('hex');
 }
 
+function tmpFamiliesRoot() {
+  return mkdtempSync(join(tmpdir(), 'family-receipts-test-'));
+}
+
 test('familyLedger.js never calls a write-shaped fs function - source-grep write-guard', () => {
   const src = readFileSync(join(repoRoot, 'src', 'orchestrator', 'familyLedger.js'), 'utf8');
   assert.doesNotMatch(src, /\bwriteFileSync?\(/, 'familyLedger.js must never write files');
@@ -66,124 +55,132 @@ test('familyLedger.js never calls a write-shaped fs function - source-grep write
   assert.doesNotMatch(src, /\bmkdirSync?\(/, 'familyLedger.js must never create directories');
 });
 
-test('familyReceipts.js renders no forbidden aggregate/comparative phrase in its own source', () => {
+test('familyReceipts.js source contains none of the forbidden aggregate/comparative phrases', () => {
   const src = readFileSync(join(repoRoot, 'src', 'ui', 'familyReceipts.js'), 'utf8');
+  const lower = src.toLowerCase();
   for (const phrase of FORBIDDEN_PHRASES) {
-    assert.ok(!src.toLowerCase().includes(phrase.toLowerCase()), `familyReceipts.js source contains forbidden phrase: "${phrase}"`);
+    assert.ok(!lower.includes(phrase.toLowerCase()), `familyReceipts.js source contains forbidden phrase: "${phrase}"`);
   }
 });
 
-test('a real 2-peer fan-out through peer-pool produces 2 family-receipt rows, each with a real on-disk artifactPath, no forbidden phrases, and leaves run folders/recorder store byte-identical', async () => {
-  const { fanOut } = await import('../src/orchestrator/peer-pool.js');
-  const { observePeerEvent, familyRows, _resetFamilyLedgerForTests } = await import('../src/orchestrator/familyLedger.js');
-  const { renderFamilyReceiptsText } = await import('../src/ui/familyReceipts.js');
-  const { runsDir } = await import('../src/orchestrator/run-recorder.js');
-
-  _resetFamilyLedgerForTests();
-
-  const beforeHash = dirHash(runsDir());
-
-  const seatId = 'cnc';
-  const task = `family-receipts-${Date.now()}`;
-
-  // Real finding, worth recording rather than worked around: peer-pool.js's own safeEnv()
-  // forwards only a fixed non-secret allowlist (PATH/HOME/LANG/...) plus ANTHROPIC_API_KEY via
-  // its own separate conditional (peer-pool.js:29, not part of SAFE_ENV_KEYS itself - a real key
-  // IS forwarded to peer subprocesses, since a peer's whole job is running `claude` for real) -
-  // a deliberate security boundary either way (docs/security-prompt-injection.md). FAKE_CLAUDE_*
-  // env vars are on neither path, so a real fanOut() call can never actually drive
-  // fake-claude.sh's success/failure output via those knobs - only its own default behavior
-  // (a fixed placeholder line, not valid stream-json) is reachable this way. Widening
-  // SAFE_ENV_KEYS to make an offline test more convenient would weaken a real security
-  // boundary for zero product reason - not done here, flagged in DECISIONS.md instead.
-  // Consequence, verified real rather than assumed: fake-claude.sh's default stdout produces
-  // no parseable stream-json `result` line, so peer-pool.js correctly reports this as
-  // `peer.problem` ("exited before a result line arrived") - which is itself a legitimate,
-  // real terminal outcome this ledger must handle honestly, not a test-setup bug to paper over.
-
-  const events = [];
-  const { dispatched } = fanOut(seatId, { count: 2, task }, (type, detail) => {
-    events.push({ type, detail });
-    observePeerEvent(seatId, type, detail);
-  });
-  assert.equal(dispatched.length, 2, 'exactly 2 peers dispatched');
-
-  // Wait for both peers to reach a terminal event.
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const terminal = events.filter(e => e.type === 'peer.idle' || e.type === 'peer.problem' || e.type === 'peer.timeout');
-    if (terminal.length >= 2) break;
-    await new Promise(r => setTimeout(r, 50));
-  }
-
-  const rows = familyRows(seatId);
-  assert.equal(rows.length, 2, `expected 2 family-receipt rows, got ${rows.length}`);
-  for (const row of rows) {
-    // artifactPath is the peer's own workdir - real, on-disk, created by peer-pool.js's own
-    // workdirFor(peerId) before the fake-claude process even spawns, so this proves the row
-    // traces to a real, checkable per-peer directory, not a synthesized path.
-    assert.ok(row.artifactPath, 'row must carry a non-empty artifactPath');
-    assert.ok(existsSync(row.artifactPath), `artifactPath must exist on disk: ${row.artifactPath}`);
-    assert.ok(row.outcome.startsWith('failure owned:') || row.outcome === 'completed - result recorded', `unexpected outcome shape: ${row.outcome}`);
-  }
-
-  const rendered = renderFamilyReceiptsText(rows);
+test('familyLedger.js source contains none of the forbidden aggregate/comparative phrases either', () => {
+  const src = readFileSync(join(repoRoot, 'src', 'orchestrator', 'familyLedger.js'), 'utf8');
+  const lower = src.toLowerCase();
   for (const phrase of FORBIDDEN_PHRASES) {
-    assert.ok(!rendered.toLowerCase().includes(phrase.toLowerCase()), `rendered output contains forbidden phrase: "${phrase}"`);
+    assert.ok(!lower.includes(phrase.toLowerCase()), `familyLedger.js source contains forbidden phrase: "${phrase}"`);
   }
-
-  const afterHash = dirHash(runsDir());
-  assert.equal(afterHash, beforeHash, 'run-recorder store directory must be byte-identical before and after a family-receipts render/observe cycle');
 });
 
-test('observePeerEvent: a clean peer.idle produces a "completed" outcome row', async () => {
-  const { observePeerEvent, familyRows, _resetFamilyLedgerForTests } = await import('../src/orchestrator/familyLedger.js');
-  _resetFamilyLedgerForTests();
-  observePeerEvent('cnc', 'peer.idle', { peerId: 'peer-success-1', detail: { ok: true } });
-  const rows = familyRows('cnc');
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].outcome, 'completed - result recorded');
-  assert.equal(rows[0].task, 'peer-success-1');
-});
+test('a family dir with 3 real turn fixtures (one verified, one failure owned, one unpriced) renders 3 rows and a reproducible counts line, read-only', () => {
+  const familiesRoot = tmpFamiliesRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'plan-1', familyId: 'fam-a', brief: 'test family', plan: '- [ ] P1' }, familiesRoot);
+    writeSessionState(family, { sessionId: 's-0001', runtime: 'chat', status: 'idle', planItem: 'P1' });
 
-test('observePeerEvent: peer.problem and peer.timeout both produce a "failure owned" row carrying the verbatim detail', async () => {
-  const { observePeerEvent, familyRows, _resetFamilyLedgerForTests } = await import('../src/orchestrator/familyLedger.js');
-  _resetFamilyLedgerForTests();
-  observePeerEvent('cnc', 'peer.problem', { peerId: 'peer-fail-1', detail: 'claude exited with code 1' });
-  observePeerEvent('cnc', 'peer.timeout', { peerId: 'peer-fail-2', detail: 'no output for 300s' });
-  const rows = familyRows('cnc');
-  assert.equal(rows.length, 2);
-  assert.ok(rows.every(r => r.outcome.startsWith('failure owned:')));
-  assert.ok(rows.some(r => r.outcome.includes('claude exited with code 1')));
-  assert.ok(rows.some(r => r.outcome.includes('no output for 300s')));
-});
+    writeTurnResult(family, 's-0001', 1, {
+      planItem: 'P1', runtime: 'chat', provider: 'mock', model: 'mock-1',
+      startedAt: 1000, endedAt: 2000, exitCode: 0, isError: false,
+      usage: { reported: true, inputTokens: 10, outputTokens: 5, priced: true, usd: 0.01 },
+      artifactPath: join(family.dir, 'sessions', 's-0001', 'workdir'),
+      verify: { command: 'npm test', exitCode: 0, outputPath: 'turns/0001.verify.txt' },
+      state: 'idle',
+    });
+    writeTurnResult(family, 's-0001', 2, {
+      planItem: 'P1', runtime: 'chat', provider: 'mock', model: 'mock-1',
+      startedAt: 3000, endedAt: 4000, exitCode: 1, isError: true,
+      errorText: 'TypeError: cannot read property of undefined',
+      usage: { reported: true, inputTokens: 8, outputTokens: 2, priced: true, usd: 0.005 },
+      artifactPath: join(family.dir, 'sessions', 's-0001', 'workdir'),
+      verify: null,
+      state: 'failed-owned',
+    });
+    writeTurnResult(family, 's-0001', 3, {
+      planItem: 'P1', runtime: 'chat', provider: 'ollama', model: 'qwen2.5-coder',
+      startedAt: 5000, endedAt: 6000, exitCode: 0, isError: false,
+      usage: { reported: true, inputTokens: 12, outputTokens: 20, priced: false },
+      artifactPath: null,
+      verify: null,
+      state: 'idle',
+    });
 
-test('observePeerEvent: progress events (start/working/output/usage) produce no row', async () => {
-  const { observePeerEvent, familyRows, _resetFamilyLedgerForTests } = await import('../src/orchestrator/familyLedger.js');
-  _resetFamilyLedgerForTests();
-  for (const type of ['peer.start', 'peer.working', 'peer.output', 'peer.usage', 'fanout.notice']) {
-    observePeerEvent('cnc', type, { peerId: 'peer-noise' });
+    const beforeHash = dirHash(familiesRoot);
+
+    const rows = familyReceiptRows(family);
+    assert.equal(rows.length, 3);
+    assert.ok(rows.some(r => r.outcome === 'verified by npm test'));
+    assert.ok(rows.some(r => r.outcome === 'failure owned: TypeError: cannot read property of undefined'));
+    assert.ok(rows.some(r => r.outcome === 'not verified' && r.usage === '~32 tokens'));
+
+    const counts = familyReceiptCounts(family);
+    assert.equal(counts.turns, 3);
+    assert.equal(counts.verifiedCount, 1);
+    assert.equal(counts.failedCount, 1);
+    assert.equal(counts.hasUnpricedSpend, true);
+    assert.equal(counts.totalUsd, null, 'unpriced spend present - no dollar total may be claimed');
+    assert.match(counts.text, /3 turns, 1 verified, 1 failure owned, usage not reported for at least one turn/);
+    assert.ok(counts.reproCommand.includes(family.dir), 'reproCommand must name the real directory it counts over');
+
+    const rendered = renderFamilyReceiptsText(rows);
+    const renderedCounts = renderFamilyReceiptCountsText(counts);
+    for (const phrase of FORBIDDEN_PHRASES) {
+      assert.ok(!rendered.toLowerCase().includes(phrase.toLowerCase()), `rendered rows contain forbidden phrase: "${phrase}"`);
+      assert.ok(!renderedCounts.toLowerCase().includes(phrase.toLowerCase()), `rendered counts line contains forbidden phrase: "${phrase}"`);
+    }
+
+    const afterHash = dirHash(familiesRoot);
+    assert.equal(afterHash, beforeHash, 'the families directory must be byte-identical before and after rendering/counting - a render must never write');
+  } finally {
+    rmSync(familiesRoot, { recursive: true, force: true });
   }
-  assert.equal(familyRows('cnc').length, 0);
 });
 
-test('familyRows caps at MAX_ROWS_PER_SEAT, oldest evicted', async () => {
-  const { observePeerEvent, familyRows, MAX_ROWS_PER_SEAT, _resetFamilyLedgerForTests } = await import('../src/orchestrator/familyLedger.js');
-  _resetFamilyLedgerForTests();
-  const seatId = 'cnc';
-  for (let i = 0; i < MAX_ROWS_PER_SEAT + 3; i += 1) {
-    observePeerEvent(seatId, 'peer.idle', { peerId: `peer-cap-${i}`, detail: 'ok' });
+test('a fully-priced family with no failures reports a real dollar total, not "unpriced"', () => {
+  const familiesRoot = tmpFamiliesRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'plan-1', familyId: 'fam-priced', brief: '', plan: '' }, familiesRoot);
+    writeSessionState(family, { sessionId: 's-0001', runtime: 'council', status: 'idle', planItem: 'P2' });
+    writeTurnResult(family, 's-0001', 1, {
+      planItem: 'P2', runtime: 'council', provider: 'anthropic', model: 'claude-sonnet-5',
+      startedAt: 0, endedAt: 1, exitCode: 0, isError: false,
+      usage: { reported: true, inputTokens: 100, outputTokens: 50, priced: true, usd: 0.12 },
+      verify: { command: 'npm test', exitCode: 0 },
+      state: 'idle',
+    });
+    const counts = familyReceiptCounts(family);
+    assert.equal(counts.hasUnpricedSpend, false);
+    assert.equal(counts.totalUsd, 0.12);
+    assert.match(counts.text, /~\$0\.12/);
+  } finally {
+    rmSync(familiesRoot, { recursive: true, force: true });
   }
-  const rows = familyRows(seatId);
-  assert.equal(rows.length, MAX_ROWS_PER_SEAT);
-  // Newest first: the most recently observed peer (peer-cap-<last>) must be present; the very
-  // first one observed (peer-cap-0) must have been evicted.
-  assert.ok(rows.some(r => r.task === `peer-cap-${MAX_ROWS_PER_SEAT + 2}`));
-  assert.ok(!rows.some(r => r.task === 'peer-cap-0'));
 });
 
-test('renderFamilyReceiptsText renders an explicit empty state, never a blank panel', async () => {
-  const { renderFamilyReceiptsText } = await import('../src/ui/familyReceipts.js');
-  assert.equal(renderFamilyReceiptsText([]), 'No family activity yet this session.');
-  assert.equal(renderFamilyReceiptsText(undefined), 'No family activity yet this session.');
+test('a family with no turns yet renders an explicit empty state, never a blank panel', () => {
+  const familiesRoot = tmpFamiliesRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'plan-1', familyId: 'fam-empty', brief: '', plan: '' }, familiesRoot);
+    assert.deepEqual(familyReceiptRows(family), []);
+    assert.equal(renderFamilyReceiptsText(familyReceiptRows(family)), 'No family activity yet this session.');
+    assert.equal(renderFamilyReceiptsText([]), 'No family activity yet this session.');
+    assert.equal(renderFamilyReceiptsText(undefined), 'No family activity yet this session.');
+  } finally {
+    rmSync(familiesRoot, { recursive: true, force: true });
+  }
+});
+
+test('a verify command that itself failed (nonzero exitCode) renders as failure owned, not "verified"', () => {
+  const familiesRoot = tmpFamiliesRoot();
+  try {
+    const family = createFamily({ ownerSeat: 'plan-1', familyId: 'fam-verify-fail', brief: '', plan: '' }, familiesRoot);
+    writeSessionState(family, { sessionId: 's-0001', runtime: 'chat', status: 'idle' });
+    writeTurnResult(family, 's-0001', 1, {
+      runtime: 'chat', exitCode: 0, isError: false,
+      usage: { reported: true, inputTokens: 1, outputTokens: 1, priced: true, usd: 0.001 },
+      verify: { command: 'npm test', exitCode: 1 },
+    });
+    const rows = familyReceiptRows(family);
+    assert.equal(rows[0].outcome, 'failure owned: verify failed (npm test)');
+  } finally {
+    rmSync(familiesRoot, { recursive: true, force: true });
+  }
 });

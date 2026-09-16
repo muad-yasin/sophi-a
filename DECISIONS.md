@@ -1768,3 +1768,91 @@ Also fixed in the same pass, found while re-reading `admit()` for the review res
 
 Full `npm test` after fixes: 78/78 green (5 new validation tests added, everything else
 unchanged). No re-review requested since nothing beyond the review's own findings changed.
+
+## 2026-09-16: Sophi-A seat-owned families, Session C - F3 (receipts v2) + F5 (chat/council runtimes)
+
+Built in worktree `cnc-harness-families-c` (branch `families-c`), rebased onto
+`seat-families-integration` @ `cfa9179` (F1+F0 from `families-a`, F2+F4 from `families-b`, both
+already Fable-reviewed). Not merged/pushed. This session was dispatched to pick up work an
+earlier attempt never actually started (it hit a permission block and closed before writing
+anything) - nothing here builds on or assumes any prior Session C code, because none existed.
+
+**F3: `familyLedger.js` fully rewritten**, not extended - the MVP-polish version derived rows from
+`peer-pool.js`'s in-memory `peer.*` events; F1's `familyMemory.js` now owns the real, durable,
+on-disk receipt store (`sessions/*/turns/*.result.json`), so the old peer-pool-derived API
+(`observePeerEvent`/`familyRows`/`_resetFamilyLedgerForTests`) is gone, replaced by
+`familyReceiptRows(family)`/`familyReceiptCounts(family)`, both pure reads over
+`familyMemory.deriveLedgerView()` - this module still never walks the filesystem itself, per F1's
+own contract note that F3 "is expected to build its own richer rendering on top of this, not
+duplicate the file-walking logic." `test/family-receipts.test.mjs` was rewritten wholesale for
+the same reason (its old peer-pool-based fixtures test a mechanism that no longer exists in this
+file) - real fixtures built via `familyMemory.js`'s own `createFamily`/`writeSessionState`/
+`writeTurnResult`, never hand-written JSON that could drift from what F1 actually writes.
+`src/ui/familyReceipts.js` updated to match the new row shape (`sessionId`+`turn` instead of the
+old peer-pool `task` id) and to render the new `usage`/counts-line fields.
+
+**Real near-miss caught while writing the extended forbidden-phrase test**: `familyLedger.js`'s
+own header comment quoted the new forbidden-phrase additions ("%, effective, reliable...") to
+explain the extension, which self-matched its own check when the test greped this file's source
+for those same literal strings - identical shape to the false-positive `familyReceipts.js`'s own
+forbidden-phrase test hit on the MVP-polish branch, and to `compassionPolicy.js`'s reason-string
+test on `families-b`. Fixed the same way each time: the comment was reworded to describe the
+extension without quoting any of its literal words.
+
+**F5: `familyRuntimes.js`, new file.** `dispatchTurn(family, session, task, turn, emit)` routes by
+`session.runtime`. `chat` calls relay's own `providers.js` in-process via `messagesApi.js`'s
+already-exported `loadProviders()` (no subprocess, no tools - proven by both a functional test and
+a source-grep on `dispatchChatTurn`'s own function body for `spawn(`/`--tools`). `council` reuses
+`relayChainSubprocess.js`'s existing `startRelayChainSeat()` spawn-and-poll adapter unmodified,
+wrapping its `emit` callback to write a `familyMemory.writeTurnResult()` receipt on the terminal
+`seat.idle`/`seat.problem` event and forwarding every other event through unchanged. `claude-code`
+is a thin delegation to F0's own `fanOut()` in `peer-pool.js` - this module never reimplements
+write capability, matching §2.7's "write capability is a property of the runtime" design exactly.
+
+**Real bug caught and fixed before this was reported done**: an early draft used
+`family.runtimes || ALL_RUNTIMES` to find the family's own allowlist, but `familyMemory.
+createFamily()`'s real return value is `{dir, ownerSeat, familyId}` - it never carries `runtimes`
+back to the caller, even though it writes that field into `family.json`. A caller holding only
+that bare descriptor (exactly what `createFamily()` itself hands back) would have silently fallen
+through to the permissive `ALL_RUNTIMES` default instead of the family's real, configured
+allowlist - the opposite of the "refused before any dispatch" guarantee F5's own acceptance test
+requires. Fixed with `familyRuntimesAllowlist()`, which reads `family.json` directly off disk
+when `family.runtimes`/`family.familyJson.runtimes` isn't already present - "the file is truth"
+(§2.3), so this fallback read is honest, not a second source of truth. Caught by
+`test/family-runtimes.test.mjs`'s own first test, which failed before the fix and passes after.
+
+**`recordUsage()` reused, not reinvented, for chat-turn usage**: an early draft of
+`dispatchChatTurn` invented `result.usd`/`result.priced` fields that relay's `call()` never
+actually returns (checked directly against THCMCP's `src/providers.js` - `callMock`/
+`callAnthropic`/`callOpenAICompat` all return only raw `{input, output}` token counts). Fixed to
+call `cost-tracker.js`'s `recordUsage()`, the same function `messagesApi.js`'s own `advisor` path
+already uses to turn raw tokens into §2.5's honesty-invariant shape (`reported`/`priced`/`usd`).
+
+**§2.7's `context/` gate check, implemented as `checkContextGate(family, sessionId)`**: for every
+file in a session's `context/` directory that isn't a gate record itself, requires a sibling
+`<filename>.gate.json` with `result: "pass"`; missing, unreadable/corrupt, or non-passing all fail
+closed (blocked), never treated as "nothing to check." This function is the check itself, not the
+dispatch-refusing wiring - per the plan's own division of labor, the composition point that
+actually builds a `claude-code` member's prompt (F7, a different session) is responsible for
+calling it before including any `context/` file that didn't originate from that session's own
+turns. Exposed here because F5's own chat/council dispatch is exactly what can *produce* the kind
+of ungated artifact this check exists to catch before it ever reaches a write-capable member.
+
+**Task/out text files (`turns/NNNN.task.md`/`.out.md`)**: F1's `familyMemory.js` only persists the
+structured `result.json` receipt - it exposes no function for the verbatim text artifacts §2.3's
+own directory layout describes. `familyRuntimes.js` writes these itself, directly via `node:fs`
+(not through any of `familyMemory.js`'s private atomic-JSON helpers, which don't apply to plain
+text), using the same zero-padded turn-numbering scheme (`String(turn).padStart(4,'0')`) F1's own
+`writeTurnResult()` uses, so the two file families stay addressable by the same turn number.
+Named here as a real division-of-responsibility choice, not an oversight: regenerable session
+text lives with the runtime dispatcher that produces it; the one authoritative receipt per turn
+stays F1's own atomic-write path.
+
+Both test files: `test/family-receipts.test.mjs` (rewritten, 7 tests) + `test/family-runtimes.test.mjs`
+(new, 12 tests). Full `npm test`: 128/128 green (also confirms F1/F0/F2/F4's own 81 tests from
+the integration branch are still passing unmodified after this branch's changes).
+
+Not built (other sessions' own file ownership per the council's worktree split):
+`familyManager.js`/WS commands/UI wiring for the receipts panel and dispatch composition (Session
+E, merges last); the security gate (Session D). `checkContextGate()`'s actual wiring into a
+claude-code dispatch path is that composition point's job, not built here.

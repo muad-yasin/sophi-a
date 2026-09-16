@@ -309,3 +309,13 @@
   `test/compassion-states.test.mjs` (+2 tests, banned-word list widened) and adds
   `test/compassion-policy.test.mjs` (14 tests) + `test/family-caps.test.mjs` (12 tests). Full
   `npm test`: 73/73. `compassionStates.js` and `peer-pool.js` both untouched - not merged/pushed.
+- 2026-09-16 - Sophi-A seat-owned families, Session C, F3+F5 (worktree `cnc-harness-families-c`,
+  branch `families-c`, not merged). `src/orchestrator/familyLedger.js` fully rewritten to derive
+  from `familyMemory.js`'s on-disk receipts (`familyReceiptRows`/`familyReceiptCounts`), replacing
+  the old peer-pool-event-based version; `src/ui/familyReceipts.js` updated to match.
+  `src/orchestrator/family/familyRuntimes.js` (new): `dispatchTurn()` routes chat (in-process,
+  no subprocess, no tools) / council (real THCMCP CLI via `relayChainSubprocess.js`, unmodified)
+  / claude-code (delegates to F0's `fanOut()`, never reimplements write capability); plus
+  `checkContextGate()` for §2.7's context/-hand-off gate check. `test/family-receipts.test.mjs`
+  rewritten (7 tests), `test/family-runtimes.test.mjs` new (12 tests). Full `npm test`: 128/128
+  (includes F1/F0/F2/F4's 81 tests from the integration base, all still green). Not merged/pushed.
