@@ -47,15 +47,18 @@ things a side seat does to another side seat.
 
 ## Running it
 
+Source only - the €20 one-time packaged-build offer this section used to point at is retired
+(Muad's direct confirmation, 2026-09-16). Sophi-A is real software (public repo, Apache-2.0) that
+has not been playtested or released; there is no purchase flow.
+
 ```
+git clone https://github.com/muad-yasin/sophi-a.git
+cd sophi-a
 npm install
 npm run tauri dev
 ```
 
-Or skip the setup: a packaged build exists (`v0.1.0` - Windows NSIS installer, Linux AppImage,
-built for real by GitHub Actions) for **€20 one-time**, no subscription - buy it, run it, bring
-your own provider keys. [Get it here.](https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03) Source
-stays free either way; paying buys convenience, not the code.
+Bring your own Claude Code / API credentials; nothing is resold.
 
 **A packaged/release build always needs a real Anthropic API key** for the Command & Control and
 build seats (Setup → provider keys) - it never falls back to whatever `claude` CLI login happens
