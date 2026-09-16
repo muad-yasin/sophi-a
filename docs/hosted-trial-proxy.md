@@ -2,12 +2,21 @@
 
 **Status: DRAFT — not implemented. See HUMAN STOP at the end.**
 
-## What this fixes
+**Correction (security review, 2026-09-16): the vulnerability this section originally described
+as a live, shipped fact is not built.** There is no free-trial council run, no seller-key
+constant, and no `trial-run.js` anywhere in this repo today (`grep -rn trial src-tauri/src/lib.rs
+src/orchestrator/` finds nothing; "Phase 1 Step 4" and "free-trial" do not appear in `PLAN.md`,
+which uses "slice 1" terminology and names no such step). The section below is restated as what it
+actually is: a forward-looking design, so that IF a free-trial mechanism is ever built, it ships
+with this proxy from the start rather than shipping the naive plain-constant-key version first and
+needing to be retrofitted.
 
-Phase 1 Step 4's free-trial council run keeps the seller's API key as a plain constant in
-`src-tauri/src/lib.rs`, protected only by a provider-side spend limit — honest, but the key is
-extractable from the shipped binary with effort. This proxy is the actual fix: the key never
-ships in any client at all.
+## What this fixes (if/when a free-trial mechanism is built)
+
+A naive free-trial council run design would keep the seller's API key as a plain constant in
+`src-tauri/src/lib.rs`, protected only by a provider-side spend limit — honest, but the key would
+be extractable from the shipped binary with effort. This proxy is the design that avoids shipping
+that shape at all: the key never ships in any client, from the first version.
 
 ## Design
 
