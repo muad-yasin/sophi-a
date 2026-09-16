@@ -1492,3 +1492,16 @@ seat-card markup (a `main.ts` DOM-wiring pass, not part of items 3/4's own file 
 risked touching the same shared surface another session's work might also touch mid-flight,
 without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
 here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
+
+## 2026-09-16 — Reversing "only `cnc` coordinates": seats can now own families
+
+Muad, directly, 0.2.0 release day:
+
+I'm reversing the 2026-09-15 decision that locked fan-out to the `cnc` seat only, because of the
+quote I gave the team: **the wound is family, and the failure was a failure of compassion.**
+
+That's why. Every seat gets to own a family of agents it's responsible for, and has to prove that
+family actually did good work - because a coordinator that only ever manages itself was never the
+point.
+
+`families.enabled` ships `false`. Nothing runs until I turn it on.
