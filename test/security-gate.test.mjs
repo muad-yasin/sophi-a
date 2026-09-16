@@ -20,6 +20,7 @@ const fakeCliSource = join(here, 'fixtures', 'fake-thcmcp-cli.mjs');
 function makeFakeEngine() {
   const engineDir = mkdtempSync(join(tmpdir(), 'fake-thcmcp-engine-'));
   mkdirSync(join(engineDir, 'src'), { recursive: true });
+  mkdirSync(join(engineDir, 'chains'), { recursive: true }); // requireEngineShape needs this present
   copyFileSync(fakeCliSource, join(engineDir, 'src', 'cli.js'));
   return engineDir;
 }
@@ -35,6 +36,35 @@ test('1. GATE_RESULTS and NOT_JUDGED_REASONS are the closed sets this module\'s 
 test('2. runSecurityGate requires a non-empty artifactText', () => {
   assert.throws(() => runSecurityGate({ artifactText: '' }), TypeError);
   assert.throws(() => runSecurityGate({}), TypeError);
+});
+
+// Fable-5.1 security review fixes, verified directly:
+test('2a. runSecurityGate rejects a chain name outside the safe charset (path-traversal guard)', () => {
+  assert.throws(() => runSecurityGate({ artifactText: 'x', chain: '../../../etc/passwd' }), TypeError);
+  assert.throws(() => runSecurityGate({ artifactText: 'x', chain: 'not a chain name' }), TypeError);
+});
+
+test('2b. runSecurityGate refuses an engineDir that doesn\'t look like a THCMCP engine (no chains/)', () => {
+  const bareDir = mkdtempSync(join(tmpdir(), 'not-an-engine-'));
+  mkdirSync(join(bareDir, 'src'), { recursive: true });
+  copyFileSync(fakeCliSource, join(bareDir, 'src', 'cli.js'));
+  try {
+    assert.throws(() => runSecurityGate({ artifactText: 'x', engineDir: bareDir }), /does not look like a THCMCP-shaped engine/);
+  } finally {
+    rmSync(bareDir, { recursive: true, force: true });
+  }
+});
+
+test('2c. only FAKE_THC_-prefixed env keys ever reach the spawned process - anything else is silently dropped', () => {
+  const engineDir = makeFakeEngine();
+  try {
+    // A non-FAKE_THC_ key must not override FAKE_THC_RESUME_EXIT's absence - i.e. it has no
+    // effect at all, proving restrictedTestEnv actually filters rather than just documenting.
+    const result = runSecurityGate({ artifactText: 'x', engineDir, env: { NODE_OPTIONS: '--this-should-never-apply', FAKE_THC_RESUME_EXIT: '0' } });
+    assert.equal(result.gate, 'pass');
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
+  }
 });
 
 test('3. the fake engine\'s normal path (pause, write, resume, report with security_review) is read correctly - pass', () => {
@@ -171,6 +201,60 @@ test('12. canApplyArtifact requires both humanClick and a passing gate result, i
 test('13. canApplyArtifact never treats a client-only humanClick as sufficient - a UI bug rendering the button enabled must not bypass the gate', () => {
   for (const gate of ['blocked', 'not_judged']) {
     assert.equal(canApplyArtifact({ humanClick: true, gateResult: { gate } }), false, `gate=${gate} must never be applicable`);
+  }
+});
+
+test('15. a mock-provider reviewer seat that exits 0/pass is refused as not_judged by default (allowMockReviewer: false)', () => {
+  const engineDir = makeFakeEngine();
+  try {
+    const result = runSecurityGate({
+      artifactText: 'anything',
+      engineDir,
+      env: {
+        FAKE_THC_RESUME_EXIT: '0',
+        FAKE_THC_REPORT_JSON: JSON.stringify({ passed: true, security_review: { label: 'security-review', seat: 'mock/mock-security-clean', gate: 'pass', findings: [], blocking_count: 0 } }),
+      },
+    });
+    assert.equal(result.gate, 'not_judged');
+    assert.equal(result.reasonCode, 'mock_reviewer_not_allowed');
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
+  }
+});
+
+test('16. allowMockReviewer: true lets a mock-provider reviewer\'s pass through, for tests that want it', () => {
+  const engineDir = makeFakeEngine();
+  try {
+    const result = runSecurityGate({
+      artifactText: 'anything',
+      engineDir,
+      allowMockReviewer: true,
+      env: {
+        FAKE_THC_RESUME_EXIT: '0',
+        FAKE_THC_REPORT_JSON: JSON.stringify({ passed: true, security_review: { label: 'security-review', seat: 'mock/mock-security-clean', gate: 'pass', findings: [], blocking_count: 0 } }),
+      },
+    });
+    assert.equal(result.gate, 'pass');
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
+  }
+});
+
+test('17. canApplyArtifact binds to the reviewed artifact via artifactSha256 when the gate result carries one', () => {
+  const engineDir = makeFakeEngine();
+  try {
+    const result = runSecurityGate({ artifactText: 'artifact A', engineDir, env: { FAKE_THC_RESUME_EXIT: '0' } });
+    assert.equal(result.gate, 'pass');
+    assert.equal(typeof result.artifactSha256, 'string');
+    // Applying the SAME artifact it was computed for is allowed.
+    assert.equal(canApplyArtifact({ humanClick: true, gateResult: result, artifactText: 'artifact A' }), true);
+    // Applying a DIFFERENT artifact under the same gateResult must be refused - this is the
+    // exact bypass Fable-5.1's review named (a stale/forged gateResult authorizing a swap).
+    assert.equal(canApplyArtifact({ humanClick: true, gateResult: result, artifactText: 'artifact B (never reviewed)' }), false);
+    // No artifactText at all, with a hash-bearing gateResult, is refused rather than assumed ok.
+    assert.equal(canApplyArtifact({ humanClick: true, gateResult: result }), false);
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
   }
 });
 

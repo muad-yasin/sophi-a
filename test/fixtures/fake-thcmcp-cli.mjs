@@ -54,7 +54,7 @@ if (resumeIdx === -1) {
   if (writeReport) {
     const reportJson = process.env.FAKE_THC_REPORT_JSON || JSON.stringify({
       passed: true,
-      security_review: { label: 'security-review', gate: 'pass', findings: [], blocking_count: 0 },
+      security_review: { label: 'security-review', seat: 'anthropic/claude-fable-5-1', gate: 'pass', findings: [], blocking_count: 0 },
     });
     writeFileSync(join(runDir, 'report.json'), reportJson);
   }
