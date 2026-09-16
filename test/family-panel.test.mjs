@@ -70,3 +70,24 @@ test('forbidden-phrase list: none of the fixed panel copy strings contain a forb
     assert.ok(!allCopy.toLowerCase().includes(phrase.toLowerCase()), `panel copy must never contain "${phrase}"`);
   }
 });
+
+// --- Fable security review fixes (2026-09-16), each with its own proving test ---
+
+test('LOW #7 fix: describeFamilyPanel carries an explicit isError flag - a real error state is never mistaken for the neutral empty state', () => {
+  assert.equal(describeFamilyPanel('error', { error: 'Fan-out refused: a turn is already running' }).isError, true);
+  assert.equal(describeFamilyPanel('empty', {}).isError, false);
+  assert.equal(describeFamilyPanel('flag-off', {}).isError, false);
+  assert.equal(describeFamilyPanel('loading', {}).isError, false);
+});
+
+test('LOW #1 fix: a malformed/corrupted session status never reaches the rendered class or text as raw text', () => {
+  const description = describeFamilyPanel('active', {
+    family: { sessions: [{ sessionId: 's1', status: 'idle; malicious-class another', turnCount: 1 }] },
+  });
+  assert.equal(description.sessions[0].status, 'unknown', 'a status outside the safe token shape collapses to "unknown"');
+  // Every real SESSION_STATES value (familyMemory.js) still passes through unchanged.
+  for (const real of ['created', 'running', 'idle', 'stopped', 'failed-owned', 'stuck', 'holdout', 'needs-human', 'unreadable', 'interrupted', 'closed']) {
+    const d = describeFamilyPanel('active', { family: { sessions: [{ sessionId: 's1', status: real, turnCount: 0 }] } });
+    assert.equal(d.sessions[0].status, real, `real status "${real}" must not be sanitized away`);
+  }
+});

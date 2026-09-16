@@ -276,3 +276,8 @@ test('M2 fix: handleFamilyDispatch and handleFamilyStop in index.js both catch a
     'handleFamilyStop wraps familyStop in try/catch',
   );
 });
+
+test('LOW #2 fix (F8 Fable review): family_list.result echoes requestedOwnerSeat, so the frontend can route a reply to the right panel', () => {
+  const src = readFileSync(join(process.cwd(), 'src', 'orchestrator', 'index.js'), 'utf8');
+  assert.match(src, /requestedOwnerSeat:\s*ownerSeat/, 'handleFamilyList echoes the requested ownerSeat back in its reply');
+});

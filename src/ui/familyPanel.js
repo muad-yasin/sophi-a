@@ -28,29 +28,45 @@ export const FORBIDDEN_PANEL_PHRASES = ['%', 'effective', 'reliable', 'guarantee
  * the DOM layer that consumes this must build nodes with textContent, never concatenate HTML).
  * @param {'flag-off'|'loading'|'error'|'empty'|'active'} state
  * @param {{seatReason?: string|null, error?: string|null, family?: {sessions: object[]}|null}} data
- * @returns {{emptyText: string|null, showCreateButton: boolean, sessions: object[], showComposer: boolean}}
+ * @returns {{emptyText: string|null, isError: boolean, showCreateButton: boolean, sessions: object[], showComposer: boolean}}
  */
 export function describeFamilyPanel(state, data = {}) {
   if (state === 'flag-off') {
-    return { emptyText: data.seatReason || 'Families are off for this seat.', showCreateButton: false, sessions: [], showComposer: false };
+    return { emptyText: data.seatReason || 'Families are off for this seat.', isError: false, showCreateButton: false, sessions: [], showComposer: false };
   }
   if (state === 'loading') {
-    return { emptyText: 'Loading…', showCreateButton: false, sessions: [], showComposer: false };
+    return { emptyText: 'Loading…', isError: false, showCreateButton: false, sessions: [], showComposer: false };
   }
   if (state === 'error') {
-    return { emptyText: data.error || 'Could not load this family.', showCreateButton: false, sessions: [], showComposer: false };
+    // Fable review, LOW #7, 2026-09-16: the DOM layer used to guess "is this an error" from the
+    // copy text (`startsWith('Could not')`) even though classifyPanelState() already knows the
+    // real state - carrying it explicitly here means every real server refusal renders with the
+    // actual error styling, not the neutral empty one.
+    return { emptyText: data.error || 'Could not load this family.', isError: true, showCreateButton: false, sessions: [], showComposer: false };
   }
   if (state === 'empty') {
-    return { emptyText: 'No family yet for this seat.', showCreateButton: true, sessions: [], showComposer: false };
+    return { emptyText: 'No family yet for this seat.', isError: false, showCreateButton: true, sessions: [], showComposer: false };
   }
   // active
   const family = data.family || { sessions: [] };
   return {
     emptyText: null,
+    isError: false,
     showCreateButton: false,
-    sessions: family.sessions.map(s => ({ sessionId: s.sessionId, status: s.status, turnCount: s.turnCount ?? 0 })),
+    sessions: family.sessions.map(s => ({ sessionId: s.sessionId, status: sanitizeStatusForClass(s.status), turnCount: s.turnCount ?? 0 })),
     showComposer: true,
   };
+}
+
+// Fable review, LOW #1, 2026-09-16: `status` reaches a CSS class name
+// (`family-status-${status}`), the one place this module doesn't use textContent/dataset. It's
+// meant to always be one of familyMemory.js's own SESSION_STATES, written by the manager, but a
+// hand-edited/corrupted state.json could otherwise inject an arbitrary class token (e.g. a space
+// applying an unrelated utility class to the badge). Cosmetic-only on this local single-user app,
+// but cheap to close: collapse anything outside a known-safe token shape to "unknown".
+const SAFE_STATUS_TOKEN_RE = /^[a-z][a-z-]{0,31}$/;
+function sanitizeStatusForClass(status) {
+  return typeof status === 'string' && SAFE_STATUS_TOKEN_RE.test(status) ? status : 'unknown';
 }
 
 function el(tag, opts = {}) {
@@ -71,9 +87,7 @@ export function buildFamilyPanelDom(description) {
   const frag = document.createDocumentFragment();
 
   if (description.emptyText !== null) {
-    const className = description.showCreateButton === false && description.sessions.length === 0 && !description.showComposer && description.emptyText.startsWith('Could not')
-      ? 'family-panel-error'
-      : 'family-panel-empty';
+    const className = description.isError ? 'family-panel-error' : 'family-panel-empty';
     frag.appendChild(el('p', { className, text: description.emptyText }));
     if (description.showCreateButton) {
       const btn = el('button', { className: 'btn family-create-btn', text: 'Create family' });

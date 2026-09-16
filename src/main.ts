@@ -2187,18 +2187,19 @@ function setupFamilyPanels() {
   }
 }
 
-function handleFamilyListResult(evt: { families: { ownerSeat: string; familyId: string; sessions: { sessionId: string; status: string; runtime: string }[] }[] }) {
-  // The WS response isn't seat-scoped by request id, so this relies on family_list's own
-  // ownerSeat filter (index.js's handleFamilyList) - only ever one outstanding request matters
-  // for this UI's current one-panel-open-at-a-time interaction, named as a real simplification.
-  for (const seatId of FAMILY_SEAT_IDS) {
-    const s = familyPanelStateFor(seatId);
-    if (!familyPanelRootEl.get(seatId) || familyPanelRootEl.get(seatId)!.hidden) continue;
-    const mine = evt.families.filter((f) => f.ownerSeat === seatId);
-    s.loading = false;
-    s.family = mine.length > 0 ? (mine[0] as any) : null;
-    renderFamilyPanel(seatId);
-  }
+function handleFamilyListResult(evt: { requestedOwnerSeat: string | null; families: { ownerSeat: string; familyId: string; sessions: { sessionId: string; status: string; runtime: string }[] }[] }) {
+  // Fable review, LOW #2, 2026-09-16: this used to apply every family_list.result to every open
+  // panel, since the reply carried no marker for which seat's request it answered - a reply for
+  // seat A (correctly empty for A) was misread as "seat B has no family either" for any other
+  // open panel, resetting it to the empty/Create-button state even though B has a real family.
+  // index.js now echoes requestedOwnerSeat back; only that one seat's panel is ever touched.
+  const seatId = evt.requestedOwnerSeat;
+  if (!seatId || !FAMILY_SEAT_IDS.includes(seatId as any)) return;
+  const s = familyPanelStateFor(seatId);
+  const mine = evt.families.filter((f) => f.ownerSeat === seatId);
+  s.loading = false;
+  s.family = mine.length > 0 ? (mine[0] as any) : null;
+  renderFamilyPanel(seatId);
 }
 
 function handleFamilyMutationResult(seatId: string | undefined, evt: { ok?: boolean; reason?: string }) {

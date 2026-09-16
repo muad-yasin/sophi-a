@@ -490,7 +490,12 @@ function handleFamilyList(ws, { ownerSeat }) {
     ownerSeat: f.ownerSeat, familyId: f.familyId, ok: f.ok,
     sessions: (f.sessions || []).map(s => ({ sessionId: s.sessionId, status: s.status, runtime: s.runtime })),
   }));
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_list.result', families }));
+  // Fable review, LOW #2, 2026-09-16: the reply carried no marker for which seat's request it
+  // answers, and familyList() above already filters server-side by the requested ownerSeat - a
+  // client with more than one family panel open had no way to tell "empty reply for seat B" (a
+  // real empty family) apart from "this is actually seat A's reply, seat B was never asked".
+  // Echoing the requested ownerSeat back lets the client route the reply to the right panel only.
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_list.result', requestedOwnerSeat: ownerSeat ?? null, families }));
 }
 
 // Fable security review, MEDIUM M2, 2026-09-16: familyDispatch/familyStop can throw synchronously

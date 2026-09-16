@@ -1941,4 +1941,35 @@ this repo's `tsc --noEmit` (a `.js`-module-import declaration-file error, alread
 (`familyPanel.js`) - not introduced by this change, not fixed here either (a real tsconfig fix,
 out of scope tonight), named for whoever next touches `tsconfig.json`.
 
-4 new tests (`test/family-manager.test.mjs`), full `npm test`: 131/131 green.
+## 2026-09-16: F8 security-review fixes (Fable 5.1 review of beecd7d)
+
+No critical/high/medium findings. Three of the LOW/INFO items were cheap and real enough to fix
+rather than only name:
+
+**LOW #1** - `session.status` reached a CSS class name (`family-status-${status}`) unsanitized -
+the one place this module didn't route a dynamic value through `textContent`/`dataset`, contrary
+to its own header claim. A hand-edited/corrupted `state.json` could inject an arbitrary class
+token. Fixed: `sanitizeStatusForClass()` collapses anything outside a safe `[a-z][a-z-]{0,31}`
+shape to `"unknown"` - every real `SESSION_STATES` value still passes through unchanged, proven by
+a test that round-trips all eleven real states plus one malformed example.
+
+**LOW #2** - `family_list.result` carried no marker for which seat's request it answered, and
+`handleFamilyList` already filters server-side by the requested `ownerSeat` - with more than one
+family panel open, a reply for seat A (correctly empty) was applied to every open panel, resetting
+seat B's panel to "no family yet" even though B has a real one. Fixed: `index.js` now echoes
+`requestedOwnerSeat` back; the client only ever updates that one seat's panel.
+
+**LOW #7** - the DOM layer guessed "is this an error" from the copy text
+(`emptyText.startsWith('Could not')`) instead of carrying the real state `classifyPanelState()`
+already computed - every actual server refusal rendered with the neutral empty styling, not the
+error one. Fixed: `describeFamilyPanel()` now returns an explicit `isError` boolean.
+
+**Not changed, named rather than fixed**: #3/#4 (client-side `familyId`/`ownerSeat` staleness -
+server-side `familyRef()` re-validates and reads fresh from disk regardless, so the worst case is
+a refused dispatch, never a wrong-family request); #5 (`Map` keys from server-echoed `ownerSeat` -
+no prototype-pollution path, `Map` isn't a plain object); #6 (the `broadcast()` visibility question
+- pre-existing, by design, not something this diff changed); #8 (a malformed `family_list.result`
+throws inside the existing top-level `try/catch` and is silently dropped - availability-only,
+matches this file's existing "ignore a malformed frame rather than crash the whole UI" posture).
+
+2 new tests. Full `npm test`: 146/146 green. `npx vite build` still succeeds.
