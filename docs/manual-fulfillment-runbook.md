@@ -12,19 +12,13 @@ Stripe emails a payment notification, or check the Payments dashboard
 email and country (Germany-only launch - `SHOP.md` - refund and explain if Stripe let a
 cross-border sale through before the checkout restriction is confirmed live).
 
-## 2. Get the buyer a working download link - the one genuinely open step
+## 2. Get the buyer a working download link
 
-The built installers exist as GitHub Release assets on `github.com/muad-yasin/sophi-a`, which is
-currently a **private** repo - a buyer can't reach a private repo's release assets on their own.
-**This is a real, unresolved gap, not assumed away**: before the first real sale, decide one of:
-
-- Make the repo public (matches the Apache-2.0/open-source decision already made - probably the
-  simplest fix, but a repo-visibility flip is the author's own call, not a session's).
-- Keep it private and re-host the two files somewhere a buyer can reach without a GitHub login
-  (a plain download link on sower-industries.de, a file-sharing link, etc.) - more steps per
-  sale, but keeps the repo private if there's a reason to.
-
-Until one of these is chosen, do this by hand per sale:
+**Corrected (security/doc-drift review, 2026-09-16): the repo has been public since 2026-09-09**
+(`DECISIONS.md`'s 2026-09-09 entry; reconfirmed by a later entry noting the footer's GitHub link
+"points at the real public GitHub blob URL - real because the repo itself is already public"). A
+buyer can reach a public repo's release assets directly - the private-repo gap this section used
+to describe as unresolved doesn't exist anymore. Do this by hand per sale:
 
 ```
 gh release download v0.1.0 -R muad-yasin/sophi-a -D /tmp/sophia-delivery
