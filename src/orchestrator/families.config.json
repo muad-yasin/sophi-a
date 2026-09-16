@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "enabled": false,
+  "global": { "maxConcurrentSessions": 4, "spendCeilingUsd": 5.00 },
+  "seats": {
+    "cnc":    { "enabled": true,  "maxConcurrentSessions": 4, "spendCeilingUsd": 5.00, "runtimes": ["claude-code", "chat", "council"] },
+    "plan-1": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 1.00, "runtimes": ["chat", "council"] },
+    "plan-2": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 1.00, "runtimes": ["chat", "council"] },
+    "plan-3": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 1.00, "runtimes": ["chat", "council"] },
+    "build-1": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 2.00, "runtimes": ["claude-code", "chat"] },
+    "build-2": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 2.00, "runtimes": ["claude-code", "chat"] },
+    "build-3": { "enabled": false, "maxConcurrentSessions": 2, "spendCeilingUsd": 2.00, "runtimes": ["claude-code", "chat"] },
+    "advisor": { "enabled": false, "maxConcurrentSessions": 1, "spendCeilingUsd": 1.00, "runtimes": ["chat"] }
+  }
+}

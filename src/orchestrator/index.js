@@ -20,6 +20,9 @@ import { checkAllSeats } from './preflight.js';
 import { listRecordedRuns, readRecordedRun, readRecordedLog } from './run-recorder.js';
 import { accumulate } from './cost-tracker.js';
 import { fanOut, stopPeer, stopAllPeers } from './peer-pool.js';
+import {
+  familyCreate, familyList, familyDispatch, familyStop, familyClose, familyStopAll,
+} from './family/familyManager.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const root = resolve(here, '../..'); // cnc-harness repo root
@@ -164,6 +167,9 @@ export function stopAll() {
   for (const seatId of Object.keys(seats)) {
     if (status.get(seatId) === 'working') stopSeat(seatId);
   }
+  // Sophi-A Seat Families F7: "Stop All must mean all" - family sessions (and the plain peers
+  // they're built on) stop alongside seats, not as a second control a human has to remember.
+  familyStopAll();
 }
 
 // Parallel-build-and-compare (PLAN_PARALLEL_BUILD.md §3, build order item 1): a fan-out dispatch
@@ -461,6 +467,71 @@ const COMPARE_RECORDS_DIR = join(root, '.workdirs', '.compare');
 // that main()'s connection handler requires a real per-launch token before any command (including
 // this one) is even dispatched, humanClick is a genuine audit field (did the UI mean to send
 // this?) layered on top of a real access-control check, not a substitute for one.
+// Sophi-A Seat Families F7's WS surface. Each handler broadcasts a `family.*` event on real
+// state change and replies to the requesting client only for a pure query (family_list) or a
+// refusal reason the UI needs to show (F8's disabled-with-a-reason rule) - same asymmetry
+// select_winner/inspect_changes already use above.
+function familyEmit(wss) {
+  return (type, detail) => broadcast(wss, { type, timestamp: Date.now(), ...(detail !== undefined ? { detail } : {}) });
+}
+
+function handleFamilyCreate(ws, wss, { ownerSeat, familyId, brief, task, humanClick }) {
+  try {
+    const family = familyCreate({ ownerSeat, familyId, brief, plan: task, humanClick });
+    broadcast(wss, { type: 'family.notice', timestamp: Date.now(), detail: { ownerSeat, familyId, notice: 'family created' } });
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: true, ownerSeat, familyId, family: { ownerSeat: family.ownerSeat, familyId: family.familyId } }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_create.result', ok: false, ownerSeat, familyId, reason: err.message }));
+  }
+}
+
+function handleFamilyList(ws, { ownerSeat }) {
+  const families = familyList({ ownerSeat }).map(f => ({
+    ownerSeat: f.ownerSeat, familyId: f.familyId, ok: f.ok,
+    sessions: (f.sessions || []).map(s => ({ sessionId: s.sessionId, status: s.status, runtime: s.runtime })),
+  }));
+  // Fable review, LOW #2, 2026-09-16: the reply carried no marker for which seat's request it
+  // answers, and familyList() above already filters server-side by the requested ownerSeat - a
+  // client with more than one family panel open had no way to tell "empty reply for seat B" (a
+  // real empty family) apart from "this is actually seat A's reply, seat B was never asked".
+  // Echoing the requested ownerSeat back lets the client route the reply to the right panel only.
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_list.result', requestedOwnerSeat: ownerSeat ?? null, families }));
+}
+
+// Fable security review, MEDIUM M2, 2026-09-16: familyDispatch/familyStop can throw synchronously
+// (e.g. assertSafeSegment on a malformed id) or, for the async dispatch path, reject - neither
+// was ever caught here, so a single malformed WS message from an authenticated client crashed the
+// whole orchestrator (an unhandled rejection is fatal by default on current Node). Every family_*
+// handler now replies with a refusal instead, matching handleFamilyCreate/handleFamilyClose's
+// existing try/catch shape.
+async function handleFamilyDispatch(ws, wss, { ownerSeat, familyId, sessionId, task, runtime, planItem }) {
+  try {
+    const result = await familyDispatch({ ownerSeat, familyId, sessionId, task, runtime, planItem }, familyEmit(wss));
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ownerSeat, familyId, sessionId, ...result }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_dispatch.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
+  }
+}
+
+function handleFamilyStop(ws, { ownerSeat, familyId, sessionId }) {
+  try {
+    const result = familyStop({ ownerSeat, familyId, sessionId });
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ownerSeat, familyId, sessionId, ...result }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_stop.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
+  }
+}
+
+function handleFamilyClose(ws, wss, { ownerSeat, familyId, sessionId, humanClick }) {
+  try {
+    const result = familyClose({ ownerSeat, familyId, sessionId, humanClick });
+    broadcast(wss, { type: 'family.session.state', timestamp: Date.now(), detail: { ownerSeat, familyId, sessionId, status: 'closed' } });
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ownerSeat, familyId, sessionId, ...result }));
+  } catch (err) {
+    if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'family_close.result', ok: false, ownerSeat, familyId, sessionId, reason: err.message }));
+  }
+}
+
 function handleSelectWinner(wss, seatId, humanClick) {
   if (humanClick !== true) {
     console.error('select_winner rejected: missing human-click origin flag');
@@ -856,6 +927,11 @@ function main() {
       }
       else if (msg.cmd === 'stop_peer') stopPeer(msg.peerId);
       else if (msg.cmd === 'stop_all_peers') stopAllPeers();
+      else if (msg.cmd === 'family_create') handleFamilyCreate(ws, wss, { ownerSeat: msg.ownerSeat, familyId: msg.familyId, brief: msg.brief, task: msg.task, humanClick: msg.humanClick });
+      else if (msg.cmd === 'family_list') handleFamilyList(ws, { ownerSeat: msg.ownerSeat });
+      else if (msg.cmd === 'family_dispatch') handleFamilyDispatch(ws, wss, { ownerSeat: msg.ownerSeat, familyId: msg.familyId, sessionId: msg.sessionId, task: msg.task, runtime: msg.runtime, planItem: msg.planItem });
+      else if (msg.cmd === 'family_stop') handleFamilyStop(ws, { ownerSeat: msg.ownerSeat, familyId: msg.familyId, sessionId: msg.sessionId });
+      else if (msg.cmd === 'family_close') handleFamilyClose(ws, wss, { ownerSeat: msg.ownerSeat, familyId: msg.familyId, sessionId: msg.sessionId, humanClick: msg.humanClick });
     });
   });
 

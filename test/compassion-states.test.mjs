@@ -11,9 +11,14 @@ import { classify, STUCK_THRESHOLD_SECS } from '../src/orchestrator/compassionSt
 import { COMPASSION_COPY, COMPASSION_STATES } from '../src/ui/compassionCopy.js';
 import { renderCompassionBadgeText } from '../src/ui/compassionBadge.js';
 import { mockRelayChain } from './fixtures/mock-relay-chain.mjs';
+// Extended per Sophi-A seat-owned families §2.6 rule 7 (relay/Docs/SophiA-Seat-Families-Plan.md):
+// "No blame, lazy, stupid, punish, retry until, or model-identity attack anywhere in family
+// copy." Exported from compassionPolicy.js so this one list is never duplicated - test/
+// compassion-policy.test.mjs imports the same constant for its own reason-string check.
+import { BANNED_COMPASSION_WORDS } from '../src/orchestrator/family/compassionPolicy.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const BANNED_WORDS = ['blame', 'lazy', 'stupid'];
+const BANNED_WORDS = BANNED_COMPASSION_WORDS;
 
 test('classify: a nonzero exit code classifies FAILED-OWNED', () => {
   const runRecord = { exitCode: 1, lastOutputAt: Date.now(), holdout: null };
@@ -73,6 +78,17 @@ test('compassionCopy.js contains none of the banned non-blaming-language violati
   const lower = src.toLowerCase();
   for (const word of BANNED_WORDS) {
     assert.ok(!lower.includes(word), `compassionCopy.js contains banned word: "${word}"`);
+  }
+});
+
+// §2.6 rule 7's "model-identity attack" clause, checked as: family copy never names a specific
+// provider/model as being at fault - approximated here by asserting no provider/vendor name
+// appears in the copy at all, since this fixed copy has no legitimate reason to name one.
+test('compassionCopy.js names no specific provider/model (the "model-identity attack" clause)', () => {
+  const src = readFileSync(join(repoRoot, 'src', 'ui', 'compassionCopy.js'), 'utf8');
+  const lower = src.toLowerCase();
+  for (const vendor of ['deepseek', 'glm', 'mistral', 'qwen', 'kimi', 'gpt', 'claude', 'gemini', 'ollama']) {
+    assert.ok(!lower.includes(vendor), `compassionCopy.js names a provider/model: "${vendor}"`);
   }
 });
 

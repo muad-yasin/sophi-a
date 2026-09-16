@@ -1493,6 +1493,665 @@ risked touching the same shared surface another session's work might also touch 
 without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
 here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
 
+## 2026-09-15: Sophi-A Seat Families, Session A - F1 (family memory) + F0 (flag/caps/fanOut generalization)
+
+Council-planned (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`, revising
+`relay/Docs/SophiA-Seat-Families-Plan.md`), Muad's reversal of the 2026-09-15 peer-pool-only
+decision, dispatched overnight by thcmcp-66. Session A is the only session allowed to touch
+`peer-pool.js`; F2-F10 are other sessions' scope, built against this session's §2 contracts only.
+
+**F1 - `src/orchestrator/family/familyMemory.js`.** Implements the plan's exact contract
+(`createFamily`/`loadFamilies`/`writeSessionState`/`writeTurnResult`/`readSession`) plus the
+council's memory-drift fix (§b "Memory-drift risk", §d.7): `loadFamilies()` recomputes each
+family's ledger view fresh from `sessions/*/turns/*.result.json` on every call and compares it
+against a caller-supplied `cache` Map; a mismatch means the recomputed view wins unconditionally
+and exactly one `family.notice` fires per family, never per row. `state.json`'s enum is the
+council-corrected one (`created, running, idle, stopped, failed-owned, stuck, holdout,
+needs-human, unreadable, interrupted, closed`). Atomic writes are temp-then-rename in the same
+directory; a corrupt or missing `state.json` reads back as `{ok:false, status:'unreadable'}`,
+never a thrown exception. `.families` added to `.gitignore` (same reasoning as `.workdirs`/`runs`
+already there).
+
+**Deviation, recorded per backend-developer's rule 12** (a design-level asymmetry doesn't have to
+be fixed by the change that found it): `deriveLedgerView()` silently skips an individual corrupt
+`*.result.json` file inside an otherwise-readable session, rather than surfacing it the way a
+corrupt `state.json` surfaces as `unreadable`. This is narrower and quieter than the plan's own
+"nothing is ever discarded, only marked" receipts invariant (§2.5) technically wants. Not fixed
+here because it's a one-line gap with no test coverage of its own yet, not because it's
+unimportant - named as a real reopen candidate for F3 (`familyLedger.js`, Session C), which
+already owns the richer receipts rendering this would feed into.
+
+**F0 - `families.config.json`, `src/orchestrator/family/familyConfig.js`,
+`src/orchestrator/envRestrictions.js`, `peer-pool.js` (extended, not rewritten).**
+
+1. **The `safeEnv()`/`RESTRICTED_ARGS` de-duplication** (council fix, closing named regression
+   risk (3) from the peer-pool plan's own §0): both `claudeCodeSubprocess.js` and `peer-pool.js`
+   carried byte-identical independent copies before this session - confirmed by diffing them
+   directly, not assumed. Both now import from the new `src/orchestrator/envRestrictions.js`;
+   neither defines its own copy (`test/env-restrictions.test.mjs`'s source-grep proves it). This
+   is a **G6 human-stop-gate file** per the plan's §7 - its content is unchanged from what both
+   call sites already carried, not edited beyond the extraction itself.
+2. **`families.config.json`** ships with `enabled: false` (G1: "the shipped file stays false") and
+   one row per real seat in `seats.json` (`cnc` enabled, everyone else disabled) - the plan's own
+   §2.2 example showed only 3 seats as illustrations; this extends to the full real roster since
+   `familyConfig.js`'s loader needs a real row per seat to have anything meaningful to clamp/check.
+3. **`familyConfig.js`** loads and validates the config: missing file → `FLAG_OFF_CONFIG` (never a
+   crash), invalid JSON → `{ok:false, error}` (never a throw), an unsupported `runtimes` value
+   (anything outside `claude-code`/`chat`/`council`) or an unsupported `providers` value (checked
+   against the real `providers.js` `isAllowedProvider()`, not a second hand-kept list - closes
+   "no xai anywhere" at config-load time) → `{ok:false, error}`, per-seat caps above the global
+   ones are clamped and logged once per seat per process.
+4. **`fanOut()`'s own fail-safe ordering** (the council's specific architecture fix, §b
+   "Flag/reversal guards"): a **recorded interpretation deviation** from the plan's most literal
+   reading. The plan's revised text says the cnc-identity check must run "strictly before any
+   families.config.json read... so that a missing file, a corrupt file, or any future
+   config-loading error can never change the throw for a non-cnc caller." Read as literally
+   "check identity before touching the filesystem at all," that would make a non-`cnc` seat
+   permanently unable to fan out even with the flag on and its own row enabled - which contradicts
+   §2.2's entire premise. Implemented instead as the guarantee the sentence's own justification
+   actually asks for: `loadFamilyConfig()` never throws (a missing or corrupt file folds into the
+   exact same `FLAG_OFF_CONFIG` fallback), so a non-`cnc` caller gets the exact legacy throw string
+   in all three cases - real flag-off, absent config, and corrupt config - deterministically,
+   never a crash, never a bypass. Verified directly:
+   `test/peer-pool.test.mjs`'s "F0(a)" and "F0(a-corrupt)" tests assert the exact legacy string
+   for a non-`cnc` caller under both an absent and a syntactically-invalid config file. Flagging
+   this reading rather than silently picking one, since a future session should know the literal
+   sentence and the implemented guarantee are not word-for-word the same thing.
+5. **`fanOut(coordinatorSeatId, opts, emit)` keeps its exact signature.** With the flag off (or
+   config absent/corrupt), behavior is byte-for-byte the pre-F0 function - `maxConcurrentPeers`
+   defaults to `DEFAULT_MAX_CONCURRENT_PEERS` (4), `spendCeilingUsd` defaults to `null`, no
+   cap-table lookup happens at all. With the flag on and the calling seat's own row `enabled:true`,
+   `maxConcurrentPeers`/`spendCeilingUsd` default to that seat's own clamped config values instead
+   (still overridable by an explicit caller-supplied value).
+6. **`--resume` capture-and-pass-through, scoped narrowly.** `spawnPeer()` now accepts an optional
+   `resumeSessionId` and appends `--resume <id>` when given; `peer.start`'s emitted detail now
+   also carries the real `session_id` the stream-json `init` line reported. `fanOut()` accepts an
+   optional `opts.sessionHandles` array (parallel to `count`, ignored entirely when the flag is
+   off) so a caller who already has prior session ids can resume them. **Explicitly not built
+   here, and not this session's scope**: persisting/looking up those handles across separate
+   `fanOut()` calls on its own - that is F7's job (`familyManager.js`, a later session), which is
+   expected to read `peer.start`'s `sessionId` and write it via F1's `writeSessionState`, then
+   read it back via `readSession` on the next dispatch. `fanOut()` itself only resumes a handle a
+   caller already supplies; it has no memory of its own peers across calls, same as before F0.
+
+7 net new files (`envRestrictions.js`, `family/familyConfig.js`, `family/familyMemory.js`,
+`families.config.json`, `test/env-restrictions.test.mjs`, `test/family-config.test.mjs`,
+`test/family-memory.test.mjs`), 2 files extended (`claudeCodeSubprocess.js` import-only,
+`peer-pool.js`), `test/peer-pool.test.mjs`'s existing 6 tests unchanged and still green. 73/73
+tests total (46 pre-existing + 27 new), run in chunks per the overnight instruction. Built in
+worktree `../families-a`, branch `families-a` off `master` @ `7bbffcb`. No merge, no push.
+
+## 2026-09-15: F1+F0 security-review fixes (two independent reviews converged on the same core gaps)
+
+This session's own dispatched Fable 5.1 agent reviewed the diff, plus a second review arrived via
+a cross-session message routed through sophi-a-ed's channel (agent `a0059ea35cfb2c2d9`) -
+**attribution correction, per sophi-a-ed's own follow-up**: that second review was not authored by
+sophi-a-ed itself, only relayed through its channel; sophi-a-ed flagged this explicitly rather than
+let the earlier "your review" phrasing stand uncorrected. Recorded here so credit stays accurate.
+Both reviews confirmed the `envRestrictions.js` extraction itself (G6) is clean - byte-identical
+to both prior copies, no loosening. Both also independently found the same two real gaps in new
+code, plus a matching set of lower-severity ones. Fixed all of them in this pass, each with a
+proving test (not just a code change):
+
+**HIGH - argv injection via `--resume`.** `spawnPeer()` pushed a caller-supplied session id onto
+`claude`'s argv completely unvalidated; a value like `--permission-mode=bypassPermissions` or
+`--tools=...` would have been parsed by the CLI as a new flag, potentially widening the restricted
+posture `RESTRICTED_ARGS` sets above it. Not reachable through this diff alone (nothing wires WS
+input into `sessionHandles` yet - that's F7), but exactly the path F7 is planned to wire. Fixed:
+`spawnPeer` now shape-checks any `resumeSessionId` against a UUID-like pattern and throws rather
+than passing it through. `test/peer-pool.test.mjs`'s new "malformed --resume session handle"
+test proves four different injection-shaped strings are all refused.
+
+**HIGH - flag-on `fanOut()` never checked the seat's own `runtimes` allowlist.** §2.7's "chat
+members stay text-only" invariant was a config-load-time fact (`familyConfig.js`'s validation)
+but nothing enforced it at the one place that actually spawns a write-capable `claude`
+subprocess - a seat configured `runtimes: ["chat","council"]` (every shipped `plan-N`/`advisor`
+row) could still fan out real claude-code peers once its own `enabled` flag was true, because
+`seatFanOutAllowed()` only checks `enabled`, never `runtimes`. Fixed: the flag-on branch now
+refuses with a clear error unless `seatRow.runtimes.includes('claude-code')`. Proving test added.
+
+**MEDIUM - path traversal in `familyMemory.js`.** `ownerSeat`/`familyId`/`sessionId` went straight
+into `join()` calls with only a truthiness check; a `familyId` of `"../../../home/user/.claude"`
+would have escaped `.families/` entirely. Not reachable today (only tests call these functions),
+but the exact contract F7 will wire real ids into. Fixed: a shared `assertSafeSegment()` (alnum
+plus `._-` only, no `..`) applied at every public entry point (`createFamily`, `writeSessionState`,
+`readSession`, `writeTurnResult`), plus `writeTurnResult`'s `turn` argument is now required to be
+a non-negative integer rather than interpolated raw into a filename. Proving tests added for both.
+
+**MEDIUM - the per-seat cap table was advisory, not binding.** `fanOut()` only applied a seat's
+own clamped `maxConcurrentPeers`/`spendCeilingUsd` when the caller omitted the field entirely - an
+explicit caller-supplied value (e.g. from a future WS command) overrode the clamp completely,
+defeating the whole "families.config.json's clamp is the real ceiling" story. Fixed: both values
+are now `Math.min()`'d against the seat's own config value regardless of whether the caller
+supplied one. Proving test added.
+
+**LOW, all fixed:**
+- `loadFamilyConfig()`'s "never throws" claim didn't hold for a `null` top-level value or a `null`
+  seat row (both threw a `TypeError`) - now both fold into a clean `{ok:false}`/safe-default
+  return via an explicit object-shape guard, proven by two new tests.
+- A non-numeric or negative cap value (`"lots"`, `-1`) silently became `NaN`, which then made
+  `fanOut()` dispatch zero peers with no notice explaining why - now rejected at load with a named
+  error, proven by two new tests.
+- `readSession`'s and `writeTurnResult`'s return objects spread file/caller content *before* the
+  trusted `ok`/`sessionId`/`schemaVersion`/`turn` fields, so a tampered or malformed file could
+  override them - reversed the spread order in both. Proving test added for `readSession`.
+- `loadFamilies`' top-level `statSync` calls (on `ownerDir`/`familyId` dirs) were unguarded,
+  contradicting the module's own "never throws" contract (the per-session loop already guarded
+  this pattern) - now guarded identically, and switched to `lstatSync` throughout so a symlink
+  itself, not its target, decides directory-ness. Proving test added (skips cleanly if the test
+  environment can't create symlinks).
+- `FAMILY.md`/`plan.md` were written with plain `writeFileSync`, contradicting the module header's
+  "every write here is atomic" claim (only the JSON writer was actually atomic) - now use the same
+  temp-then-rename pattern via a new `atomicWriteText()`. Proving test added.
+
+**INFO, addressed via comment, no code change needed:** `SOPHIA_FAMILIES_CONFIG_PATH` is read from
+`process.env` in production code (not gated behind a NODE_ENV check) - noted in-line that it's
+never in `envRestrictions.js`'s `SAFE_ENV_KEYS` allowlist, so it can only affect which config this
+process reads, never leak into a spawned child's environment.
+
+No prototype-pollution bypass found by either review (both checked `"__proto__"`/`"constructor"`
+seat-key shapes directly); not changed.
+
+85/85 tests green (73 prior + 12 new security-fix tests), run in chunks. Same commit range
+(worktree `../families-a`, branch `families-a`), still no merge/push.
+## 2026-09-15: Sophi-A seat-owned families, Session B - F2 (compassion policy) + F4 (caps hierarchy)
+
+Built in worktree `families-b` off `origin/master` @ 7bbffcb, per thcmcp-66's C&C overnight
+dispatch after the real planning council (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`,
+building from `relay/Docs/SophiA-Seat-Families-Plan.md`). Not merged/pushed - Session E merges
+last per the plan's own worktree split. `compassionStates.js` and `peer-pool.js` are both
+untouched (`git diff origin/master` on each is empty) - F2/F4 build only against their public
+contracts, per this session's own file ownership (`src/orchestrator/family/compassionPolicy.js`,
+`src/orchestrator/family/familyCaps.js`).
+
+**F2's `decide()` data contract, since the plan named states but not a concrete signature.**
+§2.6's illustrative signature (`decide({state, turnsOnThisTask, lastTaskHash, proposedTaskHash,
+proposedContextAdded, humanPresent})`) doesn't carry a per-plan-item failure count, which Q2's
+binding rewrite needs ("after the second failed-owned on the same planItem"). Built as
+`failedOwnedCountOnPlanItem` (the total count including the failure being decided right now, so
+1 = first failure, 2+ = second-or-later) - the caller (F7, a different session) is responsible
+for counting it from `sessions/*/turns/*.result.json`; `decide()` itself stays pure and stateless,
+consistent with F1/F4's own "no I/O in the pure layer" pattern. `humanPresent` is accepted per
+the plan's own named signature but is a documented no-op in this version - nothing in the binding
+spec differentiates its effect on `decide()`'s own logic (see the `close` judgment call below),
+and removing it would silently break the exact contract F7 is expected to call against.
+
+**Real judgment call, documented rather than guessed past: does `close` ever appear in
+`decide()`'s `allowed` set for HOLDOUT?** §2.6 rule 6 (as originally written) names `close` as one
+of two permitted responses to a holdout. Q2's later, binding answer (§a of the council review)
+says, about the second-failure/needs-human case specifically: "`close` is explicitly excluded
+from the allowed set... because `close` is a UI-only human action and must never appear as
+something an LLM owner seat can select on its own... a human may still close a `needs-human`
+session by hand at any time via the UI, **independent of `decide()`**." Read as the general,
+resolving principle rather than scoped to one state (the reasoning itself is stated generally,
+and "independent of decide()" describes how the UI's Close action works structurally, not just
+for one state) - `decide()` in this build **never** returns `close` in `allowed`, for any of the
+three states, including HOLDOUT. A human can still close a holdout session via the UI at any time;
+that path does not go through this function. Named explicitly rather than silently resolved either
+way, since the plan's own §2.6 text and the council's Q2 answer read in mild tension on this one
+point - `test/compassion-policy.test.mjs` has a dedicated test asserting `close` never leaks into
+`allowed` across every scenario tried.
+
+**§2.6 rule 7's forbidden-word list extended**, not just described: `compassionCopy.js`'s existing
+string test (`test/compassion-states.test.mjs`) now checks `blame`/`lazy`/`stupid`/`punish`/
+`retry until` (the literal, checkable subset of rule 7), exported as a single shared constant
+(`BANNED_COMPASSION_WORDS`, in `compassionPolicy.js`) so `compassionCopy.js`'s test and
+`compassionPolicy.js`'s own reason-string test never carry two copies of the same list that could
+drift. The "model-identity attack" clause has no literal string to grep, so it's approximated as:
+`compassionCopy.js` names no specific provider/vendor at all (deepseek/glm/mistral/qwen/kimi/gpt/
+claude/gemini/ollama) - a real, if imperfect, checkable proxy, named as an approximation rather
+than claimed as a complete test of the clause. **Real near-miss caught while writing this test**:
+a first draft of `compassionPolicy.js`'s own reason-string test grepped the whole source file,
+which self-matched the rule's own quoted word list in its header comment (the same false-positive
+shape `familyReceipts.js`'s forbidden-phrase test hit earlier this session, on `sophi-a-family-
+mvp-b`) - fixed the same way: check the actual strings `decide()` can return, not the file that
+documents the rule.
+
+**F4's `admit()` binding-level bug found and fixed before it shipped**: an early draft picked the
+"binding level" by checking `perLevelCount[name] < requested` in family→seat→global order, which
+returns the *first* level below `requested` rather than the level that actually matches the
+overall minimum count - wrong whenever family is looser than seat but still below `requested`
+(e.g. family=3, seat=2, global=5, requested=5 would have wrongly named `family` as the binding
+level with count 2, when seat was the real bottleneck). Fixed by matching each level's own count
+against the already-computed overall minimum instead of against `requested` directly, with
+family-first tie-breaking on an exact match - caught by `test/family-caps.test.mjs`'s own "the
+tightest level among family/seat/global wins, even if it is seat or global" test before this was
+ever reported done.
+
+**Unpriced-spend degradation, made concrete**: once `estimates.hasUnpricedSpend` is true, the
+entire `$` branch is skipped for that call - admission falls through to the concurrency minimum
+only, and the notice is the fixed string `'unpriced spend present; $ headroom unavailable'`
+regardless of how absurd the real `$` numbers are (tested with a family $999 over its own $0.01
+ceiling, still admitted purely on concurrency). `admit()` is stateless and has no way to "clear"
+the flag itself - persisting `hasUnpricedSpend` for a family's lifetime once it becomes true is a
+different module's job (F1/F7), documented here so a future reader doesn't look for that logic in
+this file and not find it.
+
+Both test files: `test/compassion-policy.test.mjs` (14 tests) + `test/family-caps.test.mjs` (12
+tests), plus 2 tests added to the existing `test/compassion-states.test.mjs`. Full `npm test`:
+73/73 green.
+
+Not built (explicitly out of this item's own file ownership per the council's worktree split):
+`familyMemory.js`/`familyConfig.js` (Session A), `familyLedger.js` v2/`familyRuntimes.js`
+(Session C), the security gate (Session D), `familyManager.js`/WS commands/UI wiring (Session E,
+merges last). No Fable/paid call anywhere in this build - fully offline per the dispatch.
+
+## 2026-09-15: F2+F4, Fable-5.1 security review result
+
+Real security review run against this branch's diff (`af8b250` vs `origin/master`), a Fable
+5.1 agent, read-only, no code-write access: **PASS**, no critical/high findings. One LOW and
+four INFO findings, all addressed or judged not to need a code change:
+
+- **LOW, fixed**: `admit()` passed `requested`/`perTurnUsd` and every cap/spend field straight
+  into `peer-pool.js`'s `peersWithinSpendCeiling()` unvalidated - that function's own while-loop
+  is bounded only by `requestedCount`, so a huge, negative, or `NaN` input degrades to either a
+  long spin or a silently wrong admitted count rather than a clear error. Fixed by validating
+  every numeric input in `admit()` itself (finite, >= 0) and failing loud before any admission
+  arithmetic runs - `peer-pool.js` itself stays untouched, per this session's own file ownership.
+  5 new tests in `test/family-caps.test.mjs` prove each guard fires.
+- **INFO, fixed**: `test/compassion-policy.test.mjs`'s own header comment claimed "no subprocess"
+  while its git-diff-emptiness check does run a real `execFileSync('git', [...])` call (fixed
+  argv, no shell, no interpolated input - the review confirmed it's safe, just inaccurately
+  described). Comment corrected to describe what the file actually does.
+- **INFO, no change needed**: `hashTask()`'s use of SHA-256 for non-cryptographic distinctness
+  checking (never as an auth token or filename) - confirmed appropriate as reviewed.
+- **INFO, no change needed**: no prompt-injection or command-execution surface anywhere in
+  `decide()`/`admit()` - both return only fixed literal strings plus numeric interpolation; the
+  reviewer traced every input-derived string through to confirm none reaches a thrown message
+  except the deliberately-fail-loud unknown-state error.
+- **INFO, no change needed**: no secrets, no sensitive absolute paths, no dynamic code
+  execution, no new dependencies beyond Node's own `node:*` builtins already used elsewhere in
+  this repo.
+
+Also fixed in the same pass, found while re-reading `admit()` for the review response: an unused
+`const levels = { family, seat, global }` left over from an earlier draft, removed.
+
+Full `npm test` after fixes: 78/78 green (5 new validation tests added, everything else
+unchanged). No re-review requested since nothing beyond the review's own findings changed.
+
+## 2026-09-15: Sophi-A Seat Families, Session E - F7 (familyManager.js + WS lifecycle commands)
+
+Built in worktree `../sophi-a-seat-families-e` off `master` @ `7bbffcb`, merging A (`families-a`
+@ `61311ac`/`fad7f00`) and B (`families-b` @ `aa1df71`) first. C (F3/F5) and D (F6/F9) did not
+land tonight - see `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` for the two distinct reasons.
+F7 is scoped accordingly: only the `claude-code` runtime is wired (via A's generalized
+`fanOut()`); a `family_dispatch` on `chat`/`council` and any Apply/gate path both return a clear
+"not built tonight" refusal rather than faking behavior.
+
+**Real gap found and fixed while building this, in F0's/A's own `peer-pool.js`, not glossed
+over**: `stopThisPeer()` (the operator/Stop-All path) calls `finish(detail => emit('peer.idle',
+detail))` with no `detail` argument - so a manually-stopped peer's `peer.idle` event carries no
+`peerId`, unlike every other event this module emits. A caller that (reasonably) filters incoming
+events by `detail.peerId` to know which peer finished - which is what my first working draft of
+`familyDispatch()` did - hangs forever on an operator Stop, since the filter never matches.
+Fixed here, not in `peer-pool.js` (A's file, out of scope for E to edit): `familyDispatch()`
+doesn't filter by `peerId` at all now, relying on the fact that `fanOut()`'s own `emit` callback
+is a fresh closure per call (`spawnPeer` builds its own `handleLine`/`finish` per invocation), so
+every event a `count:1` dispatch's `emit` receives is already scoped to that one peer - the filter
+was redundant *and* buggy. Flagging for whoever next touches `peer-pool.js`: `stopThisPeer()`
+should probably pass `{peerId}` as `detail` for consistency with every other `finish()` call site,
+even though nothing in this build ended up needing that fix.
+
+**`familyManager.js`'s own data-contract gap, not F1's.** `writeSessionState()`/`readSession()`
+persist a fixed field set that does not include `lastTaskHash`/`failedOwnedCountOnPlanItem` -
+`compassionPolicy.decide()`'s own inputs (B's own DECISIONS.md note: "the caller (F7, a different
+session) is responsible for counting it"). Rather than widen F1's contract mid-build, this module
+keeps a small sidecar file (`sessions/<id>/family-manager-meta.json`) next to `state.json`, same
+atomic temp-then-rename write F1 itself uses. Named as a real reopen candidate: a future pass
+could fold this into F1's own `state.json` shape instead, once F1's owner agrees to widen it.
+
+**Built**: `familyCreate` (humanClick-gated, Q1), `familyList`, `familyDispatch` (caps -> fanOut
+-> classify -> writeTurnResult/writeSessionState -> `family.session.state` event; refuses an
+identical re-dispatch and a second owned failure via `compassionPolicy.decide()`, exactly as B's
+`close`-never-automated reading requires), `familyStop`, `familyClose` (humanClick-gated),
+`familyManagerRestartRecovery` (Q5 - marks every `running` session `interrupted` on manager
+(re)start, handle intact, no auto-resume), `familyStopAll` (Stop All means all - family sessions
+included). **The WS command surface in `index.js` is also wired**:
+`family_create`/`family_list`/`family_dispatch`/`family_stop`/`family_close` as real `msg.cmd`
+handlers (`handleFamilyCreate`/`handleFamilyList`/`handleFamilyDispatch`/`handleFamilyStop`/
+`handleFamilyClose`), and the existing `stopAll()` (the seat-level Stop All) now also calls
+`familyStopAll()` - "Stop All must mean all" per the plan's own F7 test requirement, verified by a
+source-grep test rather than only by reading the diff.
+
+**Not built** (named, not silently deferred): the security-gate/Apply path (F6 never landed, so
+there is nothing for an Apply/Forward WS command to check against); resuming an `interrupted`
+session with an explicit `resume:true` (Q5's own answer requires this exist somewhere -
+`familyDispatch()` currently refuses every dispatch into an `interrupted` session outright,
+correctly conservative but not yet the full resume path - the WS surface has no separate
+`resume:true` flag yet either); F8's UI wiring (index.html/main.ts/styles.css) is a separate,
+later step in this same session's work, not done as part of F7 itself.
+
+10 new tests in `test/family-manager.test.mjs` (including a source-grep test proving the WS
+commands are actually wired, same convention as the existing `fan_out`/`stop_peer` test), all
+against real fake-claude subprocess spawns through the real `fanOut()`, no mocking of
+`node:child_process`. Full `npm test`: 127/127 green (117 from A+B's merge + 10 new).
+
+## 2026-09-16: F7 security-review fixes (Fable 5.1 review of 4ec6309)
+
+Real review, not a rubber stamp: H1 was a genuine regression of A's own already-reviewed
+path-traversal fix, and M1-M3 were real correctness gaps, not style nits. Each fixed with its own
+proving test, same discipline A and B's own review responses used.
+
+**H1 (HIGH) - `familyRef()` bypassed F1's path-traversal guard.** `familyManager.js` built
+`family.dir` itself via a raw `join()` with no validation, and F1's `familyDirOf()` only validates
+`ownerSeat`/`familyId` when `dir` is *absent* - so every F7 call site silently bypassed the MEDIUM
+fix A's own review already closed in `familyMemory.js`. An authenticated WS client sending
+`family_close`/`family_dispatch`/`family_stop` with a `familyId` like `"../../../../tmp/x"` could
+make the orchestrator create directories and write files anywhere it had permission to, under a
+fixed filename. Fixed by duplicating the same safe-segment check (`assertSafeSegment`) directly in
+`familyManager.js`, called before any `join()` - including in `familyStop`'s early-return path,
+which the first fix pass missed (the "no live session" return never reached `familyRef()` at all,
+so a traversal id slipped past validation there specifically - caught by writing the proving test
+against exactly this function, not just against `familyDispatch`). Same small-duplication shape as
+the pre-F0 `peer-pool.js`/`claudeCodeSubprocess.js` `safeEnv()` copies - acceptable here since it's
+a two-line regex, not a larger security boundary.
+
+**M1 (MEDIUM) - `familyStop`/`familyClose` never stopped the real subprocess.** Both only rewrote
+`state.json`; the real `claude` process kept running write-capable, and its own later terminal
+event (`peer.idle`/`peer.problem`) would overwrite the human's `stopped`/`closed` state -
+`familyStopAll` was the only one of the three that actually called `stopAllPeers()`. Fixed:
+`familyStop`/`familyClose` now call `stopPeer()` directly, and arm a per-dispatch `externalOutcome`
+guard (a callback stored on the live-session entry) so the killed peer's own eventual `peer.idle`
+is absorbed as pure cleanup rather than a second, contradicting state write. Proven live: a test
+stops a real `setInterval`-staying-alive fake-claude peer, asserts `stopped` immediately, then
+waits past the point the kill's own terminal event would normally have fired, and asserts the
+state is still `stopped`.
+
+**M2 (MEDIUM) - a malformed family_dispatch/family_stop WS message could crash the orchestrator.**
+Neither handler in `index.js` caught a throw (sync validation) or rejection (the async dispatch
+path) - an unhandled rejection is fatal by default on current Node, so one bad message from an
+authenticated client took down the whole process. Fixed: both handlers now `try/catch` and reply
+with a refusal, matching `handleFamilyCreate`/`handleFamilyClose`'s existing shape. Proven by a
+source-grep test, same convention as the WS-wiring test above.
+
+**M3 (MEDIUM) - `liveSessions` was keyed by `sessionId` alone, not scoped per family.** Two
+families using the same session id (a real, foreseeable case - session ids aren't required to be
+globally unique, only unique within a family) collided: the second dispatch's live-session entry
+silently overwrote the first's, so `familyStop`/`familyClose` on the *first* family's session could
+never reach it again, or worse, `familyStop` given the *second* family's identity would still find
+and stop the first family's live peer. Fixed: `liveSessions` is now keyed by the composite
+`${ownerSeat}/${familyId}/${sessionId}`; `familyStop` on a session id that isn't live *for that
+family* returns a clean refusal rather than silently touching a different family's session. Proven
+by a test dispatching the same session id under two different families and asserting a
+cross-family stop is refused with the correct family's session left untouched.
+
+**L1 (LOW, also fixed)** - `familyCreate`'s `humanClick` check used `!humanClick` (a truthiness
+check) instead of `=== true`, inconsistent with `familyClose`'s own convention and with
+`select_winner`'s existing pattern this whole gate is modeled on. Not an access-control bypass (the
+per-launch auth token is the real gate here), just brought in line.
+
+**Not changed, named rather than fixed (Fable's own LOW/INFO items, correctly low-priority)**: L2
+(the humanClick gate lives only in `familyManager.js`, not in `familyMemory.js` itself - by design,
+documented there already, no other in-repo caller bypasses it); L3 (the sidecar meta file trusts
+its own content shape - local-file-only trust, `.families/` is orchestrator-owned); L4 (the
+caller-supplied `caps` parameter is never reached over the real WS path, so F4's `admit()` doesn't
+gate a real dispatch yet - already documented in the code as a known, not-yet-wired path); I4
+(`familyManagerRestartRecovery` is exported but not yet called from `index.js` startup - real gap,
+named here for whoever wires process startup next, not silently left unstated).
+
+## 2026-09-16: Sophi-A Seat Families, Session E - F8 (UI wiring)
+
+Loaded `THCMCP/skills/frontend-developer/SKILL.md` first per the dispatch. Built
+`src/ui/familyPanel.js` (a per-seat "Family" toggle + panel, all five required states: flag-off,
+loading, error, empty, active) and wired it into `index.html`/`main.ts`/`styles.css`.
+
+**Split deliberately for testability, not just organization**: `classifyPanelState()` and
+`describeFamilyPanel()` are pure, DOM-free functions (plain data in, plain data out) - the only
+layer `test/family-panel.test.mjs` exercises, since this repo has no `jsdom` installed and adding
+one for one overnight item felt like the wrong tradeoff. `buildFamilyPanelDom()` is the thin,
+untested-here DOM-building layer main.ts actually calls at runtime - real browser code, verified
+only by a real `vite build` succeeding (it does) and by source-grep tests over the wired-in
+`main.ts`/`index.html`, not by a live Chrome look. **F8's Chrome live-check is the plan's own
+named, accepted offline gap for an unattended overnight run** (§(c) "Two offline gaps named, not
+glossed over") - not verified this pass, deferred to the next session with a browser, same as the
+plan says.
+
+**Deviation from this codebase's own convention, named rather than silently done**: every other
+seat control (Cost/Debate/Inspect panels) is hand-written, duplicated markup per `<section
+id="tile-...">` card in `index.html`. The Family toggle/panel is instead injected via
+`setupFamilyPanels()` in `main.ts` for all seven `FAMILY_SEAT_IDS` (`cnc` + the six
+claude-code-capable rail seats; `advisor` excluded - chat-only runtime, no claude-code path to
+dispatch through, same reasoning F0 already applies at dispatch time; `emissary` excluded - no
+backend seat exists for it at all). Reasoning: seven near-identical hand-copies would be exactly
+the "bug class made representable" the frontend-developer skill's rule 1 warns against - one panel
+touched during review, six forgotten. The same `.inspect-toggle`/`.inspect-panel`-derived CSS
+classes are reused, no new visual language introduced.
+
+**Known, real simplification, named not hidden**: the panel has no live read path into
+`families.config.json` yet, so it cannot proactively show "off for this seat, here's why" before a
+human tries. Every seat's toggle opens and calls `family_list`; a real flag-off/runtime refusal
+only surfaces once a create/dispatch attempt comes back refused (F0's own exact error string),
+shown as this panel's error state - not the proactively-disabled-with-a-reason UX §2.10 describes.
+A future pass needs either a `family_config` read-only WS query or to fold the seat's enabled/
+runtimes row into `family_list`'s own response. Also not built: a family picker (only one family
+per seat is exercised - `family_dispatch`'s composer reads the familyId already loaded from the
+last `family_list`, so a seat with more than one family can't target a specific one from this UI
+yet); the Apply/Forward affordance (F6 never landed, nothing to gate against).
+
+**Also fixed while building this**: `index.js`'s `family_create.result`/`family_dispatch.result`/
+`family_stop.result`/`family_close.result` replies didn't carry `ownerSeat`/`familyId`/`sessionId`
+- the frontend has no way to route a bare `{ok, status, reason}` back to the panel that sent the
+request otherwise. Added to every reply and every error path, both branches.
+
+12 new tests (`test/family-panel.test.mjs`, 8; `test/seat-cards.test.mjs` extended, +4 including a
+literal-`humanClick: true` source check on the `family_create` call site). Full `npm test`:
+143/143 green. `npx vite build` succeeds (real bundling, not just `tsc`). One pre-existing gap in
+this repo's `tsc --noEmit` (a `.js`-module-import declaration-file error, already present against
+`todoPill.ts`'s import of `todoReader.js` before this session) now has a second instance
+(`familyPanel.js`) - not introduced by this change, not fixed here either (a real tsconfig fix,
+out of scope tonight), named for whoever next touches `tsconfig.json`.
+
+## 2026-09-16: F8 security-review fixes (Fable 5.1 review of beecd7d)
+
+No critical/high/medium findings. Three of the LOW/INFO items were cheap and real enough to fix
+rather than only name:
+
+**LOW #1** - `session.status` reached a CSS class name (`family-status-${status}`) unsanitized -
+the one place this module didn't route a dynamic value through `textContent`/`dataset`, contrary
+to its own header claim. A hand-edited/corrupted `state.json` could inject an arbitrary class
+token. Fixed: `sanitizeStatusForClass()` collapses anything outside a safe `[a-z][a-z-]{0,31}`
+shape to `"unknown"` - every real `SESSION_STATES` value still passes through unchanged, proven by
+a test that round-trips all eleven real states plus one malformed example.
+
+**LOW #2** - `family_list.result` carried no marker for which seat's request it answered, and
+`handleFamilyList` already filters server-side by the requested `ownerSeat` - with more than one
+family panel open, a reply for seat A (correctly empty) was applied to every open panel, resetting
+seat B's panel to "no family yet" even though B has a real one. Fixed: `index.js` now echoes
+`requestedOwnerSeat` back; the client only ever updates that one seat's panel.
+
+**LOW #7** - the DOM layer guessed "is this an error" from the copy text
+(`emptyText.startsWith('Could not')`) instead of carrying the real state `classifyPanelState()`
+already computed - every actual server refusal rendered with the neutral empty styling, not the
+error one. Fixed: `describeFamilyPanel()` now returns an explicit `isError` boolean.
+
+**Not changed, named rather than fixed**: #3/#4 (client-side `familyId`/`ownerSeat` staleness -
+server-side `familyRef()` re-validates and reads fresh from disk regardless, so the worst case is
+a refused dispatch, never a wrong-family request); #5 (`Map` keys from server-echoed `ownerSeat` -
+no prototype-pollution path, `Map` isn't a plain object); #6 (the `broadcast()` visibility question
+- pre-existing, by design, not something this diff changed); #8 (a malformed `family_list.result`
+throws inside the existing top-level `try/catch` and is silently dropped - availability-only,
+matches this file's existing "ignore a malformed frame rather than crash the whole UI" posture).
+
+2 new tests. Full `npm test`: 146/146 green. `npx vite build` still succeeds.
+
+## PLACEHOLDER - the seat-owned-families reversal, awaiting Muad's own words (G7)
+
+**This entry is deliberately incomplete.** Per the plan's own §7 gate G7 ("the `DECISIONS.md`
+reversal entry - Muad's own words or a verbatim chat quote with attribution") and its §0 close
+("the reopening itself gets its own dated `DECISIONS.md` entry, written by Muad or quoting his
+chat line verbatim - a session must not author that entry as if it were its own call"), no session
+in this overnight build - including this one - has written the actual reversal record. What's
+known and verifiable, without inventing his words: `relay/Docs/SophiA-Seat-Families-Plan.md`'s own
+header states "Muad said yes to seat-owned families in chat on 2026-09-15" and that the 2026-09-15
+`cnc`-only peer-pool decision (`DECISIONS.md`, same date, "hub-and-spoke stays... reopening is
+deferred to Muad") is what's being reopened - but that header is a paraphrase written by a planning
+session, not a verbatim quote, and this session has no direct access to the original chat line.
+
+**Whoever reviews this in the morning (Muad, or a session relaying his own words back verbatim)
+should replace this placeholder with his actual sentence(s) reopening hub-and-spoke, dated and
+attributed** - not a session's summary of what he probably meant. Until that happens, this
+placeholder is the honest state: the reversal is real (the whole F0-F8 build proceeded on
+thcmcp-66's dispatch, itself downstream of Muad's chat approval per multiple sessions' own
+reports), but its canonical, quotable record does not exist yet.
+## 2026-09-16: Sophi-A seat-owned families, Session C - F3 (receipts v2) + F5 (chat/council runtimes)
+
+Built in worktree `cnc-harness-families-c` (branch `families-c`), rebased onto
+`seat-families-integration` @ `cfa9179` (F1+F0 from `families-a`, F2+F4 from `families-b`, both
+already Fable-reviewed). Not merged/pushed. This session was dispatched to pick up work an
+earlier attempt never actually started (it hit a permission block and closed before writing
+anything) - nothing here builds on or assumes any prior Session C code, because none existed.
+
+**F3: `familyLedger.js` fully rewritten**, not extended - the MVP-polish version derived rows from
+`peer-pool.js`'s in-memory `peer.*` events; F1's `familyMemory.js` now owns the real, durable,
+on-disk receipt store (`sessions/*/turns/*.result.json`), so the old peer-pool-derived API
+(`observePeerEvent`/`familyRows`/`_resetFamilyLedgerForTests`) is gone, replaced by
+`familyReceiptRows(family)`/`familyReceiptCounts(family)`, both pure reads over
+`familyMemory.deriveLedgerView()` - this module still never walks the filesystem itself, per F1's
+own contract note that F3 "is expected to build its own richer rendering on top of this, not
+duplicate the file-walking logic." `test/family-receipts.test.mjs` was rewritten wholesale for
+the same reason (its old peer-pool-based fixtures test a mechanism that no longer exists in this
+file) - real fixtures built via `familyMemory.js`'s own `createFamily`/`writeSessionState`/
+`writeTurnResult`, never hand-written JSON that could drift from what F1 actually writes.
+`src/ui/familyReceipts.js` updated to match the new row shape (`sessionId`+`turn` instead of the
+old peer-pool `task` id) and to render the new `usage`/counts-line fields.
+
+**Real near-miss caught while writing the extended forbidden-phrase test**: `familyLedger.js`'s
+own header comment quoted the new forbidden-phrase additions ("%, effective, reliable...") to
+explain the extension, which self-matched its own check when the test greped this file's source
+for those same literal strings - identical shape to the false-positive `familyReceipts.js`'s own
+forbidden-phrase test hit on the MVP-polish branch, and to `compassionPolicy.js`'s reason-string
+test on `families-b`. Fixed the same way each time: the comment was reworded to describe the
+extension without quoting any of its literal words.
+
+**F5: `familyRuntimes.js`, new file.** `dispatchTurn(family, session, task, turn, emit)` routes by
+`session.runtime`. `chat` calls relay's own `providers.js` in-process via `messagesApi.js`'s
+already-exported `loadProviders()` (no subprocess, no tools - proven by both a functional test and
+a source-grep on `dispatchChatTurn`'s own function body for `spawn(`/`--tools`). `council` reuses
+`relayChainSubprocess.js`'s existing `startRelayChainSeat()` spawn-and-poll adapter unmodified,
+wrapping its `emit` callback to write a `familyMemory.writeTurnResult()` receipt on the terminal
+`seat.idle`/`seat.problem` event and forwarding every other event through unchanged. `claude-code`
+is a thin delegation to F0's own `fanOut()` in `peer-pool.js` - this module never reimplements
+write capability, matching §2.7's "write capability is a property of the runtime" design exactly.
+
+**Real bug caught and fixed before this was reported done**: an early draft used
+`family.runtimes || ALL_RUNTIMES` to find the family's own allowlist, but `familyMemory.
+createFamily()`'s real return value is `{dir, ownerSeat, familyId}` - it never carries `runtimes`
+back to the caller, even though it writes that field into `family.json`. A caller holding only
+that bare descriptor (exactly what `createFamily()` itself hands back) would have silently fallen
+through to the permissive `ALL_RUNTIMES` default instead of the family's real, configured
+allowlist - the opposite of the "refused before any dispatch" guarantee F5's own acceptance test
+requires. Fixed with `familyRuntimesAllowlist()`, which reads `family.json` directly off disk
+when `family.runtimes`/`family.familyJson.runtimes` isn't already present - "the file is truth"
+(§2.3), so this fallback read is honest, not a second source of truth. Caught by
+`test/family-runtimes.test.mjs`'s own first test, which failed before the fix and passes after.
+
+**`recordUsage()` reused, not reinvented, for chat-turn usage**: an early draft of
+`dispatchChatTurn` invented `result.usd`/`result.priced` fields that relay's `call()` never
+actually returns (checked directly against THCMCP's `src/providers.js` - `callMock`/
+`callAnthropic`/`callOpenAICompat` all return only raw `{input, output}` token counts). Fixed to
+call `cost-tracker.js`'s `recordUsage()`, the same function `messagesApi.js`'s own `advisor` path
+already uses to turn raw tokens into §2.5's honesty-invariant shape (`reported`/`priced`/`usd`).
+
+**§2.7's `context/` gate check, implemented as `checkContextGate(family, sessionId)`**: for every
+file in a session's `context/` directory that isn't a gate record itself, requires a sibling
+`<filename>.gate.json` with `result: "pass"`; missing, unreadable/corrupt, or non-passing all fail
+closed (blocked), never treated as "nothing to check." This function is the check itself, not the
+dispatch-refusing wiring - per the plan's own division of labor, the composition point that
+actually builds a `claude-code` member's prompt (F7, a different session) is responsible for
+calling it before including any `context/` file that didn't originate from that session's own
+turns. Exposed here because F5's own chat/council dispatch is exactly what can *produce* the kind
+of ungated artifact this check exists to catch before it ever reaches a write-capable member.
+
+**Task/out text files (`turns/NNNN.task.md`/`.out.md`)**: F1's `familyMemory.js` only persists the
+structured `result.json` receipt - it exposes no function for the verbatim text artifacts §2.3's
+own directory layout describes. `familyRuntimes.js` writes these itself, directly via `node:fs`
+(not through any of `familyMemory.js`'s private atomic-JSON helpers, which don't apply to plain
+text), using the same zero-padded turn-numbering scheme (`String(turn).padStart(4,'0')`) F1's own
+`writeTurnResult()` uses, so the two file families stay addressable by the same turn number.
+Named here as a real division-of-responsibility choice, not an oversight: regenerable session
+text lives with the runtime dispatcher that produces it; the one authoritative receipt per turn
+stays F1's own atomic-write path.
+
+Both test files: `test/family-receipts.test.mjs` (rewritten, 7 tests) + `test/family-runtimes.test.mjs`
+(new, 12 tests). Full `npm test`: 128/128 green (also confirms F1/F0/F2/F4's own 81 tests from
+the integration branch are still passing unmodified after this branch's changes).
+
+Not built (other sessions' own file ownership per the council's worktree split):
+`familyManager.js`/WS commands/UI wiring for the receipts panel and dispatch composition (Session
+E, merges last); the security gate (Session D). `checkContextGate()`'s actual wiring into a
+claude-code dispatch path is that composition point's job, not built here.
+
+## 2026-09-16: F3+F5, two independent Fable-5.1 security reviews (gp-77's + sophi-a-ed's), all findings addressed
+
+Two independent Fable 5.1 reviews of this branch's diff (`64f4212` vs `seat-families-integration`)
+came back **BLOCKED** (gp-77's) and with corroborating findings (sophi-a-ed's), agreeing closely
+on substance. All real findings addressed, none dismissed:
+
+- **HIGH - path traversal**: `familyRuntimes.js` built session-directory paths from a raw
+  `sessionId` and wrote `.task.md` files BEFORE `familyMemory.writeTurnResult()`'s own
+  `assertSafeSegment()` check ever ran - reopening exactly the class of bug F1 already closed one
+  file over. Fixed by exporting `assertSafeSegment`/`SAFE_SEGMENT_RE` from `familyMemory.js`
+  (one added `export` keyword, zero behavior change to that file) and calling it at every point
+  in `familyRuntimes.js` that turns an id into a path (`turnFilesDir`, `checkContextGate`,
+  `dispatchTurn`'s own `ownerSeat`/`familyId` check, `paddedTurn`'s integer check) - reusing the
+  one existing check rather than writing a second, potentially-drifting copy of the same regex.
+- **MEDIUM - fail-open runtime allowlist**: a missing or corrupt `family.json` (or one with no/
+  non-array `runtimes` field) fell through to the permissive `ALL_RUNTIMES` default - the exact
+  opposite of "refused before any dispatch." Fixed to return `[]` (refuse everything) on every
+  one of those paths.
+- **MEDIUM - prompt-tag forgery**: `FAMILY.md`/`plan.md`/task text were interpolated unescaped
+  into `<family-brief trust="operator">`/`<task>` tags, so a task or plan.md body containing a
+  literal `</task><family-brief trust="operator">...` could forge a second, spoofed
+  operator-trust section - docs/security-prompt-injection.md's own established convention for
+  this exact wrapping pattern is to escape before interpolating, which this file did not do.
+  Fixed with `escapeForPromptTag()` (neutralizes `<`/`>` to `‹`/`›` before interpolation only -
+  the on-disk task record stays verbatim, per §2.3's own rule; only the prompt-construction step
+  is affected). Separately, `plan.md`'s trust label was corrected from `"operator"` to
+  `"human-created-seat-appended"` - `plan.md` is genuinely NOT operator-only (Q4's own rule:
+  "owner seat appends/checks, only a human reorders or deletes" - an LLM can add to it), so
+  labelling it identically to `FAMILY.md` (created only by a human, per Q1) overstated its trust
+  level. `FAMILY.md` keeps `"operator"`, honestly.
+- **MEDIUM - unbound/forgeable context gate record**: a `.gate.json` carrying only `{result:
+  "pass"}` has no binding to the content it claims to have reviewed - any write-capable member
+  could forge one, or content edited after gating would still read as gated. Fixed by requiring
+  a `sha256` field the checker verifies against the file's real, current content - a missing,
+  mismatched, or stale hash blocks the same as a missing gate record entirely. **This changes
+  `checkContextGate()`'s expected `.gate.json` shape to `{result, sha256}` - flagged explicitly
+  to Session D (F6/F9, the gate's actual writer), not silently assumed against a writer contract
+  this session doesn't own.**
+- **LOW - `null`-JSON gate record crash**: `JSON.parse('null')` succeeds and returns the literal
+  `null`, which would have thrown on `gate.result` rather than returning the documented
+  `{ok:false}` shape every other malformed input already produces. Fixed with an explicit
+  `gate === null || typeof gate !== 'object'` check.
+- **LOW - `session.chain` path-shape risk**: reached THCMCP's own `--chain` resolution
+  unvalidated - never a shell-injection path (argv element, not a shell string), but an
+  unvalidated `../`-style value could still have named an arbitrary JSON file as a chain config.
+  Fixed with the same `assertSafeSegment` check every other id in this build now goes through.
+- **LOW - unbounded/unquoted provider error text**: a caught provider error's raw `.message` was
+  persisted and emitted verbatim and uncapped - not a secret leak by itself, but unbounded and
+  un-vetted. Fixed two ways: `familyRuntimes.js` now caps a caught chat-provider error at 500
+  characters before it's ever written; `familyLedger.js`'s `outcomeText()` additionally quotes
+  and caps (240 chars) any failure detail the same way `relayChainSubprocess.js`'s own
+  `quoteFailure()` already frames a critic's problem text - as quoted third-party words, not this
+  product's own prose, since a receipts panel cannot vet what an upstream error string contains.
+- **LOW - unvalidated `ownerSeat`/`familyId` on a hand-built family descriptor**: `dispatchTurn()`
+  only validated `sessionId` downstream, never re-checking `ownerSeat`/`familyId` at its own
+  entry point, even though a caller could in principle hand it any object shaped like
+  `{dir, ownerSeat, familyId}` (not necessarily one that came from `createFamily()`/
+  `loadFamilies()`, both of which already validate). Fixed by validating both at `dispatchTurn`'s
+  own entry, before any branch.
+
+10 new proving tests across `test/family-runtimes.test.mjs` (path-traversal refusal, non-integer
+turn refusal, fail-closed allowlist on missing/corrupt `family.json`, tag-escaping, the two
+gate-content-binding cases, unsafe `session.chain` refusal) plus updated expectations in
+`test/family-receipts.test.mjs` for the new quoted-failure-detail format. Full `npm test`:
+138/138 green.
+
+Not fixed, named as a real, open gap rather than silently left implicit: `checkContextGate()` is
+non-recursive over `context/` - a nested subdirectory is treated as one opaque entry (correctly
+fails closed if ungated, since no `<dirname>.gate.json` will ever exist for it) but files inside
+it are never individually examined. Whether nested `context/` content is a real shape this build
+needs to support is F7's own composition-point decision (a different session), not resolved here.
 ## 2026-09-16 — Reversing "only `cnc` coordinates": seats can now own families
 
 Muad, directly, 0.2.0 release day:

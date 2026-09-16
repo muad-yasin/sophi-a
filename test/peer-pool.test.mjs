@@ -43,8 +43,8 @@ const args = process.argv.slice(2);
 const task = args[1]; // args[0] is '-p'
 const addDirIdx = args.indexOf('--add-dir');
 const addDir = addDirIdx !== -1 ? args[addDirIdx + 1] : null;
-if (task && addDir) fs.writeFileSync(path.join('${tmp.replace(/\\/g, '\\\\')}', 'invoked-' + task + '.json'), JSON.stringify({ addDir }));
-console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: 'peer-test-session' }));
+if (task && addDir) fs.writeFileSync(path.join('${tmp.replace(/\\/g, '\\\\')}', 'invoked-' + task + '.json'), JSON.stringify({ addDir, args }));
+console.log(JSON.stringify({ type: 'system', subtype: 'init', session_id: '5f3b1c2a-64e2-4a1a-9b6a-0a1b2c3d4e5f' }));
 console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'hello from ' + task }] } }));
 ${stayAlive ? '' : "console.log(JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: 'ok', total_cost_usd: 0.02, usage: { input_tokens: 5, output_tokens: 5 } }));"}
 ${stayAlive ? 'setInterval(() => {}, 1000);' : ''}
@@ -175,4 +175,192 @@ test('the fan_out/stop_peer/stop_all_peers WS commands are actually wired in ind
   assert.match(src, /msg\.cmd === 'stop_peer'/, 'stop_peer command is wired');
   assert.match(src, /msg\.cmd === 'stop_all_peers'/, 'stop_all_peers command is wired');
   assert.match(src, /from '\.\/peer-pool\.js'/, 'index.js imports the peer-pool module');
+});
+
+// --- Sophi-A Seat Families F0 (relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d.8) ---
+// A fresh, isolated families.config.json per test via SOPHIA_FAMILIES_CONFIG_PATH - never the
+// real shipped one, never shared state between these tests.
+function withFamiliesConfig(configObj, fn) {
+  const dir = mkdtempSync(join(tmpdir(), 'families-config-'));
+  const path = join(dir, 'families.config.json');
+  writeFileSync(path, JSON.stringify(configObj, null, 2));
+  const previous = process.env.SOPHIA_FAMILIES_CONFIG_PATH;
+  process.env.SOPHIA_FAMILIES_CONFIG_PATH = path;
+  return Promise.resolve(fn()).finally(() => {
+    if (previous === undefined) delete process.env.SOPHIA_FAMILIES_CONFIG_PATH;
+    else process.env.SOPHIA_FAMILIES_CONFIG_PATH = previous;
+    rmSync(dir, { recursive: true, force: true });
+  });
+}
+
+test('F0(a) - the existing 6 peer-pool tests behavior holds with the flag off AND with the config file absent (no SOPHIA_FAMILIES_CONFIG_PATH set)', async () => {
+  delete process.env.SOPHIA_FAMILIES_CONFIG_PATH;
+  writeFakeClaude();
+  const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+  await waitUntil(() => activePeerCount() === 0, 3000);
+
+  assert.throws(
+    () => fanOut('plan-1', { count: 1, task: `f0a-nonabsent-${Date.now()}` }, () => {}),
+    (err) => err.message === 'Fan-out only allowed from cnc seat',
+  );
+
+  const { dispatched, notice } = fanOut('cnc', { count: 1, task: `f0a-cnc-${Date.now()}` }, () => {});
+  assert.equal(dispatched.length, 1);
+  assert.equal(notice, null);
+});
+
+test('F0(a-corrupt) - non-cnc still gets the exact legacy throw when the config file is present but syntactically invalid', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'families-config-corrupt-'));
+  const path = join(dir, 'families.config.json');
+  writeFileSync(path, '{ this is not valid json');
+  const previous = process.env.SOPHIA_FAMILIES_CONFIG_PATH;
+  process.env.SOPHIA_FAMILIES_CONFIG_PATH = path;
+  try {
+    writeFakeClaude();
+    const { fanOut } = await import('../src/orchestrator/peer-pool.js');
+    assert.throws(
+      () => fanOut('plan-1', { count: 1, task: `f0a-corrupt-${Date.now()}` }, () => {}),
+      (err) => err.message === 'Fan-out only allowed from cnc seat',
+      'a corrupt config folds into flag-off, never a crash and never a bypass',
+    );
+  } finally {
+    if (previous === undefined) delete process.env.SOPHIA_FAMILIES_CONFIG_PATH;
+    else process.env.SOPHIA_FAMILIES_CONFIG_PATH = previous;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('F0(b) - flag on, plan-1 enabled: 2 spawns, and a second dispatch with the captured session ids carries --resume', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const events1 = [];
+    const task1 = `f0b-first-${Date.now()}`;
+    const first = fanOut('plan-1', { count: 2, task: task1 }, (type, detail) => events1.push({ type, detail }));
+    assert.equal(first.dispatched.length, 2, 'flag on + seat enabled: 2 peers dispatched');
+
+    await waitUntil(() => events1.filter(e => e.type === 'peer.start').length >= 2, 4000);
+    const sessionIds = events1.filter(e => e.type === 'peer.start').map(e => e.detail.sessionId);
+    assert.ok(sessionIds.every(id => typeof id === 'string' && id.length > 0), 'session_id was captured on peer.start');
+
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const task2 = `f0b-second-${Date.now()}`;
+    const second = fanOut('plan-1', { count: 2, task: task2, sessionHandles: sessionIds }, () => {});
+    assert.equal(second.dispatched.length, 2);
+    await waitUntil(() => existsSync(join(tmp, `invoked-${task2}.json`)) || true, 500); // let the fake binary flush its files
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const invoked = JSON.parse(readFileSync(join(tmp, `invoked-${task2}.json`), 'utf8'));
+    assert.ok(invoked.args.includes('--resume'), 'the second dispatch\'s argv includes --resume');
+    const resumeIdx = invoked.args.indexOf('--resume');
+    assert.ok(sessionIds.includes(invoked.args[resumeIdx + 1]), 'the --resume value is one of the captured session ids');
+  });
+});
+
+test('F0(c) - flag on, plan-2 not enabled: the new error string, zero spawns', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-2': { enabled: false, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['chat'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+    const before = activePeerCount();
+
+    assert.throws(
+      () => fanOut('plan-2', { count: 2, task: `f0c-${Date.now()}` }, () => {}),
+      (err) => err.message === 'Fan-out not enabled for seat plan-2 (families.seats.plan-2.enabled is false)',
+    );
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(activePeerCount(), before, 'zero spawns');
+  });
+});
+
+test('F0(d) - a per-seat cap above the global one is clamped, and fanOut() honors the clamped value', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 1, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 99, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude({ stayAlive: true });
+    const { fanOut, activePeerCount, stopAllPeers } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const { dispatched, notice } = fanOut('plan-1', { count: 3, task: `f0d-${Date.now()}` }, () => {});
+    assert.equal(dispatched.length, 1, 'clamped to the global maxConcurrentSessions of 1, not the seat row\'s 99');
+    assert.match(notice, /Peer cap reached, dispatching 1 of 3/);
+
+    stopAllPeers();
+    await waitUntil(() => activePeerCount() === 0, 3000);
+  });
+});
+
+// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+
+test('security fix - flag on, seat enabled, but claude-code not in its runtimes allowlist: refused, zero spawns', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['chat', 'council'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+    const before = activePeerCount();
+
+    assert.throws(
+      () => fanOut('plan-1', { count: 2, task: `sec-runtime-${Date.now()}` }, () => {}),
+      /claude-code is not in its runtimes allowlist/,
+    );
+    await new Promise(r => setTimeout(r, 200));
+    assert.equal(activePeerCount(), before, 'zero spawns - the config-level "chat stays text-only" guard is enforced at the one dispatch path that spawns claude');
+  });
+});
+
+test('security fix - an explicit caller-supplied maxConcurrentPeers/spendCeilingUsd above the seat cap is clamped, not honored verbatim', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 1, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude({ stayAlive: true });
+    const { fanOut, activePeerCount, stopAllPeers } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    const { dispatched, notice } = fanOut('plan-1', { count: 3, task: `sec-clamp-${Date.now()}`, maxConcurrentPeers: 100 }, () => {});
+    assert.equal(dispatched.length, 1, 'the caller-supplied 100 does not override the seat\'s own cap of 1');
+    assert.match(notice, /Peer cap reached, dispatching 1 of 3/);
+
+    stopAllPeers();
+    await waitUntil(() => activePeerCount() === 0, 3000);
+  });
+});
+
+test('security fix - a malformed --resume session handle is refused, never reaches the claude subprocess argv', async () => {
+  await withFamiliesConfig({
+    schemaVersion: 1, enabled: true,
+    global: { maxConcurrentSessions: 4, spendCeilingUsd: 5 },
+    seats: { 'plan-1': { enabled: true, maxConcurrentSessions: 4, spendCeilingUsd: 5, runtimes: ['claude-code'] } },
+  }, async () => {
+    writeFakeClaude();
+    const { fanOut, activePeerCount } = await import('../src/orchestrator/peer-pool.js');
+    await waitUntil(() => activePeerCount() === 0, 3000);
+
+    for (const badHandle of ['--permission-mode=bypassPermissions', '-x', 'not a real session id', '../../etc/passwd']) {
+      assert.throws(
+        () => fanOut('plan-1', { count: 1, task: `sec-argv-${Date.now()}-${Math.random()}`, sessionHandles: [badHandle] }, () => {}),
+        /not a plausible session id/,
+        `rejected: ${badHandle}`,
+      );
+    }
+    await waitUntil(() => activePeerCount() === 0, 3000);
+  });
 });

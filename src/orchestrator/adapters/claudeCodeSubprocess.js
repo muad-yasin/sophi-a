@@ -24,6 +24,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { root } from '../index.js';
 import { recordUsage } from '../cost-tracker.js';
+import { safeEnv, RESTRICTED_ARGS } from '../envRestrictions.js';
 
 const HEARTBEAT_MS = 30_000; // re-emit seat.working during long tool calls so it never looks stale
 const DEFAULT_TIMEOUT_MS = 300_000; // fallback only - every real seat in seats.json sets its own
@@ -38,57 +39,10 @@ const DEFAULT_TIMEOUT_MS = 300_000; // fallback only - every real seat in seats.
 // second signal - named explicitly in the plan for this reason.
 const KILL_ESCALATION_MS = 5_000;
 
-// docs/security-prompt-injection.md S1/P0: a claude-code-subprocess seat (cnc, build-1..3) must
-// never inherit process.env wholesale. The orchestrator's own env accumulates every saved
-// provider API key (src-tauri/src/lib.rs's spawn_orchestrator) plus whatever relay's .env holds
-// (messagesApi.js's loadRelayEnv merges it into process.env on first use) - a builder that runs
-// `env` in Bash would otherwise see all of it in one shot. Build the child's env from an
-// allowlist instead of filtering process.env, so nothing new leaks in by accident later.
-const SAFE_ENV_KEYS = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'TMP', 'TEMP', 'USER', 'USERNAME', 'SHELL'];
-
-function safeEnv() {
-  const env = {};
-  for (const key of SAFE_ENV_KEYS) {
-    if (process.env[key] !== undefined) env[key] = process.env[key];
-  }
-  // The one exception: the claude CLI's own Anthropic auth. An OAuth session lives under HOME
-  // (already kept above); API-key auth needs ANTHROPIC_API_KEY specifically. Every OTHER
-  // provider key (OPENAI_API_KEY, OPENROUTER_API_KEY, ...) stays out - a claude-code-subprocess
-  // seat never calls those providers, so it never needs their keys.
-  if (process.env.ANTHROPIC_API_KEY) env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-  return env;
-}
-
-// Same doc, S1: no --permission-mode/--allowedTools meant the only thing standing between an
-// injected instruction and real damage was whatever the user's own global ~/.claude/settings.json
-// happened to allow. --restricted ignores user/project/local settings files entirely (closing
-// the "a builder writes .workdirs/build-N/.claude/settings.json to grant itself Bash(*)" vector),
-// confines file tools to the working directory (--add-dir included), and refuses
-// --dangerously-skip-permissions outright. --tools re-admits exactly what a builder needs to do
-// its job (code-running tools are stripped by --restricted "unless --tools names them") - Bash,
-// the file tools, and TodoWrite - deliberately not WebFetch/WebSearch, which nothing in this
-// product's design says a builder needs. --strict-mcp-config means no MCP server is loaded at
-// all, so a seat can no longer start a real, paid relay run via mcp__relay__* outside Sophi-A's
-// own plan-N path and its start_many cost gate.
-//
-// --permission-mode: tried "dontAsk" + "--permission-prompts none" first, per the doc's own
-// suggestion ("something that denies rather than prompts") - verified live (raw `claude -p`,
-// not just read the flag descriptions) that this denies Write AND Bash outright, not just the
-// things outside --tools's allowlist. That would have silently broken every builder's actual
-// job. "acceptEdits" is what --restricted's own examples pair with real non-interactive work:
-// verified live that it lets Write/Edit/Bash actually execute (a real file got created, a real
-// echo ran, permission_denials: []) while --restricted's other protections (no local settings,
-// confined to the working dir, no bypassPermissions) still hold. --permission-prompts none stays
-// on top of it as a hang-safety net, not the thing doing the work: if some other tool category
-// ever *would* prompt under acceptEdits, this makes that resolve to a fast deny instead of a
-// silent hang until TIMEOUT_MS - verified this combination still lets Write/Bash through too.
-const RESTRICTED_ARGS = [
-  '--restricted',
-  '--tools', 'Bash,Edit,Write,Read,Glob,Grep,MultiEdit,TodoWrite',
-  '--strict-mcp-config',
-  '--permission-mode', 'acceptEdits',
-  '--permission-prompts', 'none',
-];
+// safeEnv()/RESTRICTED_ARGS moved to ../envRestrictions.js (Sophi-A Seat Families F0, closing
+// the plan's own regression risk (3): this file and peer-pool.js used to carry two independent
+// copies of this security-relevant allowlist). Import only, no local definition here anymore -
+// enforced by test/env-restrictions.test.mjs's source-grep.
 
 // Muad's explicit call (2026-09-15): a public/released Sophi-A build must never let cnc/build-N
 // ride the operator's own claude.ai subscription login - the same way every other provider needs

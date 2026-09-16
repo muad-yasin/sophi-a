@@ -3,6 +3,7 @@ import { renderSeatOutput } from "./seatOutputRender";
 import { initNotifications, notifySeatTransition, notifyBudgetExceeded } from "./seatNotify";
 import { buildSeatMarkdown, buildDebateMarkdown, exportFilename } from "./exportMarkdown";
 import { buildCostBreakdownRows, buildCostBreakdownCsv, costBreakdownCsvFilename } from "./exportCostCsv";
+import { classifyPanelState, describeFamilyPanel, buildFamilyPanelDom } from "./ui/familyPanel.js";
 
 type SeatEventType =
   | "seat.start"
@@ -876,6 +877,19 @@ async function connect() {
       else if (evt.type === "run.history") handleRunHistory(evt);
       else if (evt.type === "replay.result") handleReplayResult(evt);
       else if (evt.type === "seat.usage") handleSeatUsage(evt);
+      else if ((evt as any).type === "family_list.result") handleFamilyListResult(evt as any);
+      else if (["family_create.result", "family_dispatch.result", "family_stop.result", "family_close.result"].includes((evt as any).type)) {
+        handleFamilyMutationResult((evt as any).ownerSeat, evt as any);
+      }
+      else if ((evt as any).type === "family.session.state" || (evt as any).type === "family.notice") {
+        // Broadcast (not a direct reply to this client's own request) - re-list only if that
+        // seat's panel is actually open, same "don't fetch what nobody's looking at" rule the
+        // existing debate-history refresh follows.
+        const ownerSeat = (evt as any).detail?.ownerSeat;
+        if (ownerSeat && familyPanelRootEl.get(ownerSeat) && !familyPanelRootEl.get(ownerSeat)!.hidden) {
+          sendCommand({ cmd: "family_list", ownerSeat });
+        }
+      }
       else handleSeatEvent(evt as SeatEvent);
     } catch {
       // malformed frame - ignore rather than crash the whole UI over one bad message
@@ -2061,6 +2075,145 @@ function setupForwardControls() {
   }
 }
 
+// Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §2.10). Seats that can own
+// a family tonight: `cnc` (the only seat families.config.json ships enabled) plus the six
+// claude-code-capable rail seats, so a human can see the toggle everywhere the plan says to put
+// it, even on a seat whose row is off - `advisor` is excluded (chat-only runtime, no
+// claude-code path to dispatch through, same reasoning F0 already applies at dispatch time).
+//
+// Deviation from this codebase's usual static-markup-per-card convention, named rather than
+// silently done: the toggle/panel DOM is injected here via JS for all seven seats instead of
+// hand-duplicated seven times in index.html, to avoid seven near-identical copies drifting out
+// of sync (frontend-developer skill's "design away the bug class" rule) - the same
+// toggle/panel CSS classes as the existing Cost/Debate/Inspect panels are reused so no new CSS
+// pattern is introduced.
+const FAMILY_SEAT_IDS = ["cnc", "plan-1", "plan-2", "plan-3", "build-1", "build-2", "build-3"] as const;
+
+type FamilyPanelState = {
+  loading: boolean;
+  error: string | null;
+  family: { sessions: { sessionId: string; status: string; turnCount?: number }[] } | null;
+};
+
+const familyPanelState = new Map<string, FamilyPanelState>();
+const familyPanelRootEl = new Map<string, HTMLElement>();
+
+function familyPanelStateFor(seatId: string): FamilyPanelState {
+  let s = familyPanelState.get(seatId);
+  if (!s) {
+    s = { loading: false, error: null, family: null };
+    familyPanelState.set(seatId, s);
+  }
+  return s;
+}
+
+function renderFamilyPanel(seatId: string) {
+  const root = familyPanelRootEl.get(seatId);
+  if (!root) return;
+  const s = familyPanelStateFor(seatId);
+  // seatEnabled is not sourced from the live config in this pass (the frontend has no read path
+  // into families.config.json yet - named as a real gap below); every seat's toggle opens and
+  // attempts to load, and an actual flag-off/runtime refusal surfaces as this panel's error state
+  // once a real create/dispatch call comes back refused, rather than being predicted up front.
+  const state = classifyPanelState({ seatEnabled: true, loading: s.loading, error: s.error, family: s.family });
+  const description = describeFamilyPanel(state, { error: s.error, family: s.family });
+  root.replaceChildren(buildFamilyPanelDom(description));
+}
+
+function setupFamilyPanels() {
+  for (const seatId of FAMILY_SEAT_IDS) {
+    const tile = tileEl(seatId);
+    if (!tile) continue;
+    const attachPoint = tile.querySelector<HTMLElement>('[data-role="seat-detail"]') ?? tile;
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "inspect-toggle";
+    toggle.dataset.role = "family-toggle";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "Family";
+
+    const panel = document.createElement("div");
+    panel.className = "family-panel";
+    panel.dataset.role = "family-panel";
+    panel.hidden = true;
+
+    attachPoint.appendChild(toggle);
+    attachPoint.appendChild(panel);
+    familyPanelRootEl.set(seatId, panel);
+
+    toggle.addEventListener("click", () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      if (opening) {
+        const s = familyPanelStateFor(seatId);
+        s.loading = true;
+        s.error = null;
+        renderFamilyPanel(seatId);
+        sendCommand({ cmd: "family_list", ownerSeat: seatId });
+      }
+    });
+
+    panel.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target?.dataset?.role === "family-create-btn") {
+        // A literal click on a button a human just pressed - the real humanClick:true origin
+        // Q1 requires, not a value threaded through from anywhere else.
+        const familyId = window.prompt("Family id (letters/numbers/._- only):");
+        if (!familyId) return;
+        sendCommand({ cmd: "family_create", ownerSeat: seatId, familyId, brief: "", task: "", humanClick: true });
+      }
+    });
+
+    panel.addEventListener("submit", (e) => {
+      const form = e.target as HTMLFormElement;
+      if (form?.dataset?.role !== "family-dispatch-form") return;
+      e.preventDefault();
+      const sessionInput = form.querySelector<HTMLInputElement>('[data-role="family-session-input"]');
+      const taskInput = form.querySelector<HTMLTextAreaElement>('[data-role="family-task-input"]');
+      const sessionId = sessionInput?.value.trim();
+      const task = taskInput?.value.trim();
+      if (!sessionId || !task) return;
+      // familyId isn't tracked client-side yet in this pass (see the DECISIONS.md gap note) -
+      // family_list's response is the source of truth server-side; a real multi-family-per-seat
+      // UI needs a family picker, out of scope tonight (only one family per seat is exercised).
+      const s = familyPanelStateFor(seatId);
+      const familyId = (s.family as any)?.familyId;
+      if (!familyId) return;
+      sendCommand({ cmd: "family_dispatch", ownerSeat: seatId, familyId, sessionId, task });
+      if (taskInput) taskInput.value = "";
+    });
+  }
+}
+
+function handleFamilyListResult(evt: { requestedOwnerSeat: string | null; families: { ownerSeat: string; familyId: string; sessions: { sessionId: string; status: string; runtime: string }[] }[] }) {
+  // Fable review, LOW #2, 2026-09-16: this used to apply every family_list.result to every open
+  // panel, since the reply carried no marker for which seat's request it answered - a reply for
+  // seat A (correctly empty for A) was misread as "seat B has no family either" for any other
+  // open panel, resetting it to the empty/Create-button state even though B has a real family.
+  // index.js now echoes requestedOwnerSeat back; only that one seat's panel is ever touched.
+  const seatId = evt.requestedOwnerSeat;
+  if (!seatId || !FAMILY_SEAT_IDS.includes(seatId as any)) return;
+  const s = familyPanelStateFor(seatId);
+  const mine = evt.families.filter((f) => f.ownerSeat === seatId);
+  s.loading = false;
+  s.family = mine.length > 0 ? (mine[0] as any) : null;
+  renderFamilyPanel(seatId);
+}
+
+function handleFamilyMutationResult(seatId: string | undefined, evt: { ok?: boolean; reason?: string }) {
+  if (!seatId) return;
+  const s = familyPanelStateFor(seatId);
+  if (evt.ok === false) {
+    s.error = evt.reason || "request refused";
+  } else {
+    s.error = null;
+    sendCommand({ cmd: "family_list", ownerSeat: seatId });
+  }
+  renderFamilyPanel(seatId);
+}
+
 function setupDebatePanels() {
   for (const seatId of PLANNER_SEAT_IDS) {
     const tile = tileEl(seatId);
@@ -2611,6 +2764,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupInspectPanels();
   setupArtifactForward();
   setupHistoryPanel();
+  setupFamilyPanels();
   setupDebatePanels();
   setupDebateHistory();
   setupCouncilDemo();

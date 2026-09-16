@@ -1,5 +1,8 @@
-// Sophi-A "family" MVP polish, item 3 (relay/runs/2026-09-15T18-55-34-601Z/build.md §2):
-// renders a seat's family-receipts rows into a safe DOM fragment.
+// Sophi-A "family" MVP polish, item 3 (relay/runs/2026-09-15T18-55-34-601Z/build.md §2), rewired
+// for F3's receipts v2 (relay/Docs/SophiA-Seat-Families-Plan.md §2.5): renders a seat-owned
+// family's receipt rows into a safe DOM fragment. Rows now come from familyLedger.js's
+// familyReceiptRows(), keyed by sessionId/turn rather than the old peer-pool `task` id - the row
+// shape changed with F3's rewrite of familyLedger.js, so this render layer changed with it.
 //
 // Real-codebase correction, checked before writing this file rather than assumed from the plan
 // text: the plan asks for `src/ui/FamilyReceipts.jsx`, but this app has no React/JSX toolchain
@@ -13,28 +16,32 @@
 // nothing in this app could ever load.
 //
 // No aggregate/comparative claim ever appears in this file's copy - test/family-receipts.test.mjs
-// greps both this module's own source and its rendered output against build.md §2's forbidden-
-// phrase list, so a future edit that reintroduces one fails loudly rather than needing a human
-// to notice. (That list is not repeated verbatim in this comment on purpose - the test file
-// itself is the one place it lives, so this comment can't drift out of sync with it.)
+// greps both this module's own source and its rendered output against the full, current
+// forbidden-phrase list (that list lives in the test file only, so this comment can't drift out
+// of sync with it).
 
-// gp-77's real Fable-5.1 security review of this branch (2026-09-15) flagged the absolute local
-// filesystem path being shown directly in the UI as a low-severity finding. The row's own
-// artifactPath stays absolute (familyLedger.js needs the real path to check existsSync against),
-// but the rendered label is shortened to the part starting at `.workdirs/peers/...` - the full
-// path is still reachable via a title tooltip (DOM render) or left in the row data (text render),
-// never hidden, just not the loudest thing on screen.
+// gp-77's real Fable-5.1 security review of the MVP-polish branch (2026-09-15) flagged the
+// absolute local filesystem path being shown directly in the UI as a low-severity finding. The
+// row's own artifactPath stays absolute (familyLedger.js needs the real path to check
+// existsSync against), but the rendered label is shortened to the part starting at
+// `.families/...` - the full path is still reachable via a title tooltip (DOM render) or left in
+// the row data (text render), never hidden, just not the loudest thing on screen.
 function shortArtifactLabel(artifactPath) {
-  const marker = '.workdirs/peers/';
+  if (typeof artifactPath !== 'string') return artifactPath;
+  const marker = '.families/';
   const idx = artifactPath.indexOf(marker);
   return idx === -1 ? artifactPath : artifactPath.slice(idx);
 }
 
+function rowLabel(row) {
+  return `${row.sessionId} turn ${row.turn}${row.planItem ? ` (${row.planItem})` : ''}`;
+}
+
 /**
- * Build a `<section>` DOM fragment for one seat's family-receipts panel, ready to append into
- * that seat's card. Never throws on an empty row list - renders an explicit "no family activity
- * yet this session" line instead of a blank panel (an empty state says why, never nothing).
- * @param {{task: string, outcome: string, timestamp: number, artifactPath: string|null}[]} rows
+ * Build a `<section>` DOM fragment for one family's receipts panel, ready to append into that
+ * seat's card. Never throws on an empty row list - renders an explicit "no family activity yet
+ * this session" line instead of a blank panel (an empty state says why, never nothing).
+ * @param {{sessionId: string, turn: number, planItem: string|null, outcome: string, usage: string, timestamp: number|null, artifactPath: string|null}[]} rows
  * @returns {HTMLElement}
  */
 export function renderFamilyReceipts(rows) {
@@ -60,20 +67,25 @@ export function renderFamilyReceipts(rows) {
     const item = document.createElement('li');
     item.className = 'family-receipts-row';
 
-    const task = document.createElement('span');
-    task.className = 'family-receipts-task';
-    task.textContent = row.task;
+    const label = document.createElement('span');
+    label.className = 'family-receipts-session';
+    label.textContent = rowLabel(row);
 
     const outcome = document.createElement('span');
     outcome.className = 'family-receipts-outcome';
     outcome.textContent = row.outcome; // textContent, never innerHTML - same rule seatOutputRender.ts follows for any model-adjacent text
 
+    const usage = document.createElement('span');
+    usage.className = 'family-receipts-usage';
+    usage.textContent = row.usage;
+
     const time = document.createElement('span');
     time.className = 'family-receipts-time';
-    time.textContent = new Date(row.timestamp).toLocaleTimeString();
+    time.textContent = row.timestamp ? new Date(row.timestamp).toLocaleTimeString() : 'unknown time';
 
-    item.appendChild(task);
+    item.appendChild(label);
     item.appendChild(outcome);
+    item.appendChild(usage);
     item.appendChild(time);
 
     if (row.artifactPath) {
@@ -90,8 +102,13 @@ export function renderFamilyReceipts(rows) {
   return section;
 }
 
-/** Plain-text render of one seat's family receipts, for tests/headless checks with no DOM. */
+/** Plain-text render of one family's receipt rows, for tests/headless checks with no DOM. */
 export function renderFamilyReceiptsText(rows) {
   if (!rows || rows.length === 0) return 'No family activity yet this session.';
-  return rows.map(r => `${r.task} - ${r.outcome} (${new Date(r.timestamp).toLocaleTimeString()})${r.artifactPath ? ' @ ' + shortArtifactLabel(r.artifactPath) : ''}`).join('\n');
+  return rows.map(r => `${rowLabel(r)} - ${r.outcome} (${r.usage}, ${r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : 'unknown time'})${r.artifactPath ? ' @ ' + shortArtifactLabel(r.artifactPath) : ''}`).join('\n');
+}
+
+/** Plain-text render of the family's counts line (familyLedger.familyReceiptCounts()'s `.text`). */
+export function renderFamilyReceiptCountsText(counts) {
+  return counts.text;
 }

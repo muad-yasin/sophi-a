@@ -74,3 +74,33 @@ test("Emissary carries the design's permission-boundary line verbatim", () => {
     'design handoff: keep this line verbatim wherever a side seat exposes any control',
   );
 });
+
+// --- Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §5 F8) ---
+// The Family toggle/panel is injected via main.ts (not static index.html markup - a deliberate
+// deviation from every other seat control, named in DECISIONS.md), so its own acceptance checks
+// live here as source-grep tests over main.ts rather than tileSection() lookups.
+
+test('every focusable, claude-code-capable seat plus cnc is in FAMILY_SEAT_IDS - the Family toggle exists per seat', () => {
+  const familySeatIds = stringArray('FAMILY_SEAT_IDS');
+  for (const seatId of ['cnc', 'plan-1', 'plan-2', 'plan-3', 'build-1', 'build-2', 'build-3']) {
+    assert.ok(familySeatIds.includes(seatId), `${seatId} is missing from FAMILY_SEAT_IDS`);
+  }
+  assert.equal(familySeatIds.includes('advisor'), false, 'advisor is chat-only, no claude-code runtime to dispatch a family through');
+  assert.equal(familySeatIds.includes('emissary'), false, 'Emissary has no backend seat at all');
+});
+
+test('setupFamilyPanels is actually called on DOMContentLoaded', () => {
+  assert.match(mainTs, /setupFamilyPanels\(\);/, 'setupFamilyPanels() must be called from the init sequence, not just defined');
+});
+
+test('the family_list/family_create/family_dispatch WS commands are actually sent from main.ts', () => {
+  assert.match(mainTs, /cmd:\s*"family_list"/);
+  assert.match(mainTs, /cmd:\s*"family_create"/);
+  assert.match(mainTs, /cmd:\s*"family_dispatch"/);
+});
+
+test('family_create is only ever sent with humanClick: true - never a value threaded from elsewhere', () => {
+  const m = mainTs.match(/sendCommand\(\{\s*cmd:\s*"family_create"[^}]*\}\)/s);
+  assert.ok(m, 'could not find the family_create sendCommand call');
+  assert.match(m[0], /humanClick:\s*true/, 'family_create must always send a literal humanClick: true, matching Q1\'s human-only rule');
+});

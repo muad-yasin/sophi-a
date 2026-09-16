@@ -16,29 +16,13 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { root } from './index.js';
 import { recordUsage } from './cost-tracker.js';
+import { safeEnv, RESTRICTED_ARGS } from './envRestrictions.js';
+import { loadFamilyConfig, seatFanOutAllowed, FLAG_OFF_CONFIG } from './family/familyConfig.js';
 
-// Same allowlist as claudeCodeSubprocess.js's safeEnv() - docs/security-prompt-injection.md S1/P0
-// applies identically to a peer subprocess as it does to a seat one.
-const SAFE_ENV_KEYS = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'TMP', 'TEMP', 'USER', 'USERNAME', 'SHELL'];
-
-function safeEnv() {
-  const env = {};
-  for (const key of SAFE_ENV_KEYS) {
-    if (process.env[key] !== undefined) env[key] = process.env[key];
-  }
-  if (process.env.ANTHROPIC_API_KEY) env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-  return env;
-}
-
-// Same restricted posture as claudeCodeSubprocess.js's RESTRICTED_ARGS - a peer is exactly as
-// untrusted as a build seat, arguably more so (it exists only for the duration of one fan-out).
-const RESTRICTED_ARGS = [
-  '--restricted',
-  '--tools', 'Bash,Edit,Write,Read,Glob,Grep,MultiEdit,TodoWrite',
-  '--strict-mcp-config',
-  '--permission-mode', 'acceptEdits',
-  '--permission-prompts', 'none',
-];
+// safeEnv()/RESTRICTED_ARGS moved to ./envRestrictions.js (Sophi-A Seat Families F0, closing the
+// plan's own regression risk (3): this file and claudeCodeSubprocess.js used to carry two
+// independent copies of this security-relevant allowlist). Import only, no local definition here
+// anymore - enforced by test/env-restrictions.test.mjs's source-grep.
 
 const KILL_ESCALATION_MS = 5_000; // same escalation window as claudeCodeSubprocess.js
 const DEFAULT_TIMEOUT_MS = 300_000; // build-seat-equivalent default; a peer has no seats.json entry to read its own timeout_ms from
@@ -123,10 +107,31 @@ function workdirFor(peerId) {
  * @param {string} task
  * @param {(type: string, detail?: any) => void} emit
  * @param {number} [timeoutMs]
+ * @param {string|null} [resumeSessionId] - Sophi-A Seat Families F0 (§2.4 "F0 makes it capture
+ *   session_id... and pass --resume when the session has one"): when a caller already knows this
+ *   peer continues an earlier claude-code conversation (families flag on), pass its captured
+ *   `session_id` here to resume it, same `--resume <id>` flag claudeCodeSubprocess.js's seats
+ *   already use. Scoping note, recorded in DECISIONS.md: this function only resumes a handle the
+ *   caller supplies - it does not itself persist or look up handles across calls. That is
+ *   familyManager.js's job (F7, a later session), consuming the `sessionId` this module now emits
+ *   on `peer.start` and writing it to familyMemory.js's `state.json` via `writeSessionState`.
  */
-function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS) {
+function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS, resumeSessionId = null) {
   const dir = workdirFor(peerId);
   const args = ['-p', task, '--output-format', 'stream-json', '--verbose', '--add-dir', dir, ...RESTRICTED_ARGS];
+  if (resumeSessionId) {
+    // Security review fix (Fable 5.1 review of b31f95f, HIGH): a claude-code session_id is
+    // always a UUID (the exact shape the CLI's own init line reports); a caller-supplied value
+    // this shape-checks against is never itself a `--flag` or `--flag=value` token, so it can
+    // never be mistaken for a new CLI option and widen the restricted posture set by
+    // RESTRICTED_ARGS above it (--tools/--mcp-config/--permission-mode etc). Reject anything
+    // else outright rather than silently dropping it - a caller passing a bad handle needs to
+    // know its resume was refused, not get a silent fresh session.
+    if (!/^[0-9a-fA-F-]{8,64}$/.test(resumeSessionId)) {
+      throw new Error(`spawnPeer: refusing to resume - "${resumeSessionId}" is not a plausible session id`);
+    }
+    args.push('--resume', resumeSessionId);
+  }
   const child = spawn('claude', args, { cwd: dir, env: safeEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
 
   let exited = false;
@@ -184,7 +189,7 @@ function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS) {
     let msg;
     try { msg = JSON.parse(line); } catch { return; }
     if (msg.type === 'system' && msg.subtype === 'init') {
-      emit('peer.start', { peerId, worktree: dir });
+      emit('peer.start', { peerId, worktree: dir, sessionId: msg.session_id ?? null });
       heartbeat = setInterval(() => { if (!finished) emit('peer.working', { peerId }); }, 30_000);
     } else if (msg.type === 'assistant') {
       emit('peer.working', { peerId });
@@ -240,28 +245,97 @@ function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS) {
  * that exceeds either dispatches as many peers as fit and returns a notice naming the reduction,
  * never a silent partial fan-out and never a whole-request refusal unless zero peers fit.
  *
- * @param {string} coordinatorSeatId - must be 'cnc' (Decision 2); anything else throws with zero
- *   spawns and no state change.
+ * Sophi-A Seat Families F0 (relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d.8): with
+ * `families.config.json`'s top-level `enabled` flag off (the shipped default) or the config file
+ * absent, this function is byte-for-byte identical to the pre-F0 peer-pool plan - `cnc` only,
+ * exact same throw string, `maxConcurrentPeers`/`spendCeilingUsd` default the same way. With the
+ * flag on, any seat whose own `families.seats.<id>.enabled` row is `true` may call this too,
+ * subject to its own per-seat caps (clamped to the global ones at config-load time).
+ *
+ * Fail-safe ordering (the council's own architecture fix, §b "Flag/reversal guards"): a missing
+ * config file and a syntactically invalid one are BOTH treated as flag-off before anything else
+ * runs - `loadFamilyConfig()` never throws, and any load failure folds into the same
+ * `FLAG_OFF_CONFIG` a missing file already uses. A non-`cnc` caller therefore gets the exact
+ * legacy throw string in all three cases (absent config, corrupt config, real flag-off config),
+ * never a config-loading crash and never a bypass - verified by
+ * test/peer-pool.test.mjs's absent/corrupt-config cases.
+ *
+ * @param {string} coordinatorSeatId - 'cnc' always allowed; with the flag on, any seat whose own
+ *   `families.seats.<id>.enabled` row is true. Anything else throws with zero spawns and no
+ *   state change - the exact legacy string when the flag is off (or config unreadable), a
+ *   distinct per-seat string when the flag is on but that seat's own row is disabled.
  * @param {object} opts
  * @param {number} opts.count - how many peers were requested.
  * @param {string} opts.task - the prompt every dispatched peer receives.
- * @param {number} [opts.maxConcurrentPeers] - defaults to DEFAULT_MAX_CONCURRENT_PEERS (4).
+ * @param {number} [opts.maxConcurrentPeers] - defaults to DEFAULT_MAX_CONCURRENT_PEERS (4) with
+ *   the flag off; with the flag on, defaults to the calling seat's own clamped
+ *   `maxConcurrentSessions` from families.config.json (still overridable by the caller).
  * @param {number|null} [opts.spendCeilingUsd] - the fan-out's own aggregate spend ceiling; null
- *   (the default) means no spend cap is enforced by this call.
+ *   (the default) means no spend cap is enforced by this call, unless the flag is on, in which
+ *   case it defaults to the calling seat's own clamped `spendCeilingUsd`.
  * @param {number} [opts.estimatedUsdPerPeer] - a real, caller-supplied worst-case estimate per
  *   peer, used only to decide how many peers fit under `spendCeilingUsd` before any of them have
  *   actually spent anything. Defaults to 0 (no estimate available yet - see the plan's own
  *   honesty note: this module has no per-peer cost estimator built in, unlike relay's
  *   worstCaseOf() for a single chain stage. With no estimate, the spend cap only ever compares
  *   already-known real spend against the ceiling, never a projection).
+ * @param {string[]} [opts.sessionHandles] - Sophi-A Seat Families F0 only (§2.4): parallel to
+ *   `count`, a prior `session_id` for each peer slot the caller already knows continues an
+ *   existing claude-code conversation (see `spawnPeer`'s own doc comment for the scoping note on
+ *   who persists these across calls - not this module). Ignored entirely when the flag is off,
+ *   so flag-off behavior stays byte-identical regardless of what a caller passes.
  * @param {(type: string, detail?: any) => void} emit
  * @returns {{ dispatched: string[], notice: string|null }}
  */
 export function fanOut(coordinatorSeatId, opts, emit) {
-  const { count, task, maxConcurrentPeers = DEFAULT_MAX_CONCURRENT_PEERS, spendCeilingUsd = null, estimatedUsdPerPeer = 0, timeoutMs } = opts;
+  const { count, task, timeoutMs, sessionHandles = [] } = opts;
 
-  if (coordinatorSeatId !== 'cnc') {
-    throw new Error('Fan-out only allowed from cnc seat');
+  // Test-only override, same convention as enginePath.js's RELAY_PATH: unset in every real
+  // deployment, so production always reads the shipped families.config.json next to
+  // familyConfig.js. Lets test/peer-pool.test.mjs point a real fanOut() call at an isolated
+  // temp config file instead of mutating the real one. Security review note (info, both
+  // reviews): this env var is read from process.env in production code, but it is not in
+  // envRestrictions.js's SAFE_ENV_KEYS allowlist, so it never reaches a spawned child's env -
+  // it can only affect which config THIS process reads, never leak anywhere.
+  const loaded = loadFamilyConfig(process.env.SOPHIA_FAMILIES_CONFIG_PATH || undefined);
+  const config = loaded.ok ? loaded.config : FLAG_OFF_CONFIG;
+
+  let maxConcurrentPeers = opts.maxConcurrentPeers;
+  let spendCeilingUsd = opts.spendCeilingUsd === undefined ? null : opts.spendCeilingUsd;
+  const estimatedUsdPerPeer = opts.estimatedUsdPerPeer ?? 0;
+  const useHandles = config.enabled; // flag-off ignores sessionHandles entirely - byte-identical legacy behavior
+
+  if (!config.enabled) {
+    // Legacy path, exactly as before F0: cnc only, no cap-table lookup at all.
+    if (coordinatorSeatId !== 'cnc') {
+      throw new Error('Fan-out only allowed from cnc seat');
+    }
+    if (maxConcurrentPeers === undefined) maxConcurrentPeers = DEFAULT_MAX_CONCURRENT_PEERS;
+  } else {
+    const gate = seatFanOutAllowed(config, coordinatorSeatId);
+    if (!gate.allowed) {
+      throw new Error(gate.reason);
+    }
+    const seatRow = config.seats[coordinatorSeatId];
+    // Security review fix (Fable 5.1 review of b31f95f, HIGH): fanOut() spawns write-capable
+    // claude-code subprocesses. §2.7's "chat members stay text-only" invariant is a config-load
+    // fact (familyConfig.js's runtimes allowlist) but was never actually checked at this, the
+    // one dispatch path that exists today - a seat configured for chat/council only (e.g. the
+    // shipped plan-1..3/advisor rows) could still fan out real claude-code peers once its own
+    // `enabled` flag was true. Refused here, not deferred to F5 (familyRuntimes.js), since F0 is
+    // the code that actually spawns.
+    if (!seatRow.runtimes.includes('claude-code')) {
+      throw new Error(`Fan-out refused for seat ${coordinatorSeatId}: claude-code is not in its runtimes allowlist (families.seats.${coordinatorSeatId}.runtimes)`);
+    }
+    // Security review fix (MEDIUM): the per-seat cap table is meaningless if a caller can simply
+    // pass a larger opts.maxConcurrentPeers/spendCeilingUsd - clamp to the seat's own
+    // (already-global-clamped) config value instead of only defaulting when the caller omits it.
+    maxConcurrentPeers = maxConcurrentPeers === undefined
+      ? seatRow.maxConcurrentSessions
+      : Math.min(maxConcurrentPeers, seatRow.maxConcurrentSessions);
+    spendCeilingUsd = opts.spendCeilingUsd === undefined
+      ? seatRow.spendCeilingUsd
+      : Math.min(opts.spendCeilingUsd, seatRow.spendCeilingUsd);
   }
 
   const availableSlots = Math.max(0, maxConcurrentPeers - activePeers.size);
@@ -294,7 +368,8 @@ export function fanOut(coordinatorSeatId, opts, emit) {
   for (let i = 0; i < toDispatch; i += 1) {
     const peerId = `peer-${nextPeerSeq}`;
     nextPeerSeq += 1;
-    dispatched.push(spawnPeer(peerId, task, emit, timeoutMs));
+    const resumeSessionId = useHandles ? (sessionHandles[i] ?? null) : null;
+    dispatched.push(spawnPeer(peerId, task, emit, timeoutMs, resumeSessionId));
   }
 
   return { dispatched, notice };
