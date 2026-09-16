@@ -12,7 +12,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync, readFileSy
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runSecurityGate, canApplyArtifact, NOT_JUDGED_REASONS, GATE_RESULTS } from '../src/orchestrator/securityGate.js';
+import { createHash } from 'node:crypto';
+import { runSecurityGate, canApplyArtifact, toContextGateRecord, NOT_JUDGED_REASONS, GATE_RESULTS } from '../src/orchestrator/securityGate.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fakeCliSource = join(here, 'fixtures', 'fake-thcmcp-cli.mjs');
@@ -266,4 +267,48 @@ test('14. real THCMCP integration: mock-security-block artifact is blocked end t
   assert.equal(result.gate, 'blocked');
   assert.equal(result.exitCode, 7);
   assert.ok(result.security_review.blocking_count >= 1);
+});
+
+// Session C / Session D integration alignment (2026-09-16, flagged by thcmcp-66 pre-merge):
+// Session C's checkContextGate() (src/orchestrator/family/familyRuntimes.js, families-c @
+// 64cc0e1) now requires a `.gate.json` shaped `{ result, sha256 }`, with sha256 verified against
+// `createHash('sha256').update(readFileSync(<the real file>)).digest('hex')`. These tests prove
+// toContextGateRecord() produces that exact shape, and that its sha256 is byte-identical to what
+// Session C's checker independently recomputes from disk - not just asserted, actually computed
+// the same way (raw Buffer, no re-encoding) and compared.
+test('18. toContextGateRecord() produces {result, sha256} - the shape Session C\'s checkContextGate() requires', () => {
+  const engineDir = makeFakeEngine();
+  try {
+    const result = runSecurityGate({ artifactText: 'a context/ artifact under review', engineDir, env: { FAKE_THC_RESUME_EXIT: '0' } });
+    const record = toContextGateRecord(result);
+    assert.deepEqual(Object.keys(record).sort(), ['result', 'sha256']);
+    assert.equal(record.result, 'pass');
+    assert.equal(typeof record.sha256, 'string');
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
+  }
+});
+
+test('19. the sha256 in toContextGateRecord() matches Session C\'s own hashing method exactly (raw file bytes, not a re-encoded string)', () => {
+  const engineDir = makeFakeEngine();
+  const artifactText = 'A context/ artifact with unicode: café, 日本語, emoji 🔒.';
+  try {
+    const result = runSecurityGate({ artifactText, engineDir, env: { FAKE_THC_RESUME_EXIT: '0' } });
+    const record = toContextGateRecord(result);
+
+    // Simulate F7 copying the reviewed artifact into a real context/<name> file, then hash it
+    // exactly the way checkContextGate() does: createHash('sha256').update(readFileSync(path)).
+    const contextFile = join(engineDir, 'context-artifact.md');
+    writeFileSync(contextFile, artifactText);
+    const actualHash = createHash('sha256').update(readFileSync(contextFile)).digest('hex');
+
+    assert.equal(record.sha256, actualHash, 'toContextGateRecord()\'s sha256 must match a direct on-disk rehash of the same content');
+  } finally {
+    rmSync(engineDir, { recursive: true, force: true });
+  }
+});
+
+test('20. toContextGateRecord() passes through a non-pass gate value unchanged - checkContextGate() only special-cases "pass", so blocked/not_judged both fail closed identically', () => {
+  assert.equal(toContextGateRecord({ gate: 'blocked', artifactSha256: 'abc' }).result, 'blocked');
+  assert.equal(toContextGateRecord({ gate: 'not_judged', artifactSha256: 'abc' }).result, 'not_judged');
 });

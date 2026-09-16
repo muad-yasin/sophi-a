@@ -229,3 +229,28 @@ export function canApplyArtifact({ humanClick, gateResult, artifactText }) {
   }
   return true;
 }
+
+// Integration note (2026-09-16, thcmcp-66 flagging Session C -> Session D at pre-merge review):
+// Session C's context-gate checker (src/orchestrator/family/familyRuntimes.js's
+// checkContextGate(), families-c @ 64cc0e1) now requires a `.gate.json` record shaped
+// `{ result: "pass"|<anything else>, sha256: "<hex>" }`, where sha256 is verified against
+// `createHash('sha256').update(readFileSync(<the actual context/ file>)).digest('hex')` - a
+// forged or content-stale gate record is rejected. F7 (familyManager.js, not yet built) is the
+// real composition point that will write that file for a `context/` artifact this module has
+// reviewed; toContextGateRecord() below is the one correct conversion from this module's own
+// result shape to that exact record, so F7 has a tested function to call rather than
+// reimplementing the field names from scratch.
+//
+// Hash compatibility, checked directly (test/security-gate.test.mjs): `artifactSha256` is
+// `sha256(artifactText)` computed with `createHash('sha256').update(text, 'utf8')` - the same
+// bytes `writeFileSync(path, artifactText)` (default utf8) puts on disk, so hashing those bytes
+// back with `readFileSync(path)` (no encoding, a raw Buffer) as checkContextGate() does produces
+// an identical digest, provided F7 copies the artifact into context/ byte-for-byte and does not
+// re-encode or normalize it in between.
+/**
+ * @param {{ gate: string, artifactSha256: string }} gateResult - a runSecurityGate() result
+ * @returns {{ result: string, sha256: string }} - Session C's checkContextGate() record shape
+ */
+export function toContextGateRecord(gateResult) {
+  return { result: gateResult.gate, sha256: gateResult.artifactSha256 };
+}
