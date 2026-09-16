@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sophi-A - a multi-LLM planning-and-build harness</title>
+<meta name="description" content="Sophi-A is a Tauri desktop shell that runs one idea past several AI models from different labs, makes them argue about it on the record, and only then hands it to a build seat. Open source, Apache-2.0, bring your own API keys. Pre-release, unmeasured.">
+<link rel="canonical" href="https://muad-yasin.github.io/sophi-a/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sophi-A">
+<meta property="og:title" content="Sophi-A">
+<meta property="og:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code gets written. Open source, Apache-2.0, pre-release.">
+<meta property="og:url" content="https://muad-yasin.github.io/sophi-a/">
+<meta property="og:image" content="https://muad-yasin.github.io/sophi-a/assets/command-deck-screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sophi-A">
+<meta name="twitter:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code gets written. Open source, Apache-2.0, pre-release.">
+<meta name="twitter:image" content="https://muad-yasin.github.io/sophi-a/assets/command-deck-screenshot.png">
+
+<style>
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('assets/fonts/SpaceGrotesk/SpaceGrotesk-Regular.ttf') format('truetype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('assets/fonts/SpaceGrotesk/SpaceGrotesk-SemiBold.ttf') format('truetype');
+  font-weight: 600; font-display: swap;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('assets/fonts/SpaceGrotesk/SpaceGrotesk-Bold.ttf') format('truetype');
+  font-weight: 700; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('assets/fonts/IBMPlexSans/IBMPlexSans-Regular.ttf') format('truetype');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('assets/fonts/IBMPlexSans/IBMPlexSans-Medium.ttf') format('truetype');
+  font-weight: 500; font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --surface-0: #0b0b0e;
+  --surface-1: #13131a;
+  --surface-2: #1b1b24;
+  --surface-3: #24242f;
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.16);
+  --text: #ececf1;
+  --text-muted: #a8a8b8;
+  --text-faint: #82829c;
+  --gold: #d6a94a;
+  --gold-strong: #f0c660;
+  --gold-hi: #f7d475;
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --container: 72rem;
+  --radius-1: 10px;
+  --radius-2: 14px;
+  --radius-3: 20px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.55;
+}
+a { color: var(--gold); text-decoration: none; }
+a:hover { color: var(--gold-strong); text-decoration: underline; }
+::selection { background: rgba(214,169,74,0.25); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.wrap { max-width: var(--container); margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2rem); }
+
+header.site {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+header.site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+header.site img.logo { height: 28px; display: block; }
+header.site nav a { color: var(--text-muted); font-size: 0.9rem; margin-left: 1.5rem; }
+header.site nav a:hover { color: var(--text); }
+
+.hero { padding: clamp(3rem, 8vw, 6rem) 0 clamp(2rem, 5vw, 3rem); text-align: center; }
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 1.6rem + 2.2vw, 3.4rem);
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+.hero .lede {
+  color: var(--text-muted);
+  font-size: clamp(1.05rem, 1rem + 0.3vw, 1.25rem);
+  max-width: 46rem;
+  margin: 0 auto 1.75rem;
+}
+.badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2rem; }
+.badge {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.cta-row { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-block;
+  border-radius: var(--radius-1);
+  padding: 0.7rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.btn-primary { background: var(--gold); color: var(--surface-0); }
+.btn-primary:hover { background: var(--gold-hi); text-decoration: none; }
+.btn-secondary { border-color: var(--border-strong); color: var(--text); }
+.btn-secondary:hover { border-color: var(--gold); text-decoration: none; }
+
+.shot { margin: clamp(2rem, 5vw, 3rem) 0; }
+.shot img {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius-3);
+  border: 1px solid var(--border-strong);
+}
+.shot .cap { color: var(--text-faint); font-size: 0.85rem; text-align: center; margin-top: 0.75rem; }
+
+section { padding: clamp(2.5rem, 6vw, 4rem) 0; border-top: 1px solid var(--border); }
+section h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+  margin: 0 0 1rem;
+}
+section p { color: var(--text-muted); max-width: 44rem; }
+section p.lead { color: var(--text); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  padding: 1.25rem;
+}
+.card h3 {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+.card p { margin: 0; font-size: 0.92rem; color: var(--text-muted); }
+
+.seats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.seat {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-1);
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+}
+.seat .name { font-family: var(--font-display); font-weight: 600; color: var(--gold-hi); display: block; margin-bottom: 0.2rem; }
+.seat .role { color: var(--text-muted); }
+
+.status-box {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.5rem;
+}
+.status-box h3 { margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1.05rem; color: var(--gold-hi); }
+.status-box ul { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--text-muted); font-size: 0.92rem; }
+.status-box li { margin: 0.3rem 0; }
+
+.seal { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+.seal img { width: 56px; height: 56px; flex: none; }
+
+footer.site {
+  border-top: 1px solid var(--border);
+  padding: 2rem 0 3rem;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+footer.site a { color: var(--text-muted); }
+code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.4rem; font-size: 0.85em; }
+pre {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <img class="logo" src="assets/sophi-a-lockup-horizontal.png" alt="Sophi-A">
+    <nav>
+      <a href="https://github.com/muad-yasin/sophi-a" rel="noopener">Source</a>
+      <a href="#mechanism">Mechanism</a>
+      <a href="#status">Status</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" style="border-top:none;">
+    <div class="badge-row">
+      <span class="badge">Apache-2.0</span>
+      <span class="badge">Tauri desktop shell</span>
+      <span class="badge">Pre-release, unmeasured</span>
+    </div>
+    <h1>Five other labs review your plan before a line of code gets written.</h1>
+    <p class="lede">
+      Sophi-A is an open-source multi-LLM (MLLM) planning-and-build harness: instead of one model
+      working alone, a plan drafted by one seat is graded blind by critic seats from other labs
+      before any build seat is allowed to touch code. Bring your own Claude Code / API
+      credentials - nothing is resold.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/muad-yasin/sophi-a" rel="noopener">View source on GitHub</a>
+      <a class="btn btn-secondary" href="https://github.com/muad-yasin/sophi-a#running-it" rel="noopener">Run it from source</a>
+    </div>
+    <div class="shot">
+      <img src="assets/command-deck-screenshot.png" alt="Sophi-A's Command Deck: one home conversation in the center, three planning seats and the Advisor on the left, three build seats and the Emissary on the right.">
+      <p class="cap">The real app, not a mockup - the Command Deck, one home conversation with every seat reachable in fixed side rails.</p>
+    </div>
+  </section>
+
+  <section id="mechanism">
+    <h2>The mechanism</h2>
+    <p class="lead">
+      Sophi-A runs eight real agent seats at once: one always-on Command &amp; Control home seat,
+      one Advisor, three planning seats, and three build seats (real Claude Code subprocesses).
+      The three planning seats don't race copies of the same model to the same answer - each one
+      spawns a real council chain on <a href="https://github.com/muad-yasin/the-high-council-mcp" rel="noopener">The High Council MCP</a>,
+      where one model drafts a plan and critic seats from other labs grade it blind and
+      independently, on the record. The draft gets revised against their objections, and the run
+      ends either with unanimous sign-off or a <code>report.json</code> naming exactly which lab
+      refused and why - before any build seat writes code.
+    </p>
+    <div class="seats">
+      <div class="seat"><span class="name">cnc</span><span class="role">Command &amp; Control home seat</span></div>
+      <div class="seat"><span class="name">advisor</span><span class="role">Advisor seat</span></div>
+      <div class="seat"><span class="name">plan-1 / plan-2 / plan-3</span><span class="role">Planning seats, council-gated</span></div>
+      <div class="seat"><span class="name">build-1 / build-2 / build-3</span><span class="role">Build seats, real Claude Code subprocesses</span></div>
+    </div>
+    <div class="seal">
+      <img src="assets/council-seal.svg" alt="The Council seal">
+      <p style="color:var(--text-muted); font-size:0.92rem; margin:0;">
+        Each planning seat's Debate panel renders this seal live from that run's real
+        <code>report.json</code> - lit sigils for labs that signed off, dimmed for labs that
+        objected. Not a mockup state.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What this is not</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Not a chat window with panels</h3>
+        <p>The planning seats don't just add more chat surfaces - each spawns a real cross-lab
+        debate chain with a written, checkable verdict file.</p>
+      </div>
+      <div class="card">
+        <h3>Not a parallel-session racer</h3>
+        <p>Unlike tools that run several copies of one model racing to the same answer, critics
+        here come from different labs and must actually agree or record why they didn't.</p>
+      </div>
+      <div class="card">
+        <h3>Not a performance claim</h3>
+        <p>Sophi-A has not been measured or playtested against single-model workflows. No
+        efficacy numbers are published here - see Status below.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="status">
+    <h2>Status</h2>
+    <p class="lead">Pre-release, source-only. Read this plainly before relying on any of it.</p>
+    <div class="status-box">
+      <h3>True today</h3>
+      <ul>
+        <li>Open source under <a href="https://github.com/muad-yasin/sophi-a/blob/master/LICENSE" rel="noopener">Apache-2.0</a> - the source is the product, not a teaser for a paid build.</li>
+        <li>No packaged/purchasable build - run it from source with <code>npm run tauri dev</code>.</li>
+        <li>Vibecoded end-to-end with Claude Code; each planning seat's own plan was critiqued by
+        the same kind of cross-lab relay chain the product ships, before a build seat wrote code.</li>
+        <li>Not yet playtested or measured - no claim is made here about council output beating a
+        single model.</li>
+        <li><code>xai/Grok</code> is deliberately excluded from the allowed-provider list, checked
+        in code, not just omitted from a menu.</li>
+      </ul>
+    </div>
+    <pre>git clone https://github.com/muad-yasin/sophi-a.git
+cd sophi-a
+npm install
+npm run tauri dev</pre>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    Sophi-A - <a href="https://github.com/muad-yasin/sophi-a" rel="noopener">github.com/muad-yasin/sophi-a</a> - Apache-2.0. Pre-release, unmeasured.
+  </div>
+</footer>
+
+</body>
+</html>
