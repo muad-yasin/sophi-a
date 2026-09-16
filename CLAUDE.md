@@ -82,6 +82,22 @@ free `mock` chain on the public engine. If a plan seat's chain crashes or
 misbehaves, check whether the bug is actually relay's before assuming it's this repo's (a real
 critic-seat token-cap crash was found and fixed there, not here - see `DECISIONS.md`).
 
+## Seat-owned families (2026-09-15/16, behind `families.enabled`, off by default)
+
+A seat-owned family is a second, opt-in fan-out population, distinct from `cnc`'s always-on
+peer-pool: with `families.config.json`'s flag on and a seat's own row `enabled:true`, that seat
+(not only `cnc`) may create and dispatch into its own family of worker sessions, each with a
+durable file-based memory (`.families/<ownerSeat>/<familyId>/`), a compassion-first failure policy
+(one automated `restart-with-context`, then escalate to a human - `close` is always a human-only
+UI action, never something a policy function offers), and nested per-family/seat/global spend and
+concurrency caps. **The flag-off default reproduces today's `cnc`-only `fanOut()` behavior
+byte-for-byte** - this is an additive, reversible reopening of a decision the 2026-09-15
+peer-pool-only council made, not a replacement for it. Full architecture: `relay/Docs/
+SophiA-Seat-Families-Plan.md` (private) and its council revision at `relay/runs/
+2026-09-15T19-57-10-287Z/deliverable.md`. Build status, per item (F0-F10), and what actually landed
+in the overnight build that produced this: `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` and the
+dated `DECISIONS.md` entries. User-facing overview: `docs/families.md`.
+
 ## MCP introspection
 
 `src/mcp/server.js` exposes the running orchestrator (seat status/output/control) over MCP -

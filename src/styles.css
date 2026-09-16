@@ -3012,3 +3012,73 @@ body {
   }
 }
 
+/* Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §2.10). Reuses the existing
+   .inspect-panel/.inspect-empty tokens rather than a new visual language - the toggle itself is
+   already .inspect-toggle, unchanged. */
+.family-panel {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-2);
+  margin-top: var(--sp-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.family-panel-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-placeholder);
+  font-style: italic;
+}
+
+.family-panel-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--status-problem, #b23b3b);
+}
+
+.family-session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.family-session-table th,
+.family-session-table td {
+  text-align: left;
+  padding: 2px 6px 2px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.family-status-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+/* Same three compassion-state colors compassionBadge.js already established for seat cards -
+   never color alone (the badge text itself is the real signal), per frontend-developer's rule. */
+.family-status-failed-owned { border-color: #b8860b; color: #b8860b; }
+.family-status-stuck { border-color: #4a7fb5; color: #4a7fb5; }
+.family-status-holdout { border-color: #7a5ba6; color: #7a5ba6; }
+.family-status-idle { border-color: var(--border); color: var(--text-secondary); }
+
+.family-dispatch-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.family-session-input,
+.family-task-input {
+  font: inherit;
+  padding: var(--sp-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elevated, transparent);
+  color: inherit;
+}
+
