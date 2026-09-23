@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sideFilePaths } from '../src/orchestrator/sideFiles.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 let failed = 0;
@@ -33,12 +34,14 @@ check('env files include private relay .env when present', envs.some(f => f.ends
 
 // 5. Real mock chain through the public engine with the exact args the seat adapter uses.
 const engine = r1.path;
-const tasksDir = join(engine, 'tasks'); mkdirSync(tasksDir, { recursive: true });
+// The task file lives under ~/.cache/cnc-harness/tasks/ and is passed as an absolute path,
+// exactly as the seat adapter does since 2026-09-23 (src/orchestrator/sideFiles.js).
+const side = sideFilePaths('verify-engine', Date.now());
+mkdirSync(side.tasksDir, { recursive: true });
 const runsDir = join(engine, 'runs'); mkdirSync(runsDir, { recursive: true });
-const taskName = `cnc-harness-verify-engine-${Date.now()}.md`;
-writeFileSync(join(tasksDir, taskName), '# Task\nVerify the public engine runs a mock chain for Sophi-A.\n');
+writeFileSync(side.taskPath, '# Task\nVerify the public engine runs a mock chain for Sophi-A.\n');
 const before = new Set(readdirSync(runsDir));
-const res = spawnSync('node', [join(engine, 'src', 'cli.js'), '--chain', 'mock', '--task', join('tasks', taskName)], { cwd: engine, encoding: 'utf8', timeout: 120000 });
+const res = spawnSync('node', [join(engine, 'src', 'cli.js'), '--chain', 'mock', '--task', side.taskPath], { cwd: engine, encoding: 'utf8', timeout: 120000 });
 const newRuns = readdirSync(runsDir).filter(d => !before.has(d));
 check('mock chain exits 0 on public engine', res.status === 0, (res.stderr || '').split('\n').slice(-2).join(' '));
 check('exactly one new run folder', newRuns.length === 1, newRuns.join(','));

@@ -4,8 +4,9 @@
 // folder it writes to disk - the same discovery/poll pattern relay's own MCP server's
 // `start_run` tool uses (relay/src/mcp/server.js), just without an MCP client in between.
 //
-// This module does not modify relay in any way: it only writes one throwaway task file
-// under <relayPath>/tasks/ and spawns `node <relayPath>/src/cli.js` as a detached child.
+// This module does not modify relay in any way: it writes one throwaway task file and one side
+// log under ~/.cache/cnc-harness/ (sideFiles.js - never into the engine repo, 2026-09-23) and
+// spawns `node <relayPath>/src/cli.js --task <absolute task path>` as a detached child.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, openSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -14,6 +15,7 @@ import { resolveEnginePath } from '../enginePath.js';
 import { recordRun } from '../run-recorder.js';
 import { usageFromReport, stageUsageFromReport } from '../cost-tracker.js';
 import { emptyProgress, foldProgressLines } from '../run-log-progress.js';
+import { sideFilePaths } from '../sideFiles.js';
 
 const RUN_DISCOVERY_POLL_MS = 250;
 const RUN_DISCOVERY_MAX_ATTEMPTS = 20; // ~5s, matching relay's own start_run tool
@@ -68,8 +70,6 @@ function resolveChain(seatConfig) {
 export function startRelayChainSeat(seatId, seatConfig, task, emit) {
   const relayPath = resolveRelayPath();
   const runsDir = join(relayPath, 'runs');
-  const tasksDir = join(relayPath, 'tasks');
-  mkdirSync(tasksDir, { recursive: true });
   mkdirSync(runsDir, { recursive: true });
 
   emit('seat.start');
@@ -80,22 +80,23 @@ export function startRelayChainSeat(seatId, seatConfig, task, emit) {
   }
 
   const timestamp = Date.now();
-  const taskFileName = `cnc-harness-${seatId}-${timestamp}.md`;
-  const taskRelPath = join('tasks', taskFileName);
-  writeFileSync(join(tasksDir, taskFileName), task);
+  const side = sideFilePaths(seatId, timestamp);
+  mkdirSync(side.tasksDir, { recursive: true });
+  mkdirSync(side.logsDir, { recursive: true });
+  writeFileSync(side.taskPath, task);
 
   const chain = resolved.name;
   const cli = join(relayPath, 'src', 'cli.js');
-  const args = [cli, '--chain', chain, '--task', taskRelPath];
+  const args = [cli, '--chain', chain, '--task', side.taskPath];
 
   // Snapshot runs/ before spawning so the new run folder can be found by diffing -
   // exactly what relay/src/mcp/server.js's start_run tool does.
   const before = new Set(readdirSync(runsDir));
 
   // The child's stdout/stderr (relay's own CLI console output, a duplicate of run.log)
-  // goes to a side log file next to relay's runs/, not to this process's stdout/stderr.
-  const sideLogPath = join(relayPath, `cnc-harness-${seatId}-${timestamp}.log`);
-  const fd = openSync(sideLogPath, 'a');
+  // goes to a side log under ~/.cache/cnc-harness/side-logs/, not to this process's
+  // stdout/stderr and not into the engine repo (sideFiles.js).
+  const fd = openSync(side.logPath, 'a');
   const child = spawn('node', args, { cwd: relayPath, detached: true, stdio: ['ignore', fd, fd] });
 
   let exited = false;
