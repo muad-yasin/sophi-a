@@ -8,7 +8,7 @@ they already pay for by putting *multiple* LLMs from *different labs* to work on
 instead of one model working alone - an **MLLM (multi-LLM) harness**, not a single-model chat
 window with extra panels. It runs eight real agent seats at once: one always-on Command &
 Control home seat, one Advisor, three planning seats, and three building seats (real Claude Code
-subprocesses). Open source (Apache-2.0); bring your own Claude Code/API credentials, nothing is
+subprocesses). Open source (MIT); bring your own Claude Code/API credentials, nothing is
 resold.
 
 ![Sophi-A's real Command Deck interface](marketing/assets/command-deck-screenshot.png)
@@ -48,7 +48,7 @@ things a side seat does to another side seat.
 ## Running it
 
 Source only - the €20 one-time packaged-build offer this section used to point at is retired
-(Muad's direct confirmation, 2026-09-16). Sophi-A is real software (public repo, Apache-2.0) that
+(Muad's direct confirmation, 2026-09-16). Sophi-A is real software (public repo, MIT) that
 has not been playtested or released; there is no purchase flow.
 
 ```
@@ -117,5 +117,5 @@ before any API call rather than merely omitted from a UI dropdown (`DECISIONS.md
 
 ## License
 
-Apache-2.0 (`LICENSE`). The source is the product's own advertisement, not a teaser for the paid
+MIT (`LICENSE`). The source is the product's own advertisement, not a teaser for the paid
 build - read it, run it, fork it.

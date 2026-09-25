@@ -36,7 +36,7 @@ Download: {{download link}} - pick the installer for your system:
 **No macOS build exists yet.** If that's what you needed, say so and I'll refund order
 `{{order}}` in full - see the note at the end of this mail.
 
-The source is open (Apache-2.0) at {{repo URL, once public}} if you'd rather build it yourself
+The source is open (MIT) at {{repo URL, once public}} if you'd rather build it yourself
 or just read how it works.
 
 **Getting started:** open the app, click "Setup" (top right) to check your Claude Code CLI is

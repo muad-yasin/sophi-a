@@ -56,7 +56,7 @@ Actions - see `PLAN_PACKAGING.md` / `DECISIONS.md` for what's actually verified.
 Product name: **Sophi-A** (Muad's call, 2026-09-09) - named and visually themed after
 `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property
 choice. The repo folder and internal paths stay `cnc-harness` (`PLAN.md` has the naming note).
-Open source (Apache-2.0); monetized via a packaged build sold on Stripe - `SHOP.md` has the
+Open source (MIT); monetized via a packaged build sold on Stripe - `SHOP.md` has the
 current price/link/launch-country state, which moves faster than this file.
 
 ## Dependency: relay

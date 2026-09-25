@@ -56,7 +56,7 @@ Actions - see `PLAN_PACKAGING.md` / `DECISIONS.md` for what's actually verified.
 Product name: **Sophi-A** (Muad's call, 2026-09-09) - named and visually themed after
 `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property
 choice. The repo folder and internal paths stay `cnc-harness` (`PLAN.md` has the naming note).
-Open source (Apache-2.0); monetized via a packaged build sold on Stripe - `SHOP.md` has the
+Open source (MIT); monetized via a packaged build sold on Stripe - `SHOP.md` has the
 current price/link/launch-country state, which moves faster than this file.
 
 **Studying competing agent-GUI/harness tools for ideas is standing practice; lifting their code
@@ -64,7 +64,7 @@ or prose is not.** Looking at what LangGraph Studio, AutoGen Studio, CrewAI, and
 space actually do - and borrowing the *idea* - is encouraged, same as it was for the GUI research
 that fed `relay/Docs/SophiA-CC-GUI-v1-DesignBrief.md`. The line: describe the idea in this
 project's own words, weigh it against what Sophi-A actually is, and never copy another project's
-README/docs/code verbatim or port code out of a differently-licensed repo. Apache-2.0 is Sophi-A's
+README/docs/code verbatim or port code out of a differently-licensed repo. MIT is Sophi-A's
 own open invitation to be studied the same way - keep the courtesy running both directions.
 
 ## Dependency: relay

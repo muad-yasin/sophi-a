@@ -94,7 +94,7 @@ show, and isn't yet surfaced as the headline feature.
 The author's own framing: the best marketing is a good product. Concretely: lead with #2 above
 (the debate itself) as the actual demo/screenshot, not "8 tiles glow" - that's what makes this
 look like something new rather than a Conductor/Nimbalyst clone. Distribution follows the same
-logic: an open-source, BYOK, Apache-2.0 tool gets found via GitHub/HN/r/LocalLLaMA/r/ClaudeAI on
+logic: an open-source, BYOK, MIT-licensed tool gets found via GitHub/HN/r/LocalLLaMA/r/ClaudeAI on
 the strength of one honest "here's what it caught that a single model missed" post, not paid
 ads - but that post needs #2 to actually be visible in the product first; right now the receipts
 exist in the run folder, not on screen.

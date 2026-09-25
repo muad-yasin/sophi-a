@@ -39,7 +39,7 @@ whichever providers you want to use. Sophi-A doesn't include, resell, or meter a
 them - it's a one-time purchase for the app itself, not a subscription, and there's nothing
 ongoing to pay for.
 
-The source is open (Apache-2.0) - this purchase buys a ready-to-run build, not the code, which
+The source is open (MIT) - this purchase buys a ready-to-run build, not the code, which
 you're free to read or build yourself either way.
 
 *(No superlatives, no "AI magic," no outcome promises - matches this workspace's own house

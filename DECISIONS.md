@@ -2164,3 +2164,12 @@ family actually did good work - because a coordinator that only ever manages its
 point.
 
 `families.enabled` ships `false`. Nothing runs until I turn it on.
+
+## 2026-09-25 - Licence: Apache-2.0 → MIT, and public again (owner's call)
+
+The owner, to the C&C session: *"make sophia's repo public again"*, then *"I want to make sophia and
+zofia MIT license too"*, matching The High Council (MIT). This reverses the 2026-09-09 Apache-2.0 choice
+above; its reason (the explicit patent grant for a paid build) no longer applies since the €20 build
+offer was retired. `LICENSE` is now the MIT text with the same holder (Sower Industries); `package.json`,
+`package-lock.json`, `src-tauri/Cargo.toml` and the docs that named the licence follow. Copies taken
+under Apache-2.0 before this commit keep that licence. Bundled fonts keep their own (OFL).

@@ -8,7 +8,7 @@ call, BYOK legal-compliance check, VAT/OSS gap). Read those before changing anyt
 ## The product, in one sentence
 
 A packaged, ready-to-run Sophi-A build (installer/binary) sold for convenience - the source
-stays free and open on GitHub under `LICENSE` (Apache-2.0); paying buys a working build someone
+stays free and open on GitHub under `LICENSE` (MIT); paying buys a working build someone
 doesn't have to `npm install && npm run tauri dev` themselves, not the code.
 
 ## What is settled
