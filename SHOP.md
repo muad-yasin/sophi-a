@@ -1,3 +1,7 @@
+> **Retired (2026-09-16).** The €20 packaged-build offer this file describes was retired; Sophi-A is
+> source only and there is no purchase flow. Kept as a dated record of what was planned, not as
+> current instructions.
+
 # SHOP.md - monetizing a packaged Sophi-A build
 
 *Written 2026-09-09, following `sower-industries/plan-shop.md`'s shape (settled / open / non-goals

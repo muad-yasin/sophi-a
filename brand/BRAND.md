@@ -7,8 +7,9 @@ deliberate cross-property callout, not a coincidence - see `CLAUDE.md`'s naming 
 
 ## The one-sentence pitch this identity has to carry
 
-Sophi-A gets you closer to shipping with the models you already pay for - it never claims to
-replace you, and it never claims to be finished doing it. One build, €20, forever.
+Sophi-A puts the models you already use to work side by side, with their disagreements on the
+record - it never claims to replace you, and it never claims to be finished doing it. Source only,
+MIT. (Until 2026-09-16 this line ended "One build, €20, forever."; that offer is retired.)
 
 ## Where the mark comes from
 

@@ -11,7 +11,7 @@
 //   1. RELAY_PATH            explicit override, unchanged behaviour for anyone who set it
 //   2. ../THCMCP             sibling checkout of the public repo (this machine's layout)
 //   3. ../the-high-council-mcp   sibling checkout under the GitHub name
-//   4. node_modules/the-high-council   the npm package, once it is published
+//   4. node_modules/the-high-council   the npm package (a declared dependency in package.json)
 //   5. ../relay              the private source repo, last so it stays the fallback not the default
 //
 // Pure module on purpose: no import of index.js, so no circular-import/`root`-before-init trap

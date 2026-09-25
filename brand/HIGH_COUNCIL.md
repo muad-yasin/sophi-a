@@ -114,10 +114,12 @@ off, overruled, flagged*. Avoid: *judged, decreed, ruled, blessed*. The mechanis
 novel and doesn't need myth-language to sell; myth-language on top of a real thing reads as
 hiding that it's real.
 
-Working taglines (pick one per surface, don't run all three on the same page):
+Working taglines (pick one per surface, don't run all three on the same page). Two earlier lines
+were retired 2026-09-25 as false: the review is not a gate (a building seat takes tasks directly;
+only forwarding a deliverable is gated), so nothing "can't build until" the Council signs off.
 
-- "Five labs review your plan before a line of code exists."
-- "Nothing builds until the Council signs off - or tells you exactly why it won't."
+- "Send your plan to five other labs before a building seat writes code."
+- "Every objection on the record - who refused, and why."
 - "Your plan, cross-examined by five labs that don't work for the one that wrote it."
 
 ## What this pass did NOT do (real gaps, not oversights)

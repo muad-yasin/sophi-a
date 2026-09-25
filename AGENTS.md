@@ -1,13 +1,13 @@
 # Sophi-A (repo: cnc-harness)
 
 Sophi-A is a Tauri desktop shell that runs eight real agent seats at once - a Command & Control
-chat, an Advisor, three planning seats, three building seats (real `claude` CLI subprocesses) -
-so a vibecoder gets more out of the models they already pay for. The part that isn't a
-Conductor/Nimbalyst clone: each planning seat runs a real relay chain where one model drafts a
-plan and critic seats from five *other* labs (never the same lab twice, never Grok) grade it
-blind, round after round, until they sign off or the run records exactly who refused and why -
-"The High Council," `brand/HIGH_COUNCIL.md`. That is the whole pitch. Adversarial cross-lab review
-of a plan before any build seat touches code, not N copies of one agent racing to the same answer.
+chat, an Advisor, three planning seats, three building seats (real `claude` CLI subprocesses).
+The distinctive part: each planning seat runs a real council chain where one model drafts a plan
+and critic seats from five *other* labs (never the same lab twice, never Grok) grade it blind,
+round after round, until they sign off or the run records exactly who refused and why - "The High
+Council," `brand/HIGH_COUNCIL.md`. Cross-lab review of a plan before any build seat touches code,
+not N copies of one agent. **Public text must not claim this review produces better results:**
+nobody has measured that yet. Describe what it does, not what it achieves.
 
 **Before changing architecture, read `PLAN.md` in full.** It was settled by a real six-lab
 adversarial review panel (`BOARD.md` has the debate), not one session's guess - don't relitigate a
@@ -30,7 +30,7 @@ npm install
 npm run tauri dev
 ```
 
-A packaged build exists too: `v0.1.0` (Windows NSIS installer, Linux AppImage), built by GitHub
+Tagged builds exist too (`v0.1.0`, `v0.2.0`; Windows NSIS installer, Linux AppImage), built by GitHub
 Actions - see `PLAN_PACKAGING.md` / `DECISIONS.md` for what's actually verified.
 
 ## Read in this order before touching anything unfamiliar
@@ -56,16 +56,49 @@ Actions - see `PLAN_PACKAGING.md` / `DECISIONS.md` for what's actually verified.
 Product name: **Sophi-A** (Muad's call, 2026-09-09) - named and visually themed after
 `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property
 choice. The repo folder and internal paths stay `cnc-harness` (`PLAN.md` has the naming note).
-Open source (MIT); monetized via a packaged build sold on Stripe - `SHOP.md` has the
-current price/link/launch-country state, which moves faster than this file.
+Open source (MIT), source only, no paid offer. The €20 packaged-build offer was retired
+on 2026-09-16 (Muad's direct confirmation); `SHOP.md` and the fulfillment docs are kept as history
+only.
+
+**Studying competing agent-GUI/harness tools for ideas is standing practice; lifting their code
+or prose is not.** Looking at what LangGraph Studio, AutoGen Studio, CrewAI, and the rest of that
+space actually do - and borrowing the *idea* - is encouraged, same as it was for the GUI research
+that fed `relay/Docs/SophiA-CC-GUI-v1-DesignBrief.md`. The line: describe the idea in this
+project's own words, weigh it against what Sophi-A actually is, and never copy another project's
+README/docs/code verbatim or port code out of a differently-licensed repo. MIT is Sophi-A's
+own open invitation to be studied the same way - keep the courtesy running both directions.
 
 ## Dependency: relay
 
-`relay` (`~/Projects/relay`, `RELAY_PATH` env var, defaults to `../relay`) is a dependency, not a
-parent project. `plan-1..3` spawn real relay chains via its CLI (`src/cli.js`) and poll the run
-folder - genuine reuse of working code, not a description of it. If a plan seat's chain crashes or
+The council engine is a dependency, not a parent project. Since 2026-09-13 the plan seats run on
+the **public** engine by default - The High Council MCP (`~/Projects/THCMCP`, public repo
+`github.com/muad-yasin/the-high-council-mcp`, MIT, BYOK) - so the product ships on the same code
+everyone else gets. Resolution order lives in `src/orchestrator/enginePath.js`: `RELAY_PATH`
+override, sibling `THCMCP`, sibling `the-high-council-mcp`, the npm package `the-high-council` (a declared dependency since
+2026-09-25, so a plain `npm install` provides it),
+then the private `~/Projects/relay` as last-resort fallback (it is the private source THCMCP is
+curated from, and the only place operator API keys live in a `.env`). `plan-1..3` spawn real
+chains via the engine's CLI (`src/cli.js`) and poll its run folder - genuine reuse of working
+code, not a description of it. `node scripts/verify-engine-path.mjs` proves the order and runs a
+free `mock` chain on the public engine. If a plan seat's chain crashes or
 misbehaves, check whether the bug is actually relay's before assuming it's this repo's (a real
 critic-seat token-cap crash was found and fixed there, not here - see `DECISIONS.md`).
+
+## Seat-owned families (2026-09-15/16, behind `families.enabled`, off by default)
+
+A seat-owned family is a second, opt-in fan-out population, distinct from `cnc`'s always-on
+peer-pool: with `families.config.json`'s flag on and a seat's own row `enabled:true`, that seat
+(not only `cnc`) may create and dispatch into its own family of worker sessions, each with a
+durable file-based memory (`.families/<ownerSeat>/<familyId>/`), a compassion-first failure policy
+(one automated `restart-with-context`, then escalate to a human - `close` is always a human-only
+UI action, never something a policy function offers), and nested per-family/seat/global spend and
+concurrency caps. **The flag-off default reproduces today's `cnc`-only `fanOut()` behavior
+byte-for-byte** - this is an additive, reversible reopening of a decision the 2026-09-15
+peer-pool-only council made, not a replacement for it. Full architecture: `relay/Docs/
+SophiA-Seat-Families-Plan.md` (private) and its council revision at `relay/runs/
+2026-09-15T19-57-10-287Z/deliverable.md`. Build status, per item (F0-F10), and what actually landed
+in the overnight build that produced this: `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` and the
+dated `DECISIONS.md` entries. User-facing overview: `docs/families.md`.
 
 ## MCP introspection
 

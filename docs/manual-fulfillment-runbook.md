@@ -1,3 +1,7 @@
+> **Retired (2026-09-16).** The €20 packaged-build offer this file describes was retired; Sophi-A is
+> source only and there is no purchase flow. Kept as a dated record of what was planned, not as
+> current instructions.
+
 # Sophi-A manual fulfillment runbook - what to do when a real order arrives
 
 *Follows `sower-industries/Docs/ManualFulfillmentRunbook.md`'s shape exactly - the

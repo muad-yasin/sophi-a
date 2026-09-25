@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sophi-A — The High Council</title>
-<meta name="description" content="Sophi-A: a Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<meta name="description" content="Sophi-A: a Tauri desktop harness where critic models from five other labs can review your plan before a building seat writes code." />
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
 
 <!-- Backlog item 3 (relay run 2026-09-10T23-20-49-005Z): OG/Twitter tags for a real link preview.
@@ -17,12 +17,12 @@
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Sophi-A" />
 <meta property="og:title" content="Sophi-A — The High Council" />
-<meta property="og:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<meta property="og:description" content="A Tauri desktop harness where critic models from five other labs can review your plan before a building seat writes code." />
 <meta property="og:image" content="PLACEHOLDER-deploy-url/assets/og-image.png" />
 <meta property="og:url" content="PLACEHOLDER-deploy-url/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Sophi-A — The High Council" />
-<meta name="twitter:description" content="A Tauri desktop harness where five other labs' models review your plan before a line of code exists." />
+<meta name="twitter:description" content="A Tauri desktop harness where critic models from five other labs can review your plan before a building seat writes code." />
 <meta name="twitter:image" content="PLACEHOLDER-deploy-url/assets/og-image.png" />
 
 <style>
@@ -362,7 +362,7 @@
   <div class="wrap">
     <img class="seal" src="assets/council-seal.svg" alt="The Sophi-A High Council seal — five critic-lab seats ringed around the Sophi-A mark" />
     <h1 class="wordmark">Sophi-A</h1>
-    <p class="tagline">Five labs review your plan before a line of code exists. Nothing builds until the Council signs off — or tells you exactly why it won't.</p>
+    <p class="tagline">Send your plan to critic models from five other labs before a building seat writes code. Every objection stays on the record.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#council">Meet the Council</a>
       <!-- github.com/muad-yasin/sophi-a went public 2026-09-10, after the pre-public-release
@@ -370,7 +370,7 @@
       <a class="btn btn-secondary" href="https://github.com/muad-yasin/sophi-a" rel="noopener">Read the source</a>
     </div>
     <img class="hero-screenshot" src="assets/command-deck-screenshot.png" alt="Sophi-A's real Command Deck interface: a home Command &amp; Control seat in the center, three planning seats and the Advisor on the left, three build seats and Emissary on the right, all idle and waiting for a task." />
-    <p class="hero-screenshot-caption">The real app, not a mockup - eight live seats around one home conversation.</p>
+    <p class="hero-screenshot-caption">The real app, not a mockup - the seats around one home conversation.</p>
   </div>
 </header>
 
@@ -380,8 +380,9 @@
     <p class="lede">
       Every <code>plan-N</code> seat drafts with one model (the Advocate — Claude, Anthropic) and
       submits the draft to five critic seats from five other labs. Each one reviews it blind,
-      independently, on the record. The draft only ships once the Council signs off — or the run
-      records exactly who objected and why.
+      independently, on the record. The run ends when every critic signs off, or it records exactly
+      who objected and why. The review is not a lock: a building seat takes tasks directly, and a
+      plan only reaches a builder when you forward it.
     </p>
     <div class="council-table">
       <div class="seat-card">
@@ -420,11 +421,11 @@
 
 <section>
   <div class="wrap">
-    <h2>What the run folder actually proves</h2>
+    <h2>What a run folder records</h2>
     <p class="lede">
       This isn't a metaphor drawn over a chat completion — it's a real, structured verdict from
-      relay's own <code>report.json</code>, the same data the in-app Debate panel renders. A
-      sample shape from a real run:
+      the engine's own <code>report.json</code>, the same data the in-app Debate panel renders. An
+      illustrative example of its shape:
     </p>
     <div class="verdict-sample">
       <div class="verdict-row"><span>Qwen (Alibaba)</span><span class="signoff-yes">✓ signed off</span></div>
@@ -438,16 +439,16 @@
 
 <section>
   <div class="wrap">
-    <h2>Not another parallel-session manager</h2>
-    <p class="lede">Conductor and Nimbalyst run several copies of the same agent and let a human pick the best result afterward. That's redundancy, not review.</p>
+    <h2>Review before build, not only after</h2>
+    <p class="lede">Many multi-session tools run several agents side by side and let you compare the results. Sophi-A adds a step before that: a plan is argued over by models from other labs, on the record. Whether that step improves results has not been measured; you can read every objection and judge for yourself.</p>
     <div class="compare">
       <div class="card theirs">
-        <h3>Parallel-session managers</h3>
-        <p>N copies of one agent, same lab, racing to the same answer. You review the output after it's already built.</p>
+        <h3>Parallel sessions</h3>
+        <p>Several agents work at once. You review the output after it's built.</p>
       </div>
       <div class="card ours">
         <h3>Sophi-A's Council</h3>
-        <p>One proposer, five other labs' models cross-examining the plan before anything is built. Every objection is on the record.</p>
+        <p>One proposer, five other labs' models cross-examining the plan before you hand it to a builder. Every objection is on the record.</p>
       </div>
     </div>
   </div>
@@ -456,42 +457,14 @@
 <section>
   <div class="wrap">
     <h2>Get Sophi-A</h2>
-    <!-- Shop-card treatment ported from SMO's real "BUY AD-PARDON" purchase card - the one place
-         in that game with the same job this section has here (a one-time real-money purchase
-         decision). Source: Assets/Scripts/Editor/Shop/ShopScreenBuilder.cs +
-         Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html in ~/Projects/SMO. Colors,
-         shadows and the shine-sweep timing below are the real measured values from that handoff,
-         not approximated. The top stripe was later removed in SMO itself (developer's own note:
-         "reads as a detached line above the corners") but kept here per Muad's explicit call -
-         reproduce the original card as asked, not SMO's own later revision. -->
-    <div class="shop-card">
-      <div class="shop-card-stripe"></div>
-      <p class="shop-card-overline">Support Sophi-A</p>
-      <div class="shop-card-price-wrap">
-        <span class="shop-card-price-halo" aria-hidden="true"></span>
-        <p class="shop-card-price">€20</p>
-      </div>
-      <p class="shop-card-subtext">One-time purchase, no subscription</p>
-      <hr class="shop-card-divider" />
-      <div class="shop-card-bullet">
-        <span class="shop-card-icon-plate" aria-hidden="true">♥</span>
-        <div>
-          <p class="shop-card-bullet-title">Support the developer</p>
-          <p class="shop-card-bullet-body">Every purchase funds continued development of Sower Industries.</p>
-        </div>
-      </div>
-      <div class="shop-card-bullet">
-        <span class="shop-card-icon-plate" aria-hidden="true">⚡</span>
-        <div>
-          <p class="shop-card-bullet-title">Skip the setup</p>
-          <p class="shop-card-bullet-body">Source stays free either way - this buys a working build, not the code.</p>
-        </div>
-      </div>
-      <!-- Real Stripe payment link, created by hand in the Sower Industries dashboard 2026-09-10
-           (Sophi-A product, 20,00 EUR, status Aktiv - plink_1UE7ypFQRVJYIrwWGRvohB8g). -->
-      <a class="shop-card-buy" href="https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03" rel="noopener">
-        Get the packaged build — €20
-      </a>
+    <!-- The €20 packaged-build card (Stripe link) that sat here was retired 2026-09-16 (Muad's
+         direct confirmation). Sophi-A is source only; there is no purchase flow. The shop-card
+         CSS above is left in place, unused, in case the section is ever redesigned. -->
+    <p class="lede">Source only, MIT, bring your own API keys. There is nothing to buy.
+      Clone it, run <code>npm install</code> and <code>npm run tauri dev</code>; the README lists
+      which keys each seat needs.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/muad-yasin/sophi-a" rel="noopener">Get the source</a>
     </div>
   </div>
 </section>

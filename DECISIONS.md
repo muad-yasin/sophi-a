@@ -2173,3 +2173,17 @@ above; its reason (the explicit patent grant for a paid build) no longer applies
 offer was retired. `LICENSE` is now the MIT text with the same holder (Sower Industries); `package.json`,
 `package-lock.json`, `src-tauri/Cargo.toml` and the docs that named the licence follow. Copies taken
 under Apache-2.0 before this commit keep that licence. Bundled fonts keep their own (OFL).
+
+## 2026-09-25 - Brief 07 cleanup (zofia-research results/07-sophi-a-future), rebased onto MIT
+
+Dispatched by C&C from Muad's "you can dispatch work to them, for Zofia and Sophi-A" (FOCUS.md).
+The brief's patch was written against 799d82a (Apache-2.0); applied onto 175f1be with every licence
+line switched to MIT. `the-high-council` is now a declared dependency (3 plan-seat tests failed on a
+fresh clone without it). Removed false wording: the landing page said "the draft only ships once
+the Council signs off", and the meta/brand taglines said the review happens "before a line of code
+exists" / "nothing builds until" - untrue, since a building seat takes tasks directly and only
+forwarding a deliverable is gated. The "what the run folder proves" verdict sample is now labelled
+illustrative. The €20 card and Stripe link are off the landing page (Stripe products archived by
+Muad; Stripe itself untouched). README lists the ~6 provider accounts the default chain needs.
+Not done: freezing/archiving Sophi-A (brief 07 option c) - Muad's decision, still open.
+Verified: `npm test` 241 / 240 pass / 0 fail / 1 skipped, `npm run build` OK, `node marketing/lint.mjs` PASS.
