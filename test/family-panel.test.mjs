@@ -1,5 +1,5 @@
 // test/family-panel.test.mjs - Sophi-A Seat Families F8 acceptance tests
-// (relay/Docs/SophiA-Seat-Families-Plan.md §5 F8: "render functions called headlessly for all
+// (the private Seat Families plan §5 F8: "render functions called headlessly for all
 // five states; forbidden-phrase test over the panel copy"). Tests only the pure,
 // DOM-free layer (classifyPanelState/describeFamilyPanel) - buildFamilyPanelDom uses `document`
 // and is browser-only, per this repo having no jsdom installed (an accepted F8 offline gap,

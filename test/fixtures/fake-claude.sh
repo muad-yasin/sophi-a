@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sophi-A "family" MVP, build item 1 (relay/runs/2026-09-15T18-55-34-601Z/build.md §5.1):
+# Sophi-A "family" MVP, build item 1 (the family MVP build plan §5.1):
 # a fake `claude` binary for offline acceptance tests - never spawns a real process, never makes
 # a network call. Put its directory first on PATH so peer-pool.js's real `spawn('claude', ...)`
 # resolves to this script instead of the real CLI.

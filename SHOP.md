@@ -1,142 +1,25 @@
-> **Retired (2026-09-16).** The €20 packaged-build offer this file describes was retired; Sophi-A is
-> source only and there is no purchase flow. Kept as a dated record of what was planned, not as
-> current instructions.
+# SHOP.md - retired paid-build offer (historical note)
 
-# SHOP.md - monetizing a packaged Sophi-A build
+**Status: retired 2026-09-16. There is no purchase flow.**
 
-*Written 2026-09-09, following `sower-industries/plan-shop.md`'s shape (settled / open / non-goals
-/ acceptance test) and honesty level, not its content - that product is unrelated except as a
-reusable pattern. Source: `DECISIONS.md`'s 2026-09-09 monetization entries (Stripe-vs-Gumroad cost
-call, BYOK legal-compliance check, VAT/OSS gap). Read those before changing anything here.*
+From 2026-09-09 to 2026-09-16 the project offered a packaged, ready-to-run Sophi-A build
+(installer/binary) as a one-time paid convenience purchase. The source was, and still is, free
+and open on GitHub under `LICENSE` (MIT); the offer only sold a pre-built binary for people who
+did not want to run `npm install && npm run tauri dev` themselves.
 
-## The product, in one sentence
+The offer was retired on 2026-09-16 and its store products were archived. Sophi-A is source-only:
+build it yourself (see `README.md`), or download a release asset from the GitHub Releases page
+where one exists. Nothing is sold, and no licence key or account is needed.
 
-A packaged, ready-to-run Sophi-A build (installer/binary) sold for convenience - the source
-stays free and open on GitHub under `LICENSE` (MIT); paying buys a working build someone
-doesn't have to `npm install && npm run tauri dev` themselves, not the code.
+What the offer's design settled, kept because the reasoning still applies to the product:
 
-## What is settled
+- **BYOK, no ongoing cost to recover.** Users authenticate their own Claude Code / API
+  credentials and pay their own provider costs; Sophi-A resells nothing.
+- **No licence-key enforcement.** The software is open source; there is nothing to enforce.
+- **Trademark-safe naming.** "Sophi-A" contains no vendor name. Copy may say in plain text that
+  the product runs Claude Code, but never uses "Claude"/"Claude Code"/"Anthropic" as part of the
+  product's own name, or implies Anthropic built or endorses it.
 
-- **Channel:** Stripe, direct - a payment link, the same pattern `sower-industries.de/plan` already
-  runs live (payment link -> success page -> by-hand fulfillment). Not Gumroad/LemonSqueezy; that
-  call is made and recorded in `DECISIONS.md` (cost-driven: Stripe's ~1.5-2.9%+fixed fee vs.
-  Gumroad's ~5-10%), not re-litigated here. **The link is live** (created by Muad's own dashboard
-  click, 2026-09-09, per the standing rule that this is always the author's action, not a
-  session's).
-- **One-time purchase, not a subscription.** Matches the BYOK cost structure already established:
-  the buyer authenticates their own Claude Code/API credentials and pays their own provider costs
-  (PLAN.md's commercial-terms item 1/2, resolved in `DECISIONS.md`'s BYOK entry) - Sophi-A
-  itself has no ongoing per-user cost to recover, so there's nothing a subscription would be paying
-  for.
-- **Settled price: €20 one-time** (Muad's own call, 2026-09-09 - lower than the $29 recommendation
-  below; also matches `sower-industries.de/plan`'s own €20 anchor price). The pricing math below is
-  kept as the reasoning that was actually weighed at the time, not edited to retroactively justify
-  €20 - see the note at the end of that section.
-
-## Pricing math (Stripe vs. the earlier Gumroad recommendation)
-
-The author already rejected an earlier $29-49 recommendation when it was proposed for Gumroad/
-LemonSqueezy, on the grounds that their ~5-10% cut eats too much of a small indie sale. That
-rejection stands and isn't reversed here - but the channel underneath it has changed, and the math
-changes with it:
-
-| price | via Gumroad (~5-10% cut, `DECISIONS.md`'s own range) | via Stripe (~1.5-2.9% + a small fixed fee) |
-|---|---|---|
-| $29 | fee ~$1.45-$2.90, net **~$26.10-$27.55** | fee ~$0.70-$1.14, net **~$27.86-$28.30** |
-| $35 | fee ~$1.75-$3.50, net **~$31.50-$33.25** | fee ~$0.80-$1.32, net **~$33.68-$34.21** |
-
-Stripe's cut is roughly a third of Gumroad's worst case on a $29-35 sale. That buys room to do
-either of two things - both stay inside the indie-BYOK-desktop-tool $10-100 one-time range the
-earlier research found, so neither is a new number invented here:
-
-- Keep a similar price point ($35) at meaningfully higher margin (~$33.68-$34.21 vs. ~$31.50-$33.25
-  net via Gumroad), or
-- Price lower ($29) and still net about as much per sale (~$27.86-$28.30 via Stripe) as $29 would
-  have netted at Gumroad's *best* case (~$27.55), while beating Gumroad's worst case
-  (~$26.10) outright - and reading cheaper next to free source.
-
-**Recommendation: $29.** This is a convenience sale of a build whose source is free on GitHub under
-an OSI license - the price has to read as "worth not compiling it yourself," not as buying the
-software. $29 sits at the low end of the previously-considered range (a familiar number, not a
-fresh guess), and Stripe's lower cut means it still nets a healthy ~96% of face value. Regional
-pricing, like `plan-shop.md`'s own product, is a later step, not v1.
-
-**Actually settled, 2026-09-09: €20**, not $29 - Muad's own call when creating the real Stripe
-link. Lower than this section's recommendation, matching `sower-industries.de/plan`'s own €20
-price instead (one round number across both Sower Industries products, easier to talk about, and
-consistent with this author preferring a lower price point earlier in the same conversation - see
-the Gumroad-vs-Stripe fee math above, which was itself a reaction to "we cannot afford" a higher
-number). Net-of-fees at €20 via Stripe is still roughly 96-97% of face value, the same shape of
-outcome this section argued for, just anchored to a different number.
-
-## What's still genuinely open - the author's own decision or action, not guessed here
-
-- **VAT/OSS registration.** Unresolved for `sower-industries.de/plan` today
-  (`PlanShop_Legal.md` §4) and inherited unchanged by this product the moment it uses Stripe direct
-  instead of a merchant-of-record platform (`DECISIONS.md`, 2026-09-09). **Recommendation: launch
-  Germany-only**, matching `PlanShop_Legal.md`'s own stopgap ("either sell only to Germany or hold
-  off"), until OSS registration is actually done. This is a real legal gate, not a formality - don't
-  sell cross-border before it clears.
-- **The Stripe payment link itself: done, 2026-09-10 (link recorded for the first time).** The
-  2026-09-09 entry above said a link was created by Muad's dashboard click, but no session ever
-  recorded the URL itself - a real gap, not just an omission (nothing in this repo could actually
-  point at it). 2026-09-10: Muad created the link live in the dashboard (guided there via
-  remote-control browser navigation, no payment/business fields touched by the session, per the
-  standing rule that Stripe links are the author's own dashboard action) - the pre-existing
-  "Sophi-A" product (20,00 €, present in the catalog since 2026-09-09) got its payment link:
-  `https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03` (`plink_1UE7ypFQRVJYIrwWGRvohB8g`, status
-  Aktiv). Verified live by loading the checkout page directly (Sower Industries / Sophi-A /
-  CNC Harness, €20,00, no payment submitted) - not just read back from the dashboard list. Now
-  wired into `marketing/index.html`'s "Get Sophi-A" CTA, replacing the honestly-inert
-  coming-soon placeholder from the previous pass.
-- **Delivery mechanism: built.** Packaging now exists for real (`v0.1.0`, `PLAN_PACKAGING.md`) -
-  real Windows/Linux installers exist as GitHub Release assets. Fulfillment mails and the
-  copy-pasteable runbook are written: `docs/fulfillment-mails.md`,
-  `docs/manual-fulfillment-runbook.md` (mirrors `ManualFulfillmentRunbook.md`'s pattern - notice
-  the sale, do the work, send it). **Corrected (security/doc-drift review, 2026-09-16): the repo
-  has been public since 2026-09-09** (`DECISIONS.md`'s 2026-09-09 entry, reconfirmed by a later
-  entry) - the private-repo gap this line used to flag as unresolved doesn't exist anymore; a
-  buyer can reach a public repo's release assets directly.
-- **Stripe success page: built.** `sower-industries` now has `/en/sophi-a/next/`, mirroring
-  `/plan/next.astro`'s pattern. Once deployed, point the Sophi-A payment link's success URL at
-  `https://sower-industries.de/en/sophi-a/next/` - a dashboard action, not done here.
-- **Product name: settled, 2026-09-09 - "Sophi-A"** (Muad's own call; the name and the "Visual
-  Identity: SMO" direction both draw on an existing Sower Industries property - see DECISIONS.md).
-  This name passes the trademark check on its face (no "Claude"/"Anthropic"/"Claude Code" in it),
-  Trademark-safe copy for the actual Stripe product now drafted: `docs/stripe-product-copy.md`
-  (checked against code.claude.com/docs/en/legal-and-compliance, 2026-09-09 - see DECISIONS.md).
-  Pasting it into Stripe's dashboard is the author's own action, same rule as the payment link
-  itself - not done here.
-
-## Non-goals for v1
-
-- No auto-update mechanism - manual re-download of a new build if one is ever made.
-- No license-key enforcement - the software is open source; there is nothing to enforce, and
-  pretending otherwise would be a lie the source code itself disproves.
-- No cross-border sales until the OSS/VAT gate above actually clears.
-- No packaging/installer automation - that's the parallel build effort's job, not this document's.
-- No regional pricing, no DE-language page, no subscription tier.
-
-## Acceptance test
-
-~~The author creates the Stripe payment link by hand for €20 one-time~~ - **done, 2026-09-09**. A
-test purchase completes and lands on a plain thank-you/next-steps page telling the buyer a build is
-on its way by email; the author builds and sends one binary by hand per
-`ManualFulfillmentRunbook.md`'s pattern; the sale is restricted to Germany at checkout (or the OSS
-gate is confirmed cleared first); the marketing copy passes a trademark-safe read against
-Anthropic's brand guidelines before publishing. The remaining three checks (test purchase, by-hand
-delivery, Germany restriction/OSS gate, copy review) are still open - the link's existence isn't
-the whole acceptance test.
-
-## Build definitely, but later
-
-Automated packaging and delivery (once `npm run tauri build` is wired and signed builds exist),
-a download-page-per-purchase flow instead of by-hand email, regional pricing, and a public
-"if it becomes a business" pledge mechanism if the author wants to mirror `plan-shop.md`'s 0.7
-percent pattern here too - none of that is decided or designed, only named as plausible next steps.
-
-**Website-wallet idea (2026-09-15):** a Steam-style stored-balance wallet on sower-industries.de
-(Stripe top-up, non-cashable, spendable across every product including this one) is floated as a
-possible future way to pay for Sophi-A seat usage without individually sourcing provider API
-keys. Not scoped, not designed - full writeup lives in `THCMCP/Review/FLAGSHIP-IDEAS.md`, this is
-a pointer only.
+The related documents (`docs/fulfillment-mails.md`, `docs/manual-fulfillment-runbook.md`,
+`docs/stripe-product-copy.md`, `docs/hosted-trial-proxy.md`) are kept as the same kind of short
+historical note.

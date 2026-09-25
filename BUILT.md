@@ -50,10 +50,10 @@
   to `seats.json`). Tested for real (see PROGRESS.md): a direct WebSocket protocol test against
   both a standalone orchestrator process and the live one already spawned by a real `npm run tauri
   dev` process, confirmed by finding and connecting to that process's actual bound port.
-- 2026-09-09 - Product named "Sophi-A" + visual identity ported from SMO (DECISIONS.md has the
+- 2026-09-09 - Product named "Sophi-A" + visual identity ported from a sibling game project's design system (DECISIONS.md has the
   full reasoning). `tauri.conf.json` (productName, window title, identifier ->
   `com.sower.sophia`), `package.json` name, `index.html` title, `README.md` (real content,
-  replacing the stock Tauri template) all updated. `src/styles.css` rewritten against SMO's real
+  replacing the stock Tauri template) all updated. `src/styles.css` rewritten against that project's real
   `ScreenBuilderUtils.cs` palette (Bg/Surface ladder, Text colors, Gain/Warning/Breaking status
   mapping, Gold primary-action accent, AiAccent brand accent) and fonts (Space Grotesk + IBM Plex
   Sans, copied into `src/fonts/` with their OFL licenses). `npx tsc --noEmit` clean after. Repo
@@ -89,10 +89,10 @@
   with masked inputs and set/not-set badges, a restart-orchestrator control). `cargo check`
   (isolated target dir) and `npx tsc --noEmit` both clean; live panel interaction not exercised
   (port contention with a concurrent session's dev server) - see DECISIONS.md.
-- 2026-09-09 - Fulfillment mails/runbook (`docs/fulfillment-mails.md`,
-  `docs/manual-fulfillment-runbook.md`), trademark-safe Stripe product copy
-  (`docs/stripe-product-copy.md`), and Sophi-A's Stripe success page (`sower-industries`'s
-  `src/pages/[lang]/sophi-a/next.astro`, `npm run build` confirmed it renders correctly).
+- 2026-09-09 - Docs for an early paid-build offer (`docs/fulfillment-mails.md`,
+  `docs/manual-fulfillment-runbook.md`, `docs/stripe-product-copy.md`) plus a purchase success page
+  on the company website (`npm run build` confirmed it rendered). That offer has since been
+  retired; there is no purchase flow.
 - 2026-09-09 - `src/mcp/server.js`: MCP introspection over the orchestrator's existing WebSocket
   (`list_seats`, `get_seat`, `start_seat`, `stop_seat`, `configure_seat`, `wait_for_idle`),
   discovering the running orchestrator via a new well-known port file
@@ -246,13 +246,13 @@
   --noEmit`, `vite build`, and `cargo check` in `src-tauri`, all clean.
 - 8f6f550 — Phase 2 Step 3 — export a run as markdown (long-horizon build plan)
 - c8bd59f — Phase 1 Step 3 — smoke run button on cnc/advisor, readiness-gated, never auto-clicked
-- 064b0cb — Backlog item 2 (relay run 2026-09-10T23-20-49-005Z) — first-run Council discoverability explainer, shown once, persisted via wizard-state.json
-- 7ab1ad6 — Backlog item 3 (relay run 2026-09-10T23-20-49-005Z) — deploy-ready marketing/index.html (self-contained assets, real OG tags, marketing/lint.mjs acceptance test)
-- a741165 — Backlog item 4 (relay run 2026-09-10T23-20-49-005Z) — advisor-to-cnc forward flow, S2 security spec's second forward candidate
-- d445caa — Backlog item 5 (relay run 2026-09-10T23-20-49-005Z) — interactive offline Council demo, zero-network fixture reusing the real Debate panel render path
-- 03e7326 — Backlog item 6 (relay run 2026-09-10T23-20-49-005Z) — per-seat cost breakdown panel + CSV export (exportCostCsv.ts)
-- c1436e6 — Backlog item 7 (relay run 2026-09-10T23-20-49-005Z) — per-seat cost budget warning, follow-on to item 6
-- b0a8426 — Backlog item 8 (relay run 2026-09-10T23-20-49-005Z) — build-seat artifact inspector + context forwarder, S2's third forward candidate. All 6 non-blocked ranked items now built; item 1 still needs Muad's Stripe webhook setup.
+- 064b0cb — Backlog item 2 (council-ranked backlog, 2026-09-10) — first-run Council discoverability explainer, shown once, persisted via wizard-state.json
+- 7ab1ad6 — Backlog item 3 (council-ranked backlog, 2026-09-10) — deploy-ready marketing/index.html (self-contained assets, real OG tags, marketing/lint.mjs acceptance test)
+- a741165 — Backlog item 4 (council-ranked backlog, 2026-09-10) — advisor-to-cnc forward flow, S2 security spec's second forward candidate
+- d445caa — Backlog item 5 (council-ranked backlog, 2026-09-10) — interactive offline Council demo, zero-network fixture reusing the real Debate panel render path
+- 03e7326 — Backlog item 6 (council-ranked backlog, 2026-09-10) — per-seat cost breakdown panel + CSV export (exportCostCsv.ts)
+- c1436e6 — Backlog item 7 (council-ranked backlog, 2026-09-10) — per-seat cost budget warning, follow-on to item 6
+- b0a8426 — Backlog item 8 (council-ranked backlog, 2026-09-10) — build-seat artifact inspector + context forwarder, S2's third forward candidate. All 6 non-blocked ranked items now built; item 1 (payment webhook) was left blocked on an owner action; the paid offer it served has since been retired.
 - 2020e10 — Phase 2 Step 2 — cost-tracker.js + pricing.json + usage hooks in all three adapters + header ticker (long-horizon build plan)
 - 58f4de4 — Phase 2 Step 1 — Stop-All + per-seat watchdog (long-horizon build plan)
 - da116b4 — Engine switch — Sophi-A plan seats run on the public High Council MCP (THCMCP) by default, private relay is the fallback (src/orchestrator/enginePath.js + scripts/verify-engine-path.mjs)
@@ -270,8 +270,8 @@
   `.grid.is-cold .seat-card:not(.seat-card-static)` out-ranked the focused opacity, so the whole
   Emissary overlay rendered at 0.6 - fixed by excluding `.seat-card-unwired`. Verified in a running
   dev build in Chrome: rail 0.7, focused 1, panel shown, Escape and Back to home both close it.
-- 2026-09-15 - "Family" MVP polish, Session A, items 1+2 (build.md §5.1/§5.2 of
-  `relay/runs/2026-09-15T18-55-34-601Z/build.md`, unanimous council sign-off, $0.031). Item 1,
+- 2026-09-15 - "Family" MVP polish, build lane A, items 1+2 (build.md §5.1/§5.2 of
+  a council-reviewed build plan in the private upstream engine, unanimous council sign-off). Item 1,
   offline-first acceptance harness: `test/fixtures/fake-claude.sh` (env-controllable exit
   code/delay/marker/stdout, no networking tool in its own source) + `test/fixtures/
   mock-relay-chain.mjs` (all-approve/one-holdout/malformed-json-critic scenarios, `signoff`/
@@ -281,7 +281,7 @@
   therefore `peer-pool.js`) hadn't merged into master yet, so the plan's literal acceptance
   wording (`git diff master -- src/orchestrator/peer-pool.js`) was unsatisfiable - verified
   instead against this branch's own starting commit (`git diff c566d2a -- ...`, empty), flagged to
-  sophi-a-ed/thcmcp-66. **Update, post-merge (peer-pool-v1 -> master @ 0a9674b):** `peer-pool.js`
+  the coordinating session. **Update, post-merge (peer-pool-v1 -> master @ 0a9674b):** `peer-pool.js`
   is on master now, so `git diff master -- src/orchestrator/peer-pool.js` is both literally
   checkable and empty - the plan's original wording and DECISIONS.md's own text are now both
   accurate as written; this note exists only to explain why an earlier version of this entry
@@ -289,19 +289,19 @@
   time (11 pre-existing + 11 new; the plan's "17/17" figure didn't match the real pre-existing
   count of 11, noted honestly rather than silently reconciled) - 27/27 after the post-merge rebase
   (16 pre-existing + 11 new). Built in worktree `../sophi-a-family-mvp-a`, branch
-  `sophi-a-family-mvp-a`, rebased onto `master` @ 0a9674b after Muad approved the peer-pool-v1
-  merge. Not merged - Muad's call.
-- 2026-09-15 - "Family" MVP, Session B, items 3+4 (worktree `sophi-a-family-mvp-b`, not merged).
+  `sophi-a-family-mvp-a`, rebased onto `master` @ 0a9674b after the owner approved the peer-pool-v1
+  merge. Not merged - the owner's call.
+- 2026-09-15 - "Family" MVP, build lane B, items 3+4 (worktree `sophi-a-family-mvp-b`, not merged).
   `src/orchestrator/familyLedger.js` (read-only, event-derived per-seat family receipts, capped at
   10 rows/seat) + `src/ui/familyReceipts.js` (render, `.js` not `.jsx` - no React toolchain in
   this app, see DECISIONS.md). `src/orchestrator/compassionStates.js` (pure `classify()`,
   FAILED-OWNED/STUCK/HOLDOUT precedence) + `src/ui/compassionCopy.js` (fixed, test-pinned copy) +
   `src/ui/compassionBadge.js` (render). `test/family-receipts.test.mjs` (8 tests) +
-  `test/compassion-states.test.mjs` (11 tests), both against Session A's real fixtures
+  `test/compassion-states.test.mjs` (11 tests), both against lane A's real fixtures
   (`test/fixtures/fake-claude.sh`, `mock-relay-chain.mjs`, pulled in from `sophi-a-family-mvp-a`).
   Full `npm test`: 30/30. Not wired into `index.html`/`main.ts` seat cards (see DECISIONS.md for
   why); not merged/pushed.
-- 2026-09-15 - Sophi-A seat-owned families, Session B, F2+F4 (worktree `families-b`, not merged).
+- 2026-09-15 - Sophi-A seat-owned families, build lane B, F2+F4 (worktree `families-b`, not merged).
   `src/orchestrator/family/compassionPolicy.js` (pure `decide()`, one restart-with-context per
   failure, second failed-owned escalates to human, `close` never in the automated allowed set) +
   `src/orchestrator/family/familyCaps.js` (pure `admit()`, family/seat/global cap hierarchy
@@ -309,7 +309,7 @@
   `test/compassion-states.test.mjs` (+2 tests, banned-word list widened) and adds
   `test/compassion-policy.test.mjs` (14 tests) + `test/family-caps.test.mjs` (12 tests). Full
   `npm test`: 73/73. `compassionStates.js` and `peer-pool.js` both untouched - not merged/pushed.
-- 2026-09-16 - Sophi-A seat-owned families, Session C, F3+F5 (worktree `cnc-harness-families-c`,
+- 2026-09-16 - Sophi-A seat-owned families, build lane C, F3+F5 (worktree `cnc-harness-families-c`,
   branch `families-c`, not merged). `src/orchestrator/familyLedger.js` fully rewritten to derive
   from `familyMemory.js`'s on-disk receipts (`familyReceiptRows`/`familyReceiptCounts`), replacing
   the old peer-pool-event-based version; `src/ui/familyReceipts.js` updated to match.

@@ -29,7 +29,7 @@ dist-node
 # above.
 runs
 
-# Sophi-A seat-owned families (relay/Docs/SophiA-Seat-Families-Plan.md §2.3): durable per-family
+# Sophi-A seat-owned families (the private Seat Families plan §2.3): durable per-family
 # memory on disk (family.json/FAMILY.md/plan.md/sessions/*), runtime-generated, never source -
 # same reasoning as .workdirs above.
 .families

@@ -5,7 +5,7 @@
 // pattern test/fixtures/fake-claude.sh already uses for peer-pool.js's tests: env-var knobs, no
 // hidden state, one clearly-named responsibility.
 //
-// Its main purpose is the deterministic not_judged fault-injection fixture (thcmcp-66's own
+// Its main purpose is the deterministic not_judged fault-injection fixture (a peer review session's own
 // instruction: "not a real-chain race"): FAKE_THC_WRITE_REPORT=0 simulates a resume that exits
 // looking-successful (any exit code, including 0) but never produces report.json - the exact
 // case securityGate.js must treat as not_judged regardless of exit code, since "not_judged is

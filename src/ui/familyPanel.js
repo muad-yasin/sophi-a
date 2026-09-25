@@ -1,4 +1,4 @@
-// Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §2.10 "Events and UI
+// Sophi-A Seat Families F8 (the private Seat Families plan §2.10 "Events and UI
 // surface"). Split deliberately into a pure, DOM-free "what should this panel show" layer
 // (headlessly testable with plain node:test, no jsdom - this repo has none installed and F8's
 // own accepted offline gap already covers the Chrome-only part) and a thin DOM-building layer

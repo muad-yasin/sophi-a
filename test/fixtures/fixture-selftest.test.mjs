@@ -1,5 +1,4 @@
-// Sophi-A "family" MVP, build item 1's own acceptance test (relay/runs/2026-09-15T18-55-34-601Z/
-// build.md §5.1): proves fake-claude.sh and mock-relay-chain.mjs actually behave as the plan
+// Sophi-A "family" MVP, build item 1's own acceptance test (the family MVP build plan// build.md §5.1): proves fake-claude.sh and mock-relay-chain.mjs actually behave as the plan
 // requires, before any later session (B/C) builds on top of them.
 import test from 'node:test';
 import assert from 'node:assert/strict';

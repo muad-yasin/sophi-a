@@ -5,7 +5,7 @@
 // Until 2026-09-23 both were written INTO the engine repo - the task under <engine>/tasks/ and
 // the log at <engine>/ itself - so every seat start left a `cnc-harness-*.log` in the public
 // THCMCP checkout's root (31 of them by then, all mock-chain test debris; moved to
-// ~/.cache/cnc-harness/legacy-2026-09/ on Muad's call). The engine repo is a curated public tree
+// ~/.cache/cnc-harness/legacy-2026-09/ on the owner's call). The engine repo is a curated public tree
 // whose CLAUDE.md forbids adding tasks/ content, so neither file belongs there.
 //
 // They now live under ~/.cache/cnc-harness/ (override: CNC_HARNESS_CACHE_DIR, used by tests).

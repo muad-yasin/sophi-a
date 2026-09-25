@@ -1,11 +1,10 @@
 # Market positioning — 2026-09-09
 
-*Written from a sower-industries session, at the author's request, after a quick market pass
-prompted by wanting to make Sower Industries "prettier" using SMO's visual identity - that
-conversation surfaced a bigger question (how does Sophi-A actually compare to what's already
-out there), which is what this file answers. Standing direction going forward, the author's own
-words: sower-industries.de keeps developing as the website/showcase for the whole project
-portfolio; Sophi-A keeps developing, in its own session, as one of the core products.*
+*Written at the owner's request after a quick market pass that started as a website-design
+conversation and surfaced a bigger question: how does Sophi-A actually compare to what's already
+out there? That is what this file answers. Standing direction (owner decision, 2026-09-09): the
+company website stays the showcase for the whole project portfolio, and Sophi-A keeps developing
+as one of the core products.*
 
 ## The market, as of this pass (real competitors, not guesses)
 
@@ -32,14 +31,14 @@ from several labs critique a plan *before a single line of code exists*. Conduct
 run N copies of the *same* agent in parallel and let a human pick the best result after the fact
 - that is redundancy, not adversarial review. Sophi-A's real pitch is not "run more agents at
 once," it is **other labs' models arguing about what to build, before anything gets built.** The
-author's own framing, and the reason this has looked like a real product from the start: this is
+owner's framing, and the reason this has looked like a real product from the start: this is
 a genuinely new mechanism, not a UI variation on what conductor.build/Nimbalyst already do.
 
 > **Precision note, 2026-09-09 (same day, second session, checked against the code):** the
 > paragraph above originally read "multiple labs independently proposing and critiquing" and
 > "seven labs arguing." Both overstate what a plan seat actually runs. `seats.json` gives
 > `plan-1..3` the `plan-cheap` chain (there is no per-task chain override in the orchestrator's
-> `start` command - changing it means editing `seats.json`), and `relay/chains/plan-cheap.json`
+> `start` command - changing it means editing `seats.json`), and the engine's `chains/plan-cheap.json`
 > is: one Anthropic Sonnet 5 builder drafts, five cheap critic seats from *other* labs (Qwen via
 > Together, GLM via Z.ai, Cohere, Gemini, Llama via OpenRouter) grade it blind, Sonnet revises,
 > up to 5 rounds. That is real cross-lab *adversarial critique* - the differentiator stands - but
@@ -91,7 +90,7 @@ show, and isn't yet surfaced as the headline feature.
 
 ## Marketing, following from the product, not from ad spend
 
-The author's own framing: the best marketing is a good product. Concretely: lead with #2 above
+The owner's framing: the best marketing is a good product. Concretely: lead with #2 above
 (the debate itself) as the actual demo/screenshot, not "8 tiles glow" - that's what makes this
 look like something new rather than a Conductor/Nimbalyst clone. Distribution follows the same
 logic: an open-source, BYOK, MIT-licensed tool gets found via GitHub/HN/r/LocalLLaMA/r/ClaudeAI on
@@ -99,23 +98,16 @@ the strength of one honest "here's what it caught that a single model missed" po
 ads - but that post needs #2 to actually be visible in the product first; right now the receipts
 exist in the run folder, not on screen.
 
-## Standing direction (the author's own words, this session)
+## Standing direction (owner decision, 2026-09-09)
 
-- Cross-platform coverage (the macOS gap specifically - see the harness-prompt draft for a
-  macOS packaging/notarization plan, discussed the same session) should be solid *before*
-  marketing this project - a product pitched as cross-platform that isn't yet undermines the
-  positioning above rather than supporting it.
-  > **Unreconciled, 2026-09-09 (same day, second session):** no "harness-prompt draft" and no
-  > macOS packaging/notarization plan for Sophi-A exists anywhere that could be found -
-  > searched this repo, `~/Projects/sower-industries`, `~/Projects/relay` (including `tasks/`),
-  > `~/Projects/Ideas.md`, `~/Projects/FOCUS.md`. The only macOS notarization text in the
-  > workspace is `~/Projects/parztream`'s (a different product with its own `packaging/macos/`
-  > and `build-macos-app.yml`). `PLAN_PACKAGING.md` scopes Windows and Linux only, never names
-  > macOS, and the live shop page (`sower-industries/Docs/SophiAShop_Page.md` §"Platform
-  > support") plus this repo's `docs/fulfillment-mails.md` both tell buyers "no macOS build
-  > exists yet - don't buy yet." So this bullet asserts a platform commitment nothing else
-  > records. Left in place as the author's stated direction, not deleted; whether macOS is
-  > actually a precondition for marketing is Muad's call - see `DECISIONS.md`, 2026-09-09.
-- sower-industries.de keeps developing as the website/showcase for the whole project portfolio.
-- Sophi-A keeps developing, in its own session, as one of Sower Industries' core products - not
-  a side experiment.
+- Cross-platform coverage (the macOS gap specifically) should be solid *before* marketing this
+  project - a product pitched as cross-platform that isn't yet undermines the positioning above
+  rather than supporting it.
+  > **Unreconciled, 2026-09-09 (same day, second session):** no macOS packaging/notarization
+  > plan for Sophi-A exists anywhere that could be found. `PLAN_PACKAGING.md` scopes Windows and
+  > Linux only and never names macOS, and the (since retired) paid-build offer's copy said "no
+  > macOS build exists yet." So this bullet asserts a platform commitment nothing else records.
+  > Left in place as the owner's stated direction, not deleted; whether macOS is actually a
+  > precondition for marketing is the owner's decision - see `DECISIONS.md`, 2026-09-09.
+- The company website keeps developing as the showcase for the whole project portfolio.
+- Sophi-A keeps developing as one of the core products - not a side experiment.

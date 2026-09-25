@@ -1,13 +1,13 @@
 // The one shared definition of a real `claude` subprocess's env allowlist and restricted-mode
 // args - previously duplicated between claudeCodeSubprocess.js and peer-pool.js (found by the
-// Sophi-A Seat Families council review, relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §b
+// Sophi-A Seat Families council review, the Seat Families council plan §b
 // "Flag/reversal guards": two independent copies of a security-relevant allowlist is regression
 // risk (3) from that plan's §0 materialized already, before any family code existed - a
 // family-motivated edit to one copy would not touch the other, and nothing proved they stayed
 // identical). Both call sites now import from here; neither defines its own copy - verified by
 // test/env-restrictions.test.mjs's source-grep and byte-identical-argv/env test.
 //
-// G6 (relay/Docs/SophiA-Seat-Families-Plan.md §7): any change to RESTRICTED_ARGS, SAFE_ENV_KEYS,
+// G6 (the private Seat Families plan §7): any change to RESTRICTED_ARGS, SAFE_ENV_KEYS,
 // or safeEnv() itself is a human-stop gate - a session that thinks it needs one stops and asks.
 // This file's own content is otherwise unchanged from what both call sites already carried.
 

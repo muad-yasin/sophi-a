@@ -1,6 +1,6 @@
 // test/compassion-states.test.mjs
 //
-// Item 4 of Sophi-A's "family" MVP polish (relay/runs/2026-09-15T18-55-34-601Z/build.md §4,
+// Item 4 of Sophi-A's "family" MVP polish (the family MVP build plan §4,
 // handoff.md). Pure classifier + fixed copy - fully offline, no subprocess, no network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +11,7 @@ import { classify, STUCK_THRESHOLD_SECS } from '../src/orchestrator/compassionSt
 import { COMPASSION_COPY, COMPASSION_STATES } from '../src/ui/compassionCopy.js';
 import { renderCompassionBadgeText } from '../src/ui/compassionBadge.js';
 import { mockRelayChain } from './fixtures/mock-relay-chain.mjs';
-// Extended per Sophi-A seat-owned families §2.6 rule 7 (relay/Docs/SophiA-Seat-Families-Plan.md):
+// Extended per Sophi-A seat-owned families §2.6 rule 7 (the private Seat Families plan):
 // "No blame, lazy, stupid, punish, retry until, or model-identity attack anywhere in family
 // copy." Exported from compassionPolicy.js so this one list is never duplicated - test/
 // compassion-policy.test.mjs imports the same constant for its own reason-string check.

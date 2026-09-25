@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!--
     Sophi-A mark - the asymptote star.
-    Palette is not invented here: the gold/gold-bright CSS variables are SMO's own "AI Upgrades" Gold,
-    already reused 1:1 in src/styles.css; the corona/ember stops below are desaturated-to-sRGB versions of
-    the actual HDR values in SMO's SophiACoronaGenerator.cs (corona anchor list) and
-    SophiAVisualDriver.cs (coreDim/coreFull), converted from >1.0 bloom floats to display-safe hex.
+    Palette is not invented here: it is ported from an earlier in-house game's design system - the
+    gold/gold-bright CSS variables are that design system's Gold, already reused 1:1 in src/styles.css;
+    the corona/ember stops below are desaturated-to-sRGB versions of that game's HDR corona and core
+    values, converted from >1.0 bloom floats to display-safe hex.
     Six flare rays, uneven lengths - a static, symmetric sunburst is exactly the "frozen prominence"
-    complaint SophiAFlareAnimator.cs's own header comment names; asymmetry is the cheap fix for a
+    complaint the original flare-animation notes name; asymmetry is the cheap fix for a
     still image that a real animated build (see brand/BRAND.md's own notes) can later make literal.
   -->
   <defs>

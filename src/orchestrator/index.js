@@ -242,7 +242,7 @@ export function startMany(wss, seatIds, task, confirmed) {
   for (const seatId of unique) startSeat(wss, seatId, task);
 }
 
-// Multi-session C&C delegation, v1 (relay/runs/2026-09-15T15-14-29-893Z/deliverable.md). A peer
+// Multi-session C&C delegation, v1 (the multi-session delegation council plan). A peer
 // is not a seat - broadcasting a distinct `fanout.*`/`peer.*` event namespace here keeps that
 // real at the wire-protocol level, not just in the module boundary peer-pool.js itself enforces.
 function makePeerEmit(wss) {

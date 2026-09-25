@@ -1,7 +1,6 @@
 # HANDOFF_PACKAGING.md — Sophi-A Packaging Build Session
 
-*Produced by the same 2026-09-09 relay run as `PLAN_PACKAGING.md` (run id
-`2026-09-09T02-29-54-628Z`). Read `PLAN_PACKAGING.md` in full before starting - this handoff does
+*Produced by the same 2026-09-09 council run as `PLAN_PACKAGING.md`. Read `PLAN_PACKAGING.md` in full before starting - this handoff does
 not restate its content, only its section numbers are referenced below.*
 
 ## What this is

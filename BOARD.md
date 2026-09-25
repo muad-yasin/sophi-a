@@ -40,7 +40,7 @@ proposals withdrawn, 19 amended.
   `plan-1..3` should genuinely run relay's CLI (real relay chains), reversing Anthropic-only for
   those three seats specifically. Recorded as an Addendum to PLAN.md, not a fourth chain round (the
   round cap was already spent).
-- **2026-09-09, panel-only regrade** (`relay/runs/2026-09-08T23-33-33-206Z/`): the addendum was
+- **2026-09-09, panel-only regrade** (a separate panel-only council run): the addendum was
   regraded against the same 13 criteria. GLM's criterion-1 objection did not recur - confirmed
   resolved. All six labs instead flagged criterion 3 ("Anthropic-only") as now violated - expected
   and disclosed in PLAN.md's own Disputed section, not a new defect. No other criterion regressed.

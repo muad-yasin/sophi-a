@@ -1,4 +1,4 @@
-// Sophi-A "family" MVP polish, item 4 (relay/runs/2026-09-15T18-55-34-601Z/build.md §4): renders
+// Sophi-A "family" MVP polish, item 4 (the family MVP build plan §4): renders
 // one compassion-state badge. Same real-codebase correction as src/ui/familyReceipts.js (item
 // 3) - the plan asks for `src/ui/CompassionBadge.jsx`, but this app has no React/JSX toolchain
 // (verified: no "react" in package.json, no .tsx/.jsx anywhere in src/). This follows the app's

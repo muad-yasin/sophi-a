@@ -1,7 +1,7 @@
-// F6 (relay/Docs/SophiA-Seat-Families-Plan.md §2.9, §5) - src/orchestrator/securityGate.js.
+// F6 (the private Seat Families plan §2.9, §5) - src/orchestrator/securityGate.js.
 // Paired with THCMCP's F9 (chains/security-review-only.json, built separately in that repo).
 // Fully offline: no real model call anywhere - a fully synthetic fake-engine fixture that needs
-// no THCMCP checkout at all (the deterministic not_judged cases thcmcp-66 asked for, not a
+// no THCMCP checkout at all (the deterministic not_judged cases a peer review session asked for, not a
 // real-chain race), plus an integration test against the real THCMCP checkout when it's present
 // next to this repo (skipped, not failed, when it isn't - same convention THCMCP's own
 // test/status-ledger.test.js and this repo's test/withdrawal-ledger.test.js-equivalent already
@@ -104,7 +104,7 @@ test('5. a first call that never pauses (exit 0 immediately) is not_judged with 
   }
 });
 
-// The deterministic fault-injection fixture for not_judged, as thcmcp-66 asked for explicitly:
+// The deterministic fault-injection fixture for not_judged, as a peer review session asked for explicitly:
 // "not a real-chain race." A resume that exits looking terminal (0, 7, or 8) but never produces
 // report.json must never be reported as anything but not_judged - the exit code alone is not
 // evidence a review actually happened.
@@ -269,14 +269,14 @@ test('14. real THCMCP integration: mock-security-block artifact is blocked end t
   assert.ok(result.security_review.blocking_count >= 1);
 });
 
-// Session C / Session D integration alignment (2026-09-16, flagged by thcmcp-66 pre-merge):
-// Session C's checkContextGate() (src/orchestrator/family/familyRuntimes.js, families-c @
+// build lane C / build lane D integration alignment (2026-09-16, flagged by a peer review session pre-merge):
+// build lane C's checkContextGate() (src/orchestrator/family/familyRuntimes.js, families-c @
 // 64cc0e1) now requires a `.gate.json` shaped `{ result, sha256 }`, with sha256 verified against
 // `createHash('sha256').update(readFileSync(<the real file>)).digest('hex')`. These tests prove
 // toContextGateRecord() produces that exact shape, and that its sha256 is byte-identical to what
-// Session C's checker independently recomputes from disk - not just asserted, actually computed
+// build lane C's checker independently recomputes from disk - not just asserted, actually computed
 // the same way (raw Buffer, no re-encoding) and compared.
-test('18. toContextGateRecord() produces {result, sha256} - the shape Session C\'s checkContextGate() requires', () => {
+test('18. toContextGateRecord() produces {result, sha256} - the shape build lane C\'s checkContextGate() requires', () => {
   const engineDir = makeFakeEngine();
   try {
     const result = runSecurityGate({ artifactText: 'a context/ artifact under review', engineDir, env: { FAKE_THC_RESUME_EXIT: '0' } });
@@ -289,7 +289,7 @@ test('18. toContextGateRecord() produces {result, sha256} - the shape Session C\
   }
 });
 
-test('19. the sha256 in toContextGateRecord() matches Session C\'s own hashing method exactly (raw file bytes, not a re-encoded string)', () => {
+test('19. the sha256 in toContextGateRecord() matches build lane C\'s own hashing method exactly (raw file bytes, not a re-encoded string)', () => {
   const engineDir = makeFakeEngine();
   const artifactText = 'A context/ artifact with unicode: café, 日本語, emoji 🔒.';
   try {

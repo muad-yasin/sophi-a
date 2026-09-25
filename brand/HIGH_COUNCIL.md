@@ -1,8 +1,8 @@
 # The High Council - Sophi-A's visual/marketing identity
 
-*Written 2026-09-10, at Muad's request, as the visual+marketing identity for `plan-1..3`'s real
+*Written 2026-09-10, at the owner's request, as the visual+marketing identity for `plan-1..3`'s real
 mechanism - not a new feature, a name and a look for one that already ships. Source of truth for
-who's actually at the table: `../relay/chains/plan-cheap.json` and
+who's actually at the table: the council engine's `chains/plan-cheap.json` and
 `docs/market-positioning.md`'s 2026-09-09 correction pass (six labs total, one proposer plus five
 critics, not seven, not "multiple labs propose"). Do not invent a seventh seat or a
 "labs-propose-blind" story here - that's `plan-debate`, a different chain, not what a `plan-N`
@@ -42,7 +42,7 @@ the chain-config change, not separately.
 
 ## Why sigils, not logos
 
-Per Muad's call: distinct seats per lab, not an abstracted single council. But "distinct" here
+Owner decision, 2026-09-10: distinct seats per lab, not an abstracted single council. But "distinct" here
 means **a sigil Sophi-A owns**, not another company's mark - no Anthropic wordmark, no Google "G",
 no Meta infinity. Two reasons, both real: (1) trademark risk on a public marketing surface -
 flagged for a later legal pass per the standing "move fast, flag later" call, not resolved by

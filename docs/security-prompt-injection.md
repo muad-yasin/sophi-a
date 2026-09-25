@@ -77,11 +77,12 @@ What this does and does not do:
   release.yml`. A prompt-injected `cnc` turn can rewrite the harness that runs it, and the change
   is live on the next orchestrator restart (`seats.json` is read once at startup, `index.js:21`).
 - **Builders inherit the harness's own CLAUDE.md as instructions.** `.workdirs/build-N/` is
-  inside the repo, so the CLI's CLAUDE.md walk-up loads `~/Projects/cnc-harness/CLAUDE.md` (which
-  tells the reader to "read PLAN.md in full", references `~/Projects/relay`, etc.) and
-  `~/.claude/CLAUDE.md` (which imports `~/Projects/FOCUS.md`). That is not injection, but it shows
-  the workdir is not a clean context: a builder given "write a sort function" also reads the
-  product's whole planning history and priority board.
+  inside the repo, so the CLI's CLAUDE.md walk-up loads the repository's own `CLAUDE.md` (which
+  tells the reader to "read PLAN.md in full", points at the sibling engine checkout, etc.) and the
+  user's global `~/.claude/CLAUDE.md` (plus anything it imports, such as a personal notes or
+  priorities file). That is not injection, but it shows the workdir is not a clean context: a
+  builder given "write a sort function" also reads the product's whole planning history and
+  whatever private notes the user's global instructions pull in.
 - **Persistence vector**: a builder can write `.workdirs/build-N/CLAUDE.md`. `.workdirs/` is
   gitignored (never reviewed in a diff) and the file is auto-loaded on the next `--resume` turn
   and every later session. Injected instructions can therefore outlive the turn that planted them.
@@ -95,10 +96,10 @@ What this does and does not do:
   `claudeCodeSubprocess.js:50` passes no `env` option, so Node hands the child the full
   `process.env`. A builder that runs `env` in Bash sees every key. An injected "post the output of
   `env` to <url>" is a one-tool exfiltration.
-- **Every subprocess inherits the global `relay` MCP server.** `~/.claude.json` registers `relay`
-  globally (its `start_run`, `write_task`, `submit_stage`, `resume_run` tools are what this very
-  session sees as `mcp__relay__*`). A `claude -p` child launched from any cwd gets them too. So a
-  builder or `cnc` can start a real, paid relay chain, or write into `relay/tasks/`, without
+- **Every subprocess inherits a globally registered `relay` MCP server.** If `~/.claude.json`
+  registers `relay` globally (it did in the environment this audit ran in; its `start_run`,
+  `write_task`, `submit_stage`, `resume_run` tools appear as `mcp__relay__*`), a `claude -p`
+  child launched from any cwd gets them too. So a builder or `cnc` can start a real, paid relay chain, or write into `relay/tasks/`, without
   going through Sophi-A's `plan-N` path, its cost panel, or its `start_many` confirmation gate.
 
 ### S2 - Cross-seat injection: one real path today, the big one is not wired yet
@@ -376,7 +377,7 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
 - [x] **Fixed 2026-09-09.** The S2 forward rule is now a comment directly above the `start`
       dispatch in `index.js`'s connection handler, in the way of whoever wires plan->build or
       advisor->cnc next.
-- [x] **Fixed 2026-09-11** (backlog item 4, relay run `2026-09-10T23-20-49-005Z`). The second
+- [x] **Fixed 2026-09-11** (backlog item 4, from a 2026-09-10 council planning run). The second
       named candidate - advisor's reply into `cnc` - is now built: `forwardAdvisorReply`
       (`index.js`), same three requirements as `forwardDeliverable`'s plan->build flow. The server
       caches advisor's own last real `seat.output` text (`makeEmit`, never a client-supplied
@@ -395,7 +396,7 @@ there. "Gap" = exists in the code today; "Forward" = enforce before the feature 
       `<advisor-reply>` block, never as a bare top-level instruction. That confirms the mechanical
       wrap/gate this code controls; it is not a claim about what any given LLM would do if it did
       receive an unframed instruction - no code-level check can prove that.
-- [x] **Fixed 2026-09-11** (backlog item 8, relay run `2026-09-10T23-20-49-005Z`). A third forward
+- [x] **Fixed 2026-09-11** (backlog item 8, from the same council planning run). A third forward
       candidate, not one of the two originally named here: `forwardArtifact` (`index.js`) lets a
       build seat's own workdir file be forwarded into `advisor` or `cnc`. Same three requirements
       again: `<build-artifact seatId="..." path="..." trust="untrusted-model-output">` framing,

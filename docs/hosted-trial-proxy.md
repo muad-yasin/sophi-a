@@ -1,61 +1,15 @@
-# Hosted trial-key proxy — design doc (Phase 4, Step 1)
+# Hosted trial-key proxy (historical note)
 
-**Status: DRAFT — not implemented. See HUMAN STOP at the end.**
+**Status: design draft only, never implemented. Retired with the paid-build offer on 2026-09-16.
+There is no purchase flow and no free-trial mechanism.**
 
-**Correction (security review, 2026-09-16): the vulnerability this section originally described
-as a live, shipped fact is not built.** There is no free-trial council run, no seller-key
-constant, and no `trial-run.js` anywhere in this repo today (`grep -rn trial src-tauri/src/lib.rs
-src/orchestrator/` finds nothing; "Phase 1 Step 4" and "free-trial" do not appear in `PLAN.md`,
-which uses "slice 1" terminology and names no such step). The section below is restated as what it
-actually is: a forward-looking design, so that IF a free-trial mechanism is ever built, it ships
-with this proxy from the start rather than shipping the naive plain-constant-key version first and
-needing to be retrofitted.
+This file once held a design for a hosted free-trial council run tied to the packaged-build offer
+(see `SHOP.md`). That offer was retired on 2026-09-16, and the trial was never built: there is no
+trial endpoint, no seller key and no `trial-run.js` in this repo.
 
-## What this fixes (if/when a free-trial mechanism is built)
-
-A naive free-trial council run design would keep the seller's API key as a plain constant in
-`src-tauri/src/lib.rs`, protected only by a provider-side spend limit — honest, but the key would
-be extractable from the shipped binary with effort. This proxy is the design that avoids shipping
-that shape at all: the key never ships in any client, from the first version.
-
-## Design
-
-- **Endpoint:** `POST /trial-run` on a Cloudflare Worker (or equivalent — any serverless HTTP
-  endpoint with a KV-like store works; Worker chosen for zero-ops cost at this volume).
-- **Request body:** `{ installId: string, sampleTask: string }`. `installId` is the same
-  `~/.sophia/install-id` UUID Phase 1 already generates — no new client-side identity mechanism.
-- **Per-install cap:** the Worker checks a KV store for `installId`; if a run already exists for
-  it, respond `403 { error: 'trial_used' }`. Max 1 run per install, enforced server-side —
-  unlike Phase 1's local flag file, this cannot be reset by deleting a local file.
-- **Global cap:** a KV counter tracks total spend this calendar month; if it exceeds EUR 50,
-  respond `503 { error: 'limit_reached' }` regardless of per-install state.
-- **The call itself:** the Worker holds the seller key as an environment secret (Cloudflare's own
-  secret store, never in source), spawns the `plan-cheap` relay chain against `sampleTask` (this
-  requires the relay harness to be reachable from the Worker — see Open Question below), and
-  returns the resulting `report.json` verbatim.
-- **Client change:** `src/orchestrator/trial-run.js`'s `runTrial()` calls this endpoint instead of
-  injecting a local env var; `src-tauri/src/lib.rs`'s key-holding code is deleted entirely once
-  this ships — there is no longer a key on the client to protect.
-
-## Open question (must be answered before implementation, not during)
-
-The relay harness (`~/Projects/relay`) currently runs as a local CLI, spawned as a child process
-by `relayChainSubprocess.js`. A Cloudflare Worker cannot spawn a local Node process. Either the
-Worker calls the model APIs directly (reimplementing a slice of relay's `plan-cheap` chain logic
-server-side — real duplication) or relay needs its own hosted HTTP entry point (relay's own
-`src/mcp/server.js` comment already names this as a known future step: "relay-http-service is not
-provisioned yet"). This design does not resolve that; it is the first thing the human stop below
-must decide, since it changes the size estimate materially.
-
-## Cost
-
-**Days (2), once the open question above is resolved** — plus Cloudflare account setup and
-ongoing operational ownership (nobody currently owns "the trial proxy is down" as an on-call
-concern). Not free to run: Worker requests are cheap, but the EUR 50/month model spend is real
-and separate from Cloudflare's own bill.
-
-## HUMAN STOP — DO NOT PROCEED
-
-No implementation starts until the owner (1) approves this design, specifically the open question
-above, and (2) provisions the Cloudflare account (or chosen alternative) themselves — an account
-creation and billing action, never done by a session.
+The one design principle worth keeping, should a hosted trial ever be reconsidered: a
+project-owned API key must never ship inside any client binary. It would live only as a secret
+on a server-side endpoint, with per-install and global spend caps enforced server-side, and the
+open question of how a serverless endpoint reaches the council engine (which runs as a local CLI
+subprocess today) would have to be answered before any implementation. Any such work needs the
+owner's explicit approval and account/billing setup first; a session never does that.

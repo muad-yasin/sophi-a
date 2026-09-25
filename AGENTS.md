@@ -53,17 +53,16 @@ Actions - see `PLAN_PACKAGING.md` / `DECISIONS.md` for what's actually verified.
 
 ## Naming, license, monetization
 
-Product name: **Sophi-A** (Muad's call, 2026-09-09) - named and visually themed after
-`~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative, a deliberate cross-property
-choice. The repo folder and internal paths stay `cnc-harness` (`PLAN.md` has the naming note).
+Product name: **Sophi-A** (owner decision, 2026-09-09) - named after an in-game AGI narrative
+from an earlier in-house game, a deliberate cross-property choice. The repo folder and internal paths stay `cnc-harness` (`PLAN.md` has the naming note).
 Open source (MIT), source only, no paid offer. The €20 packaged-build offer was retired
-on 2026-09-16 (Muad's direct confirmation); `SHOP.md` and the fulfillment docs are kept as history
+on 2026-09-16 (owner decision); `SHOP.md` and the fulfillment docs are kept as history
 only.
 
 **Studying competing agent-GUI/harness tools for ideas is standing practice; lifting their code
 or prose is not.** Looking at what LangGraph Studio, AutoGen Studio, CrewAI, and the rest of that
 space actually do - and borrowing the *idea* - is encouraged, same as it was for the GUI research
-that fed `relay/Docs/SophiA-CC-GUI-v1-DesignBrief.md`. The line: describe the idea in this
+that fed a private GUI design brief. The line: describe the idea in this
 project's own words, weigh it against what Sophi-A actually is, and never copy another project's
 README/docs/code verbatim or port code out of a differently-licensed repo. MIT is Sophi-A's
 own open invitation to be studied the same way - keep the courtesy running both directions.
@@ -71,12 +70,12 @@ own open invitation to be studied the same way - keep the courtesy running both 
 ## Dependency: relay
 
 The council engine is a dependency, not a parent project. Since 2026-09-13 the plan seats run on
-the **public** engine by default - The High Council MCP (`~/Projects/THCMCP`, public repo
+the **public** engine by default - The High Council MCP (local folder `THCMCP`, public repo
 `github.com/muad-yasin/the-high-council-mcp`, MIT, BYOK) - so the product ships on the same code
 everyone else gets. Resolution order lives in `src/orchestrator/enginePath.js`: `RELAY_PATH`
 override, sibling `THCMCP`, sibling `the-high-council-mcp`, the npm package `the-high-council` (a declared dependency since
 2026-09-25, so a plain `npm install` provides it),
-then the private `~/Projects/relay` as last-resort fallback (it is the private source THCMCP is
+then a private sibling `relay` checkout as last-resort fallback (it is the private source THCMCP is
 curated from, and the only place operator API keys live in a `.env`). `plan-1..3` spawn real
 chains via the engine's CLI (`src/cli.js`) and poll its run folder - genuine reuse of working
 code, not a description of it. `node scripts/verify-engine-path.mjs` proves the order and runs a
@@ -94,10 +93,8 @@ durable file-based memory (`.families/<ownerSeat>/<familyId>/`), a compassion-fi
 UI action, never something a policy function offers), and nested per-family/seat/global spend and
 concurrency caps. **The flag-off default reproduces today's `cnc`-only `fanOut()` behavior
 byte-for-byte** - this is an additive, reversible reopening of a decision the 2026-09-15
-peer-pool-only council made, not a replacement for it. Full architecture: `relay/Docs/
-SophiA-Seat-Families-Plan.md` (private) and its council revision at `relay/runs/
-2026-09-15T19-57-10-287Z/deliverable.md`. Build status, per item (F0-F10), and what actually landed
-in the overnight build that produced this: `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` and the
+peer-pool-only council made, not a replacement for it. Full architecture: the private Seat Families plan and its council revision (private run). Build status, per item (F0-F10), and what actually landed
+in the overnight build that produced this: the private Seat Families build log and the
 dated `DECISIONS.md` entries. User-facing overview: `docs/families.md`.
 
 ## MCP introspection
@@ -123,7 +120,7 @@ reading this inside a system prompt: you are in chat-only mode here, with no too
 access - say so plainly if asked to edit or run something, don't imply you can.
 
 Whatever runs you: don't over-govern this project. The whole spirit, carried over from
-`~/Projects/FOCUS.md`'s 2026-09-09 rewrite, is scope-creep-tolerant, build-first, ship-the-next-
+the owner's 2026-09-09 priorities rewrite, is scope-creep-tolerant, build-first, ship-the-next-
 slice - the old "no new repos, say so and stop" rules are gone on purpose. Build, test for real
 (see "run it, don't just typecheck" above), and record what you did in `PROGRESS.md`/`BUILT.md`/
 `DECISIONS.md` the way every entry already there does - dated, specific, honest about what's

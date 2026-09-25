@@ -39,10 +39,10 @@
   eight seats in order (cnc, advisor, plan-1..3, build-1..3) - matching the frontend's green-tile
   rendering path exactly. This is the acceptance bar HANDOFF.md names for slice 1. Left running.
 - 2026-09-09 - Monetization initiative started: three research agents audited cnc-harness's real
-  gap to sellable, sower-industries' reusable payment/legal infra, and indie dev-tool pricing;
+  gap to sellable, the company website's reusable payment/legal infra, and indie dev-tool pricing;
   findings and decisions recorded in DECISIONS.md. Biggest finding: no UI path anywhere calls
-  `startSeat` today - the whole app is read-only tiles. Author decisions since: Stripe (not
-  Gumroad/LemonSqueezy) despite the VAT/OSS trade-off, `cnc`/`advisor` made provider-selectable
+  `startSeat` today - the whole app is read-only tiles. Owner decisions since: a direct payment processor (not a
+  merchant-of-record reseller) despite the VAT/OSS trade-off, `cnc`/`advisor` made provider-selectable
   (any of relay's supported providers except xai/Grok, by policy), and the project is to be open
   source. `cnc`/`advisor` provider-selection backend shipped and tested for real (see BUILT.md).
   Next: the task-input UI (still missing entirely), a provider picker, product naming/visual
@@ -71,16 +71,16 @@
   capture tool (Xvfb/wmctrl/xdotool/grim/gnome-screenshot) was present, so the visual render was
   not directly observed - only the protocol and process behavior driving it were.
 - 2026-09-09 - Product named "Sophi-A"; visual identity ported from an existing Sower Industries
-  property, SMO (both Muad's direct call in chat, confirmed rather than assumed after finding
-  `~/Projects/SMO/SMO/Docs/Sophi-A.md` describes a real, shipped in-game AGI narrative arc of the
+  game project (both owner decisions, confirmed rather than assumed after finding that game's own
+  design docs describe a real, shipped in-game AGI narrative arc of the
   same name - a deliberate cross-property choice, not the naming mix-up from earlier this session).
   Product-facing surfaces renamed (tauri.conf.json, package.json, index.html, README.md); repo
-  folder/internal paths deliberately left as `cnc-harness`. `src/styles.css` rebuilt against SMO's
+  folder/internal paths deliberately left as `cnc-harness`. `src/styles.css` rebuilt against that game's
   actual design system (`ScreenBuilderUtils.cs`): real surface ladder, text colors, and a Gain/
   Warning/Breaking status mapping replacing the old placeholder green/amber/red; Space Grotesk +
   IBM Plex Sans fonts copied in with their OFL licenses. Full reasoning in DECISIONS.md.
-  Also ran: a real relay `plan-debate` chain (task `sophi-a-packaging-plan.md`, run id
-  `2026-09-09T02-29-54-628Z`, $0.34, unanimous sign-off round 1) producing a reviewed Windows/
+  Also ran: a real relay `plan-debate` chain (task `sophi-a-packaging-plan.md`,
+  unanimous sign-off round 1) producing a reviewed Windows/
   Linux/Android/iOS packaging plan - `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/
   `BOARD_PACKAGING.md` now in the repo. Headline: Windows (NSIS, unsigned v1) then Linux
   (AppImage) for desktop; Android and iOS both explicitly out of scope for v1, each with its own
@@ -120,7 +120,7 @@
   90f5e3a there): six chains' Cohere `command-r7b-12-2024` critic seats requested 20000 max
   tokens against a real 4096 cap, crashing mid-chain. A recent relay-side blanket "raise all
   critic maxTokens" commit had swept this seat up too without checking its real ceiling.
-- 2026-09-09 - Pushed for real: `github.com/muad-yasin/sophi-a` (private), tagged `v0.1.0`. CI
+- 2026-09-09 - Pushed for real: `github.com/muad-yasin/sophi-a` (private at the time), tagged `v0.1.0`. CI
   built both installers for real on GitHub's runners - first time either has ever existed as an
   actual file. Fixed a release-permissions bug (403, missing `contents: write`) and published the
   release by hand from the already-built artifacts. `v0.1.0`'s release page now has a real
@@ -142,13 +142,12 @@
   VM, and it passed. **Windows NSIS under Wine: inconclusive** - Wine's own prefix bootstrap never
   finished in this sandbox after 8+ minutes, so the installer itself was never reached; killed and
   cleaned up. AT-1/AT-2/AT-3 still need a real Windows machine. Full trace in DECISIONS.md.
-- 2026-09-09 - Fulfillment mails + runbook (`docs/fulfillment-mails.md`,
-  `docs/manual-fulfillment-runbook.md`) and trademark-safe Stripe copy
-  (`docs/stripe-product-copy.md`) written, closing three of `SHOP.md`'s open items. Named one real
-  unresolved gap: the GitHub repo is private, so a buyer can't reach the release assets directly -
-  author's call, not decided here. Sophi-A's Stripe success page also built
-  (`sower-industries`'s `/en/sophi-a/next/`, `npm run build` confirmed it renders) - pointing the
-  actual payment link at it is a dashboard action, not done here.
+- 2026-09-09 - Docs for an early paid-build offer (`docs/fulfillment-mails.md`,
+  `docs/manual-fulfillment-runbook.md`, `docs/stripe-product-copy.md`) written, closing three of
+  `SHOP.md`'s open items, plus a purchase success page on the company website. Named one real
+  unresolved gap at the time: the GitHub repo was private, so release assets weren't directly
+  reachable - the owner's call, not decided here. That paid offer has since been retired; there is
+  no purchase flow.
 - 2026-09-09 - Built `src/mcp/server.js` - the MCP introspection named in CLAUDE.md's "what's
   next" since the very first build session, now real. Tested with an actual MCP client (not a
   hand-rolled approximation) against a real standalone orchestrator; found and fixed a genuine
@@ -157,7 +156,7 @@
   consecutive real runs. Full detail in DECISIONS.md.
 - 2026-09-09 - Ran the last remaining item from the day's punch list through the real relay
   harness: parallel-build-and-compare, the feature PLAN.md had only ever named, never designed.
-  `plan-debate` chain, run id `2026-09-09T10-20-19-041Z`, $0.32, unanimous round-1 sign-off.
+  `plan-debate` chain, unanimous round-1 sign-off.
   Result: `PLAN_PARALLEL_BUILD.md`/`HANDOFF_PARALLEL_BUILD.md`/`BOARD_PARALLEL_BUILD.md`. Headline
   decisions: a per-task (non-sticky) checkbox trigger fused with a pre-spend Nx-cost confirmation
   modal, a hash-manifest diff baseline (not git - workdirs aren't git repos), retain-in-place
@@ -241,9 +240,8 @@
   `brand/generate-lockups.py` composites the transparent mark with "Sophi-A" in Space Grotesk
   Bold + a tagline in IBM Plex Sans, using the app's own `--bg`/`--gold-bright`/`--text-secondary`
   hex values. Horizontal lockup now wired into the top of `README.md`; square lockup generated
-  for a future Stripe product image / landing page but not wired anywhere yet (`SHOP.md`'s flow
-  is still a bare payment link). See `brand/BRAND.md` for the full record.
-- 2026-09-10 - "The High Council" visual/marketing identity, at Muad's request. Names and gives a
+  for a future product image / landing page but not wired anywhere yet. See `brand/BRAND.md` for the full record.
+- 2026-09-10 - "The High Council" visual/marketing identity, at the owner's request. Names and gives a
   face to `plan-N`'s real mechanism (one Advocate/Anthropic proposer, five critic seats from five
   other labs - `relay/chains/plan-cheap.json`, already the "actual differentiator" identified in
   `docs/market-positioning.md`), not a new feature. `brand/HIGH_COUNCIL.md`: the full spec -
@@ -255,9 +253,8 @@
   hexagram at preview size, an unintended resemblance worth catching before ship) and a first
   landing page, `marketing/index.html` (static, self-contained, reuses the app's own fonts/
   palette verbatim). Rendered and checked in a real browser end to end. Two placeholder links left
-  honestly marked in the HTML (source-code URL - the GitHub repo is private per DECISIONS.md
-  2026-09-09 - and the Stripe payment link, which SHOP.md records was created by hand but never
-  records the link itself) - both need a real URL pasted in before this deploys anywhere, not
+  honestly marked in the HTML (source-code URL - the GitHub repo was private per DECISIONS.md
+  2026-09-09 - and a purchase link for the since-retired paid build) - both need a real URL pasted in before this deploys anywhere, not
   invented here per the standing "don't guess URLs" rule.
 - 2026-09-10 - Wired "The High Council" into the live in-app Debate panel (brand/HIGH_COUNCIL.md's
   "live verdict" design, built the same day as the identity itself). Each plan-N tile's Debate
@@ -278,18 +275,12 @@
   and the three in-app copies (stroke-width 10-12, ~1.5x larger shapes) - verified legible by
   rendering at 80px with nearest-neighbor upscaling (no smoothing to hide the problem) and by
   screenshotting a real running dev build. npx tsc --noEmit clean.
-- 2026-09-10 - Real Stripe payment link recorded and wired in for the first time. The
-  2026-09-09 SHOP.md/DECISIONS.md entries said a link was created but never recorded the URL - a
-  real gap (nothing in the repo could actually point buyers anywhere). Guided Muad to the Stripe
-  payment-link creation page via remote-control browser navigation (no payment/business fields
-  touched by the session - Muad's own click, per the standing dashboard-only rule); the
-  pre-existing "Sophi-A" product got a real link, https://buy.stripe.com/bJe00jfsCbOB7UU17BfjG03,
-  status Aktiv. Verified live by loading the actual checkout page (Sower Industries / Sophi-A /
-  CNC Harness, EUR20,00) without submitting payment. Wired into marketing/index.html's "Get
-  Sophi-A" CTA, replacing the coming-soon placeholder from the previous pass. SHOP.md updated
-  with the real link and an honest note about the earlier undocumented gap.
+- 2026-09-10 - A purchase link for the then-planned paid build was recorded and wired into
+  marketing/index.html's "Get Sophi-A" CTA, replacing the coming-soon placeholder (the link itself
+  was created by the owner by hand; the session touched no payment fields). That paid offer was
+  retired later; there is no purchase flow now.
 - 2026-09-10 - README.md and CLAUDE.md rewritten for real front-loading (critical orientation
-  in the first ~30% of each, per Muad's explicit ask), CLAUDE.md copied verbatim to AGENTS.md so
+  in the first ~30% of each, per the owner's explicit ask), CLAUDE.md copied verbatim to AGENTS.md so
   any agent tooling that looks for that filename instead gets the same orientation. Also wired
   CLAUDE.md's content into the actual advisor/cnc system prompts (messagesApi.js) for real, not
   just documentation: a real `claude` CLI subprocess gets CLAUDE.md automatically via its own
@@ -357,30 +348,30 @@
   One real mistake made and fixed mid-session: ran a manual `cargo check` against the same
   `target/debug` directory the live `npm run tauri dev` process was using, which collided with
   its own rebuild and crashed the whole window (`Text file busy` - Linux can't overwrite a
-  running binary). Relaunched cleanly; Muad confirmed the window came back before work continued.
+  running binary). Relaunched cleanly; the owner confirmed the window came back before work continued.
   Lesson for next time: never run a manual cargo command against a target dir a live dev process
   owns - use an isolated `CARGO_TARGET_DIR` or just trust the dev process's own auto-rebuild.
 
   npx tsc --noEmit and a real `vite build` both clean throughout.
-- 2026-09-10 - Ported SMO's real shop-card visual grammar into Sophi-A, at Muad's request.
-  Researched the actual source before touching anything (visual-craft's own rule: check the real
-  reference, never memory) - found this is SMO's "Ad-Pardon" purchase card
-  (~/Projects/SMO/Assets/Scripts/Editor/Shop/ShopScreenBuilder.cs), with a full pixel-measured
-  CSS handoff at Review/ShopAdRow_2026-09-02/handoff/export/ (colors.json, state-3a.html, real
-  screenshots). Real finding surfaced before building: the mockup's glowing top stripe was later
-  removed in SMO's own shipped build ("reads as a detached line above the corners" per the
-  developer's own comment) and replaced with a gradient border - flagged to Muad, who explicitly
-  chose to keep the stripe as originally asked rather than follow SMO's later revision.
+- 2026-09-10 - Ported a sibling game project's real shop-card visual grammar into Sophi-A, at
+  the owner's request. Researched the actual source before touching anything (visual-craft's own
+  rule: check the real reference, never memory) - found this is that game's purchase card
+  (`ShopScreenBuilder.cs` there), with a full pixel-measured CSS handoff (colors.json,
+  state-3a.html, real screenshots). Real finding surfaced before building: the mockup's glowing
+  top stripe was later removed in the game's own shipped build ("reads as a detached line above
+  the corners" per the developer's own comment) and replaced with a gradient border - flagged to
+  the owner, who chose to keep the stripe as originally asked rather than follow the later
+  revision.
 
   Applied in two places, both grounded in the real measured values (gradient stops, box-shadow
   layers, the 2.6s shine cycle), not approximated:
   - marketing/index.html's "Get Sophi-A" section rebuilt as a real hero card: glowing top stripe,
     blurred gold price halo, ring-outlined icon-plate bullets (adapted to Sophi-A's real value
-    props, not SMO's copy), and the gold BUY button with a continuous shine-sweep loop - the
-    landing page's one purchase moment, the same shape of moment SMO's button was built for.
+    props, not the game's copy), and the gold BUY button with a continuous shine-sweep loop - the
+    landing page's one purchase moment, the same shape of moment the game's button was built for.
   - src/styles.css's .btn-send (every in-app Send button) got the same gold gradient/glow
     treatment, but the shine sweep triggers on hover, not continuously: a deliberate departure
-    from SMO's own always-looping button, because a Send button fires dozens of times a session
+    from the game's own always-looping button, because a Send button fires dozens of times a session
     and eight of them looping at once in one screen is the "inviting signal over-animated into a
     nag" failure the ux-design skill names - the landing page's rare single decision keeps the
     loop, the frequent in-app action doesn't.
@@ -390,16 +381,14 @@
   animation is actually applying via computed style (animationName/duration/iterationCount), not
   just present in source. prefers-reduced-motion respected on both. npx tsc --noEmit and a real
   vite build both clean.
-- 2026-09-10 - Sophi-A-as-a-paid-web-service pivot: scope-gated first (verdict NEEDS-SPEC - not
-  ranked in FOCUS.md, likely duplicating GP's intake service), the five open gaps resolved with
-  Muad directly (refund-on-SLA-miss, unified EUR 20 product covering both the desktop download
-  and one web question, output-only delivery matching /plan's mechanism-privacy rule, Germany-only
-  VAT/OSS gate carried forward), then a real Council run dispatched for the technical design.
-  Real finding correcting the scope-gate's own doc-level read: GP's intake service has no
-  Stripe/payment code at all and delivers publicly (leaderboard/forum), never privately to a
-  submitter - not the reusable "paid intake" it looked like on paper. Only lib/cap.mjs and
-  cli/relay-client.mjs's spawn-and-poll pattern were genuinely reusable; corrected with
-  sower-industries-ec before designing further.
+- 2026-09-10 - Sophi-A-as-a-paid-web-service pivot (explored, not built): scope-gated first
+  (verdict NEEDS-SPEC - not on the owner's priority list, likely duplicating another internal
+  project's intake service), the open product gaps resolved with the owner directly, then a real
+  Council run dispatched for the technical design. Real finding correcting the scope-gate's own
+  doc-level read: that other intake service had no payment code at all and delivered publicly,
+  never privately to a submitter - not the reusable "paid intake" it looked like on paper. Only its
+  spawn-and-poll pattern was genuinely reusable; corrected with a peer session before designing
+  further.
 
   Design run hit a real, reproducible relay bug: 3 consecutive real runs against the same task
   all stopped at critique round 1 because Qwen3.5-9B's JSON reply had a literal unescaped " inside
@@ -410,15 +399,15 @@
   after the fix), committed and pushed to relay's own repo (f058acd). A 4th run with the fix
   produced a real, clean pass - Qwen's critique parsed correctly and signed off outright.
 
-  Final Council-approved design saved to sower-industries/Docs/SophiaWebIntake_Design_2026-09-10.md
-  (not committed there - left for Muad/sower-industries-ec). Covers: pre-payment form (with a
+  Final Council-approved design saved in a separate private repo (not committed there - left for
+  the owner). Covers: pre-payment form (with a
   stated reason Payment Link custom fields alone don't suffice), the webhook handler's real
   request/response shape, a concrete node:sqlite schema (four tables: question_orders, run_queue,
   review_queue, sla_checks), reuse of the proven relay-spawn-and-poll pattern, a single mandatory
   review-queue gate modeled on /plan's own manual-fulfillment shape, output-only email delivery
   with Council internals structurally excluded (sendAnswer() never reads report.json), a real
   scheduled SLA-breach-and-refund checker, and an explicit human-operator-vs-agent-buildable task
-  split. Real cost across all four attempts: ~$0.59 total. Actual implementation not started -
+  split. Actual implementation not started -
   this pass delivered the reviewed design only, per the session's own scope discipline.
 
 - [Phase 0, Step 1] verify-assumptions.js — pass — `node scripts/verify-assumptions.js` — 2026-09-10T20:33:15Z
@@ -436,7 +425,7 @@
 - [Phase 3, Step 3] Chain presets as relay config data — pass — real WS test against a standalone orchestrator (malformed/missing `chainConfig` fails fast with the real error, no relay subprocess spawned, no fallback to `plan-cheap`; non-planner seat rejected) plus `node src/cli.js --chain plan-fast|plan-thorough --dry-run` and `mcp__relay__list_chains` confirming both real chains resolve with correct rounds/roster/pricing — 2026-09-10T23:39:22Z
 - [Phase 3, Step 4] Seat keyboard shortcuts — pass — real Chrome tab against the running vite dev server (grid's `hidden` cleared to reach already-registered real listeners, no live WebSocket needed): Ctrl+1 focuses `cnc`, Ctrl+8 focuses `build-3`, Enter submits via the real per-seat submit handler, Shift+Enter inserts a newline instead, Escape sends `{cmd:'stop',seatId:'cnc'}` only while that seat is `working` — 2026-09-10T23:39:22Z
 - Fixed the real restart-orchestrator reconnect bug — pass — real Chrome tab with a mocked WebSocket + mocked Tauri invoke simulating a real restart's timing (old port/token nulled immediately, new ones ready 300ms later): a real click on the real Restart button produces exactly one live WebSocket connection to the new port, old one closed. Caught and fixed a real bug in the first version of this fix (a redundant explicit `connect()` call raced the close handler's own `scheduleReconnect()`, producing two simultaneous connections) via the same live test before landing it — 2026-09-10T23:51:18Z
-- Real Council run, "what's next" ranked backlog — pass — chain `idea-open-c2`, run `2026-09-10T23-20-49-005Z`, unanimous 6-lab sign-off (round 2, one real shared gap found and fixed in round 1's revise), $0.3041. Full detail in DECISIONS.md; not itself authorization to build — awaiting Muad's own review/go per the run's own stated terms — 2026-09-11T01:55:29Z
+- Real Council run, "what's next" ranked backlog — pass — chain `idea-open-c2`, unanimous 6-lab sign-off (round 2, one real shared gap found and fixed in round 1's revise). Full detail in DECISIONS.md; not itself authorization to build — awaiting the owner's own review/go per the run's own stated terms — 2026-09-11T01:55:29Z
 - [Backlog item 2] First-run Council discoverability explainer — pass — real Chrome tab against a standalone orchestrator with an isolated `HOME` (genuine fresh-install first run, real WebSocket, no mocked WS this time): wizard shows on first run, closing it shows the Council explainer exactly once, dismissing it persists `councilExplainerShown:true` to `wizard-state.json`, and a full page-reload relaunch shows neither panel again — 2026-09-11T00:04:09Z
 - [Backlog item 3] Deploy-ready `marketing/index.html` config — pass — `node marketing/lint.mjs` (dependency-free link/OG-tag checker, the acceptance test itself: zero broken local asset paths, all required OG/Twitter tags present; confirmed it actually catches a broken path by deliberately breaking one first) plus a real standalone static server (`python3 -m http.server`) serving `marketing/` alone, loaded in a real Chrome tab - every asset request returned 200, zero 404s, page rendered with real fonts/seal. No deploy performed, per the item's own acceptance boundary — 2026-09-11T00:09:00Z
 - [Backlog item 4] Advisor-to-cnc forward flow (S2 security spec) — pass — real WS test against a standalone orchestrator (real advisor API call, a fake `claude` CLI on `PATH` for `cnc` so no real file edits/spend were needed to inspect the exact prompt received): `confirmed !== true` and no-cached-reply both rejected server-side before any subprocess exists; a real advisor turn asked for an example injection payload notably refused to emit a bare unframed one and quoted it instead; forwarding wrapped the entire reply, injection quote included, inside `<advisor-reply trust="untrusted-model-output">`, never as a bare top-level instruction to `cnc`. Full detail, including the honest scope limit (mechanical wrap/gate verified, not an LLM-behavior guarantee), in `docs/security-prompt-injection.md`'s S2 entry — 2026-09-11T00:16:33Z
@@ -444,8 +433,8 @@
 - [Backlog item 6] Per-seat cost breakdown + CSV export — pass — real end-to-end test against a standalone orchestrator: a real free relay `mock` chain on plan-1 (real per-stage usage, honestly unpriced) and a fake-`claude`-CLI-backed real turn on build-1 (real priced usage) dispatched from the actual frontend UI (task-form submit, not a bypassed WS call); the Cost breakdown panel showed one row per plan-1 stage plus one row for build-1, and "Export CSV" produced a file whose content matched the table byte-for-byte — 2026-09-11T00:28:48Z
 - [Backlog item 7] Per-seat cost budget warning — pass (new logic only; native notification firing reuses already-verified plumbing, see DECISIONS.md) — real end-to-end test against a standalone orchestrator: setting a $0.01 threshold on `build-1` via the real Budget warnings UI, then dispatching a real task from the real frontend form, produced the real `budget-exceeded` tile highlight and the "⚠" ticker prefix; code review confirms no `stop` command is ever sent from this code path — 2026-09-11T00:36:09Z
 - [Backlog item 8] Build-seat artifact inspector + context forwarder — pass (core logic unit-tested in isolation; WS/browser end-to-end not re-run this time, see DECISIONS.md's real near-miss with the shared `.workdirs/build-N` directory) — `inspectArtifact`/`listWorkdirFiles`/`forwardArtifact`'s own logic confirmed against a real isolated `/tmp` fixture directory: file listing, binary detection (a real binary file correctly flagged, `content:null`), token estimation (a 20,000-char file → 5000 estimated tokens, correctly over the 4,000 threshold), and truncation (a large file cut to exactly `FORWARD_MAX_CHARS` plus the marker; binary rejected outright) — 2026-09-11T00:46:38Z
-- [Engine switch] Sophi-A plan seats run on the public High Council MCP by default — pass — `node scripts/verify-engine-path.mjs` (9/9: resolution order RELAY_PATH > sibling THCMCP > sibling the-high-council-mcp > npm package > private relay; bogus RELAY_PATH skipped; private relay `.env` still feeds keys; a real `mock` chain spawned with the seat adapter's exact args against `~/Projects/THCMCP` produced one run folder with a parseable `report.json`, $0) plus an esbuild bundle of the orchestrator containing the new module; no real chain run, zero API spend by Muad's instruction — 2026-09-13T03:40:00Z
-- [Engine switch, live] plan-1 runs a council chain on the public engine through the real orchestrator — pass — standalone `src/orchestrator/index.js` (isolated `HOME`, `RELAY_PATH` unset) driven over a real authenticated WebSocket: `configure` plan-1 `chainConfig:"mock"` (runtime-only, seats.json never touched), `start` a short task; process log printed `[engine] council engine: /home/user/Projects/THCMCP (sibling THCMCP)`, the seat streamed all six relay stages, one new run folder `~/Projects/THCMCP/runs/2026-09-13T04-28-54-940Z` with `report.json` appeared, `debate.report` `passed:true`, and `seat.usage` `total` reported `546 in / 160 out, usd:0, priced:false` before `seat.idle` with the mock deliverable; THCMCP `git status` unchanged after (runs/tasks/log ignored). Not verified: a priced chain (zero API spend by instruction) and the Tauri window itself (orchestrator only). One earlier driver-script attempt matched the auth-time `seat.idle` replay and killed the orchestrator early; the detached mock chain still finished on its own (`runs/2026-09-13T04-28-36-148Z`), a script bug, not an app one — 2026-09-13T04:29:00Z
-- ["Family" MVP, Session B, item 3] Per-seat family receipts panel — pass — `test/family-receipts.test.mjs` (8/8): a real 2-peer fan-out through `peer-pool.js`'s real `fanOut()` (Session A's real fake-`claude` fixture on a temp PATH) produces 2 rows each with a real on-disk `artifactPath`; source-grep proves `familyLedger.js` never calls a write-shaped fs function; before/after directory hash of the run-recorder store is byte-identical; no forbidden aggregate/comparative phrase in source or rendered output; row-cap/eviction and the clean-vs-failure outcome paths each separately unit-tested — 2026-09-15
-- ["Family" MVP, Session B, item 4] Compassion state machine + badges — pass — `test/compassion-states.test.mjs` (11/11): pure `classify()` against real `mockRelayChain('one-holdout')`/`('all-approve')` fixture data plus synthetic exit-code/last-output fixtures, all three states plus the success fallback and the FAILED-OWNED-over-HOLDOUT precedence rule; STUCK's 300s threshold tested at 299/300/301s; `compassionCopy.js` string-tested for zero occurrences of "blame"/"lazy"/"stupid"; badge render function proven distinct/non-empty per state and throws on an unknown one — 2026-09-15
-- [Engine hygiene, 2026-09-23] Plan-seat side files no longer written into the engine repo - pass - `src/orchestrator/sideFiles.js`: the relay-chain-subprocess seat's task file and side log now go under `~/.cache/cnc-harness/{tasks,side-logs}/` (override `CNC_HARNESS_CACHE_DIR`), with the task passed to the CLI as an absolute `--task`; `scripts/verify-engine-path.mjs` mirrors it. Before, every seat start dropped a `cnc-harness-*.log` in THCMCP's root and a task file in its `tasks/` (31 + 32 of mock/fixture debris, moved to `~/.cache/cnc-harness/legacy-2026-09/` on Muad's call, with a MANIFEST.md). Verified: `npm test` 236/236 (1 skipped) before, 240/240 (1 skipped) after with `test/side-files.test.mjs` (4 new); `node scripts/verify-engine-path.mjs` all checks pass with the absolute task path against the public engine (run `2026-09-23T12-18-30-916Z`, report.json written, $0); a real seat dispatch from the suite wrote its log to `~/.cache/cnc-harness/side-logs/` with `task: /home/user/.cache/cnc-harness/tasks/...`, and THCMCP's root and `tasks/` stayed unchanged. The one pre-fix baseline run's leftovers were moved to the same legacy folder.
+- [Engine switch] Sophi-A plan seats run on the public High Council MCP by default — pass — `node scripts/verify-engine-path.mjs` (9/9: resolution order RELAY_PATH > sibling THCMCP > sibling the-high-council-mcp > npm package > private relay; bogus RELAY_PATH skipped; private relay `.env` still feeds keys; a real `mock` chain spawned with the seat adapter's exact args against a sibling THCMCP checkout produced one run folder with a parseable `report.json`, $0) plus an esbuild bundle of the orchestrator containing the new module; no real chain run, zero API spend by owner instruction — 2026-09-13T03:40:00Z
+- [Engine switch, live] plan-1 runs a council chain on the public engine through the real orchestrator — pass — standalone `src/orchestrator/index.js` (isolated `HOME`, `RELAY_PATH` unset) driven over a real authenticated WebSocket: `configure` plan-1 `chainConfig:"mock"` (runtime-only, seats.json never touched), `start` a short task; process log printed `[engine] council engine: <engine-dir> (sibling THCMCP)`, the seat streamed all six relay stages, one new run folder `<engine-dir>/runs/2026-09-13T04-28-54-940Z` with `report.json` appeared, `debate.report` `passed:true`, and `seat.usage` `total` reported `546 in / 160 out, usd:0, priced:false` before `seat.idle` with the mock deliverable; THCMCP `git status` unchanged after (runs/tasks/log ignored). Not verified: a priced chain (zero API spend by instruction) and the Tauri window itself (orchestrator only). One earlier driver-script attempt matched the auth-time `seat.idle` replay and killed the orchestrator early; the detached mock chain still finished on its own (`runs/2026-09-13T04-28-36-148Z`), a script bug, not an app one — 2026-09-13T04:29:00Z
+- ["Family" MVP, build lane B, item 3] Per-seat family receipts panel — pass — `test/family-receipts.test.mjs` (8/8): a real 2-peer fan-out through `peer-pool.js`'s real `fanOut()` (lane A's real fake-`claude` fixture on a temp PATH) produces 2 rows each with a real on-disk `artifactPath`; source-grep proves `familyLedger.js` never calls a write-shaped fs function; before/after directory hash of the run-recorder store is byte-identical; no forbidden aggregate/comparative phrase in source or rendered output; row-cap/eviction and the clean-vs-failure outcome paths each separately unit-tested — 2026-09-15
+- ["Family" MVP, build lane B, item 4] Compassion state machine + badges — pass — `test/compassion-states.test.mjs` (11/11): pure `classify()` against real `mockRelayChain('one-holdout')`/`('all-approve')` fixture data plus synthetic exit-code/last-output fixtures, all three states plus the success fallback and the FAILED-OWNED-over-HOLDOUT precedence rule; STUCK's 300s threshold tested at 299/300/301s; `compassionCopy.js` string-tested for zero occurrences of "blame"/"lazy"/"stupid"; badge render function proven distinct/non-empty per state and throws on an unknown one — 2026-09-15
+- [Engine hygiene, 2026-09-23] Plan-seat side files no longer written into the engine repo - pass - `src/orchestrator/sideFiles.js`: the relay-chain-subprocess seat's task file and side log now go under `~/.cache/cnc-harness/{tasks,side-logs}/` (override `CNC_HARNESS_CACHE_DIR`), with the task passed to the CLI as an absolute `--task`; `scripts/verify-engine-path.mjs` mirrors it. Before, every seat start dropped a `cnc-harness-*.log` in THCMCP's root and a task file in its `tasks/` (31 + 32 of mock/fixture debris, moved out of the engine checkout into a local archive folder by owner decision, with a MANIFEST.md). Verified: `npm test` 236/236 (1 skipped) before, 240/240 (1 skipped) after with `test/side-files.test.mjs` (4 new); `node scripts/verify-engine-path.mjs` all checks pass with the absolute task path against the public engine (run `2026-09-23T12-18-30-916Z`, report.json written, $0); a real seat dispatch from the suite wrote its log to `~/.cache/cnc-harness/side-logs/` with `task: ~/.cache/cnc-harness/tasks/...`, and THCMCP's root and `tasks/` stayed unchanged. The one pre-fix baseline run's leftovers were moved to the same archive folder.

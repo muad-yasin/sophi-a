@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Phase 2 Step 3 of the long-horizon build plan
-// (~/Projects/relay/runs/2026-09-10T20-03-03-692Z/revise-1.md) - "Export a run as markdown",
+// (the phase-2 council plan) - "Export a run as markdown",
 // acceptance test. src/exportMarkdown.ts is pure and DOM-free by design specifically so this
 // script can exercise the real shipped module directly with Node, without a live Tauri window
 // (see that module's own top comment). esbuild (already a devDependency, used the same way by

@@ -1,8 +1,7 @@
 # PLAN_PACKAGING.md — Sophi-A Packaging & Installer Plan
 
-*Produced 2026-09-09 via a real relay `plan-debate` chain run (task `sophi-a-packaging-plan.md`,
-run id `2026-09-09T02-29-54-628Z`, $0.34, unanimous panel sign-off in round 1 - no revision
-needed). Full debate: `BOARD_PACKAGING.md`. Build-order handoff: `HANDOFF_PACKAGING.md`. This
+*Produced 2026-09-09 via a real `plan-debate` council chain run (task `sophi-a-packaging-plan.md`,
+unanimous panel sign-off in round 1 - no revision needed). Full debate: `BOARD_PACKAGING.md`. Build-order handoff: `HANDOFF_PACKAGING.md`. This
 mirrors exactly how the original `PLAN.md`/`BOARD.md`/`HANDOFF.md` were produced.*
 
 **Status:** proposed, not yet built
@@ -31,9 +30,9 @@ The runtime shape that packaging must survive:
 - Anthropic's Commercial Terms require the unmodified `claude` CLI, run as published. **This plan
   does not touch, wrap, rebundle, or modify that binary anywhere - it only locates it on the
   user's machine at runtime.**
-- Team: solo/small operator (Sower Industries, Berlin), monetizing via a ~$29 one-time Stripe
-  purchase, Germany-only launch initially, near-zero budget for signing certs, store fees, or
-  dedicated CI.
+- Team: solo/small operator, at the time planning a low-priced one-time purchase of the packaged
+  build (an offer since retired - see SHOP.md), Germany-only launch initially, near-zero budget
+  for signing certs, store fees, or dedicated CI.
 
 None of this works on Android or iOS as-is: mobile sandboxes forbid arbitrary subprocess
 execution, and neither `node` nor `claude` ship on either OS. This is treated head-on in §5-§6,
@@ -87,7 +86,7 @@ persists filesystem paths only.
 
 **Installer format: NSIS**, via Tauri's built-in Windows bundler, over MSI. NSIS is picked because
 it is scriptable, lightweight, requires no WiX-toolchain ceremony, and Tauri's NSIS path supports
-per-user (`installMode: currentUser`) installation with no UAC elevation - appropriate for a $29
+per-user (`installMode: currentUser`) installation with no UAC elevation - appropriate for a low-priced
 indie tool where forcing an admin prompt on first run is pure friction with no benefit. MSI's
 advantages (enterprise GPO deployment, Windows Installer service integration) don't matter for
 this audience.
@@ -117,7 +116,7 @@ maintaining a `.deb` (or `.rpm`) means owning a repo, a GPG signing key for that
 dependency declarations that Tauri's Debian bundler doesn't cleanly support for a non-packaged
 runtime dependency like a bundled Node binary in the first place. AppImage needs none of that - it
 is a single portable executable that runs on Fedora, Arch, Ubuntu, and Debian alike without root
-and without a package manager transaction. For a Germany-only $29 launch with no packaging team,
+and without a package manager transaction. For a Germany-only, low-priced launch with no packaging team,
 one artifact that covers the whole distro landscape beats a "better on Debian, absent everywhere
 else" deb with a second pipeline to maintain. (This resolves a genuine debate in review: an
 earlier deb proposal argued a Debian-leaning German audience justified `.deb`; that reasoning
@@ -166,8 +165,8 @@ Play Store listing, no thin client - deferred as a *named future direction*, not
   recompile.
 - This is deferred to a **v2 direction**, not ruled out permanently: it is named here so it isn't
   silently lost, but no work against it is scheduled in this plan.
-- Cost of building it now would not be recovered: the launch is Germany-only, one-time $29
-  purchase, solo operator - a remote-orchestrator rewrite before the desktop product has any users
+- Cost of building it now would not be recovered: the launch was Germany-only, a low-priced
+  one-time purchase, solo operator - a remote-orchestrator rewrite before the desktop product has any users
   to validate it against is the wrong sequencing.
 
 ### 3.1 iOS — a separate, stricter case
@@ -226,7 +225,7 @@ of validating the desktop product has buyers.
   app.
 - Node 22 LTS is the pinned bundled runtime version across Windows and Linux, fetched and
   SHA-256-verified at build time (not fetched at install/run time from the user's machine).
-- Germany-only Stripe launch means no localization, currency, or regional-pricing work is in scope
+- A Germany-only launch meant no localization, currency, or regional-pricing work is in scope
   here - this plan is packaging/installer only.
 - GitHub Actions free-tier minutes are sufficient for this project's expected release cadence in
   v1; overage costs are named in §2.4 rather than assumed away.

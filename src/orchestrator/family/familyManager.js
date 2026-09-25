@@ -1,11 +1,11 @@
-// Sophi-A Seat Families F7 (relay/Docs/SophiA-Seat-Families-Plan.md §5 "F7 - Lifecycle
-// integration"; council build order in relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §c).
+// Sophi-A Seat Families F7 (the private Seat Families plan §5 "F7 - Lifecycle
+// integration"; council build order in the Seat Families council plan §c).
 // The one composition point wiring F0-F6 together: dispatch = caps -> runtime -> receipt ->
-// gate -> event. This is Session E's own module.
+// gate -> event. This is build lane E's own module.
 //
 // SCOPE NOTE, not silently glossed over: F3 (familyLedger v2), F5 (chat/council runtimes) and F6
 // (securityGate.js) were not built tonight - Sessions C and D did not land (see
-// relay/Docs/SophiA-Seat-Families-OVERNIGHT.md for why, they are different reasons). This module
+// the private Seat Families build log for why, they are different reasons). This module
 // therefore only wires the `claude-code` runtime (via F0's generalized `fanOut()`), and the
 // gate/Apply path is a documented no-op stub, refused rather than faked - `family_dispatch` on a
 // `chat`/`council` session, and `family_apply`, both return a clear "not built tonight" error
@@ -114,7 +114,7 @@ export function familyList({ ownerSeat = null, familiesRoot } = {}) {
  */
 export async function familyDispatch({ ownerSeat, familyId, sessionId, task, runtime = 'claude-code', planItem = null, timeoutMs, caps = null, familiesRoot }, emit = () => {}) {
   if (runtime !== 'claude-code') {
-    return { ok: false, reason: `family_dispatch refused: runtime "${runtime}" is not built tonight (F5/Session C did not land) - only "claude-code" is wired` };
+    return { ok: false, reason: `family_dispatch refused: runtime "${runtime}" is not built tonight (F5/build lane C did not land) - only "claude-code" is wired` };
   }
 
   const family = familyRef(ownerSeat, familyId, familiesRoot);

@@ -11,7 +11,7 @@
      og:url/og:image/canonical are left as PLACEHOLDER — no real deploy URL exists yet (this
      item's own boundary: it stops at "ready to deploy," the actual host/domain is a separate
      human decision, not guessed here per the project's standing "don't invent URLs" rule, same
-     as the GitHub-source and Stripe-link placeholders this file already carried before either
+     as the GitHub-source and purchase-link placeholders this file already carried before either
      was real). Fill in the real domain in the same pass as the actual deploy. -->
 <link rel="canonical" href="PLACEHOLDER-deploy-url/" />
 <meta property="og:type" content="website" />
@@ -191,9 +191,8 @@
     .compare { grid-template-columns: 1fr; }
   }
 
-  /* --- Shop card, ported from SMO's real purchase-card grammar - see the HTML comment above
-     this section for the exact source files. Real measured values throughout, not approximated:
-     ShopScreenBuilder.cs / Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html. --- */
+  /* --- Shop card (unused since the paid offer was retired), ported from an earlier in-house
+     game's purchase-card design. Measured values throughout, not approximated. --- */
   .shop-card {
     position: relative;
     max-width: 460px;
@@ -207,9 +206,8 @@
     text-align: center;
   }
 
-  /* The glowing top stripe - present in SMO's original mockup, removed in SMO's own shipped
-     build later (developer's note: "reads as a detached line above the corners"), kept here on
-     Muad's explicit call to reproduce the original as asked. */
+  /* The glowing top stripe - present in the source design's original mockup, kept here on the
+     owner's call to reproduce the original. */
   .shop-card-stripe {
     position: absolute;
     top: 0;
@@ -305,11 +303,11 @@
     line-height: 1.45;
   }
 
-  /* The BUY button - real gradient/shadow values from ShopScreenBuilder.cs, plus a continuous
-     shine sweep (SMO's own BuyShineCycleSeconds = 2.6s, sweep holds off-screen for most of the
+  /* The BUY button - real gradient/shadow values from the source design, plus a continuous
+     shine sweep (2.6s cycle, sweep holds off-screen for most of the
      cycle rather than moving constantly). Looping here is deliberate, unlike the in-app Send
      buttons this same treatment was also applied to (src/styles.css) - a landing-page purchase
-     button is a single rare decision, the exact case SMO's own button was built for; an in-app
+     button is a single rare decision, the exact case the original button was built for; an in-app
      Send button fires dozens of times a session, so that one only sweeps on hover. Same
      component, different cadence, chosen for what the moment actually is. */
   .shop-card-buy {
@@ -457,8 +455,8 @@
 <section>
   <div class="wrap">
     <h2>Get Sophi-A</h2>
-    <!-- The €20 packaged-build card (Stripe link) that sat here was retired 2026-09-16 (Muad's
-         direct confirmation). Sophi-A is source only; there is no purchase flow. The shop-card
+    <!-- The €20 packaged-build card (Stripe link) that sat here was retired 2026-09-16 (owner
+         decision). Sophi-A is source only; there is no purchase flow. The shop-card
          CSS above is left in place, unused, in case the section is ever redesigned. -->
     <p class="lede">Source only, MIT, bring your own API keys. There is nothing to buy.
       Clone it, run <code>npm install</code> and <code>npm run tauri dev</code>; the README lists

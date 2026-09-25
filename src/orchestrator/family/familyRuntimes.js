@@ -1,5 +1,5 @@
-// Sophi-A seat-owned families, F5 (relay/Docs/SophiA-Seat-Families-Plan.md §2.7; council review
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §b "No-write invariant for chat/council
+// Sophi-A seat-owned families, F5 (the private Seat Families plan §2.7; council review
+// the Seat Families council plan §b "No-write invariant for chat/council
 // runtimes" and §d item 4). `dispatchTurn(family, session, task, emit)` routes by
 // `session.runtime`. Write capability is a property of the runtime, not of the family (§2.7):
 // only `claude-code` members write, and only via F0's own `fanOut()` in `peer-pool.js`, which
@@ -52,15 +52,15 @@ function familyPromptPrefix(family) {
   // FAMILY.md is genuinely human/operator-authored (Q1: only a human ever calls createFamily()),
   // so it keeps `trust="operator"`. plan.md is NOT the same: Q4's own rule is "owner seat
   // appends/checks, only a human reorders or deletes" - an LLM, not only a human, can add lines
-  // to it. Labelling it "operator" would overstate its trust level (sophi-a-ed's independent
-  // Fable-5.1 review, 2026-09-16, on top of gp-77's own MEDIUM finding) - it now carries its own,
+  // to it. Labelling it "operator" would overstate its trust level (a peer review session's independent
+  // Fable-5.1 review, 2026-09-16, on top of a peer review session's own MEDIUM finding) - it now carries its own,
   // honestly narrower label instead of borrowing FAMILY.md's.
   return `<family-brief trust="operator">\n${escapeForPromptTag(familyMd)}\n</family-brief>\n\n<plan trust="human-created-seat-appended">\n${escapeForPromptTag(planMd)}\n</plan>`;
 }
 
 // Fable-5.1 security review (HIGH, 2026-09-16): this module built session-directory paths from a
 // raw sessionId and wrote files under them BEFORE familyMemory.writeTurnResult() ever ran its own
-// assertSafeSegment() check - a sessionId like "../../../home/user/.claude" would have escaped
+// assertSafeSegment() check - a sessionId like "../../../home/<user>/.claude" would have escaped
 // .families/ entirely and had attacker-influenced task text written there, with the validating
 // throw only arriving after that write already happened. Every function below that turns a
 // sessionId/turn into a path now validates first - reusing familyMemory.js's own exported check,
@@ -109,14 +109,14 @@ function rebuildChatHistory(family, sessionId) {
  * can *produce* the ungated artifact this check exists to catch before it reaches a write-capable
  * member.
  *
- * Fable-5.1 review (MEDIUM, 2026-09-16, both independent reviews - gp-77's and sophi-a-ed's):
+ * Fable-5.1 review (MEDIUM, 2026-09-16, both independent reviews - a peer review session's and a peer review session's):
  * a `.gate.json` carrying only `{result}` is unbound to the content it claims to have reviewed -
  * any write-capable member could forge a passing record, or content edited after gating would
  * still read as gated. Fixed by binding the gate record to a `sha256` field the checker verifies
  * against the real file's current content - a gate record that doesn't match (or doesn't carry
  * one at all) is blocked, same as a missing record. **This changes checkContextGate()'s own
  * expected `.gate.json` shape to `{result: "pass", sha256: "<hex>"}` - flagged explicitly to
- * Session D (F6/F9, the gate's actual writer) so their writer emits a matching field, rather
+ * build lane D (F6/F9, the gate's actual writer) so their writer emits a matching field, rather
  * than silently assuming a shape their code doesn't produce yet.**
  * @param {{dir: string}} family
  * @param {string} sessionId

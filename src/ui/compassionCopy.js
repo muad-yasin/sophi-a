@@ -1,4 +1,4 @@
-// Sophi-A "family" MVP polish, item 4 (relay/runs/2026-09-15T18-55-34-601Z/build.md §4): fixed,
+// Sophi-A "family" MVP polish, item 4 (the family MVP build plan §4): fixed,
 // test-pinned copy for the three compassion states. Every string here is checked by
 // test/compassion-states.test.mjs to contain none of the named non-blaming-language violations -
 // this file is the one place that check reads from, so a future edit can't drift the copy away

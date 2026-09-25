@@ -1,5 +1,5 @@
-// Sophi-A "family" MVP polish, item 3 (relay/runs/2026-09-15T18-55-34-601Z/build.md §2), rewired
-// for F3's receipts v2 (relay/Docs/SophiA-Seat-Families-Plan.md §2.5): renders a seat-owned
+// Sophi-A "family" MVP polish, item 3 (the family MVP build plan §2), rewired
+// for F3's receipts v2 (the private Seat Families plan §2.5): renders a seat-owned
 // family's receipt rows into a safe DOM fragment. Rows now come from familyLedger.js's
 // familyReceiptRows(), keyed by sessionId/turn rather than the old peer-pool `task` id - the row
 // shape changed with F3's rewrite of familyLedger.js, so this render layer changed with it.
@@ -20,7 +20,7 @@
 // forbidden-phrase list (that list lives in the test file only, so this comment can't drift out
 // of sync with it).
 
-// gp-77's real Fable-5.1 security review of the MVP-polish branch (2026-09-15) flagged the
+// a peer review session's real Fable-5.1 security review of the MVP-polish branch (2026-09-15) flagged the
 // absolute local filesystem path being shown directly in the UI as a low-severity finding. The
 // row's own artifactPath stays absolute (familyLedger.js needs the real path to check
 // existsSync against), but the rendered label is shortened to the part starting at

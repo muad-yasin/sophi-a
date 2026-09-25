@@ -75,7 +75,7 @@ test("Emissary carries the design's permission-boundary line verbatim", () => {
   );
 });
 
-// --- Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §5 F8) ---
+// --- Sophi-A Seat Families F8 (the private Seat Families plan §5 F8) ---
 // The Family toggle/panel is injected via main.ts (not static index.html markup - a deliberate
 // deviation from every other seat control, named in DECISIONS.md), so its own acceptance checks
 // live here as source-grep tests over main.ts rather than tileSection() lookups.

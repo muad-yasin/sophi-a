@@ -1,10 +1,10 @@
 # BOARD_PARALLEL_BUILD.md — Parallel-build-and-compare debate board
 
-*Copied verbatim from relay run `2026-09-09T10-20-19-041Z`'s `BOARD.md` (chain: plan-debate,
-task: sophi-a-parallel-build-compare.md, $0.32, unanimous panel sign-off round 1). Companion to
+*Copied from the 2026-09-09 council run's `BOARD.md` (chain: plan-debate, task:
+sophi-a-parallel-build-compare.md, unanimous panel sign-off round 1; lightly edited for privacy only). Companion to
 `PLAN_PARALLEL_BUILD.md`/`HANDOFF_PARALLEL_BUILD.md`.*
 
-# Debate board - run 2026-09-09T10-20-19-041Z
+# Debate board - 2026-09-09 parallel-build run
 
 Every proposal, what the other labs posted on it, and the author's reply.
 

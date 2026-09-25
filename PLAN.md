@@ -2,22 +2,22 @@
 
 ## Naming note (2026-09-09)
 
-The product is now named **Sophi-A** (Muad's call - the name and its visual identity are drawn
-from `~/Projects/SMO`'s own "Project Sophi-A" in-game AGI narrative; see DECISIONS.md). `cnc-harness`
+The product is now named **Sophi-A** (owner decision, 2026-09-09 - the name and its visual identity
+are drawn from an in-game AGI narrative in an earlier in-house game; see DECISIONS.md). `cnc-harness`
 remains the repository/codename throughout this document and the rest of the on-disk paths
 (`RELAY_PATH` adjacency, `.workdirs/`, etc.) - only user-facing surfaces (window title, package
-name, README, the Stripe product) use "Sophi-A". Do not rename the repo directory itself; nothing
+name, README) use "Sophi-A". Do not rename the repo directory itself; nothing
 below this note has been retroactively edited to say "Sophi-A" instead of "cnc-harness".
 
 ## Addendum (2026-09-09, second) - cnc and advisor become provider-selectable, Grok excluded by policy
 
 After the first addendum above (which reversed Assumption 3 for `plan-1..3` only), the author
 made a second, separate decision the same day: `cnc` and `advisor` are no longer Claude/Fable-only
-either. He wants cnc-harness to be genuinely open source and to let a user swap either seat's
+either. The goal is for cnc-harness to be genuinely open source and to let a user swap either seat's
 underlying model to any frontier provider they like - OpenAI, Google/Gemini, Mistral, DeepSeek,
 Groq, Cohere, OpenRouter, Together, Z.ai - with one explicit, permanent exception: **xAI/Grok is
-never offered, by policy, not by technical limitation** ("for reasons" - the author's words, not
-elaborated here; treat this as a standing product rule, not a placeholder to revisit).
+never offered, by policy, not by technical limitation** (owner decision, not elaborated here;
+treat this as a standing product rule, not a placeholder to revisit).
 
 This reuses relay's existing `src/providers.js` `call(provider, opts)` function unchanged - it
 already speaks to every provider above (see `OPENAI_COMPAT` in that file) via one OpenAI-compatible
@@ -73,26 +73,11 @@ five of six labs signed off.
 
 ## Status
 
-Originally authorized 2026-09-08 by Muad as a one-night exception to FOCUS.md's then-stated order.
-
-**Superseded 2026-09-09** - do not treat this as a bare claim; check it against
-`/home/user/Projects/FOCUS.md` directly, which now reads (verbatim, "Why" section):
-
-> "We build cool shit first. Revenue comes when we have built a few cool things on our website. We
-> need 'scope creep' for a while... We need to utilize AI automation with cheap mass-thinking done
-> by the harness, and heavily utilize Claude Code to code on 2-3 repos at the same time, and we
-> want to run one repo as the C&C for having many videogames with the same intellectual property."
-
-and its "Rules for any session or agent" section:
-
-> "Before proposing work, check it is in the order above. If it is not, say so."
-
-(no longer "say so and stop" - that wording was removed 2026-09-09, along with the prior "No new
-projects. No new repos." line). FOCUS.md's own "Exception - 2026-09-08, one night only (closed)"
-section states plainly that this broader direction "is now the standing direction, not a one-night
-exception." cnc-harness is not named as a line item in FOCUS.md's numbered order, and a session
-should still say so - but FOCUS.md itself, not this document, is the authority for that; read it
-fresh rather than trusting this paragraph's summary of it.
+Originally authorized 2026-09-08 by the owner as a one-night exception to the project's then-stated
+priority order. **Superseded 2026-09-09:** the owner's priority board now treats building several
+projects in parallel as the standing direction rather than an exception, so this plan is no longer
+gated on that one-night window. That board is private and is the authority on current priorities;
+this paragraph only records that the gate was lifted.
 
 ## Assumptions (the eight defaulted answers this run took, one revised 2026-09-09)
 
@@ -292,8 +277,8 @@ No commercial release until every item above is checked and resolved.
 - The three-way parallel-build-and-compare feature - deferred to a slice 2.
 - Any packaged, signed, or store-distributed installer for Linux or Windows.
 - Pricing, licensing terms, or a monetization mechanism for the product itself. **(Reopened
-  2026-09-09** - the author has since decided to monetize cnc-harness directly via Stripe,
-  reusing sower-industries.de's existing payment-link/legal pattern; see DECISIONS.md.)
+  2026-09-09** - the author decided to sell a packaged build directly; that offer was retired
+  2026-09-16 and there is no purchase flow now - see SHOP.md.)
 
 ## Scope additions
 

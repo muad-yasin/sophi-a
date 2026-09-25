@@ -1,5 +1,5 @@
-// Sophi-A seat-owned families, F3 (relay/Docs/SophiA-Seat-Families-Plan.md §2.5; council review
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §c "Session C - familyLedger.js (rewritten
+// Sophi-A seat-owned families, F3 (the private Seat Families plan §2.5; council review
+// the Seat Families council plan §c "build lane C - familyLedger.js (rewritten
 // to derive from A's files)"). Rewrite of the MVP-polish version of this file: rows now derive
 // from `familyMemory.js`'s `deriveLedgerView()` (F1's own file-walking function - this module
 // does not re-walk the filesystem itself) rather than from peer-pool's in-memory events. Still
@@ -39,7 +39,7 @@ function usageText(usage) {
 // relayChainSubprocess.js's own quoteFailure() pattern, reused: cap length and frame as quoted
 // third-party text, so an upstream error string (which this ledger never authored and cannot
 // vet) reads as quoted external content rather than this product's own prose - the same reason
-// that pattern exists there. Fable-5.1 review (LOW, sophi-a-ed's independent review, 2026-09-16):
+// that pattern exists there. Fable-5.1 review (LOW, a peer review session's independent review, 2026-09-16):
 // familyLedger.js rendered errorText/verify.command verbatim and uncapped, so an upstream error
 // string that happened to coincidentally match one of the forbidden-phrase-test's own banned
 // substrings would render unguarded - capping and quoting doesn't make that impossible, but it

@@ -70,7 +70,7 @@ def horizontal_lockup():
 
 
 def square_lockup():
-    """Stripe product image / social share card: mark centered, wordmark below."""
+    """Social share card / product image: mark centered, wordmark below."""
     S = 1000
     canvas = Image.new("RGBA", (S, S), BG)
     mark = render_svg(MARK_SVG, 520)

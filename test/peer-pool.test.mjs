@@ -1,5 +1,5 @@
 // test/peer-pool.test.mjs - acceptance tests for Decisions 1, 2, 3, 4 of the multi-session C&C
-// delegation plan (relay/runs/2026-09-15T15-14-29-893Z/deliverable.md, unanimous 4-lab). Each
+// delegation plan (the multi-session delegation council plan, unanimous 4-lab). Each
 // test below is one of the plan's own literal acceptance-test bullets, not a paraphrase of it.
 //
 // Real subprocess spawns, real timers, no mocking of node:child_process - same technique as
@@ -177,7 +177,7 @@ test('the fan_out/stop_peer/stop_all_peers WS commands are actually wired in ind
   assert.match(src, /from '\.\/peer-pool\.js'/, 'index.js imports the peer-pool module');
 });
 
-// --- Sophi-A Seat Families F0 (relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d.8) ---
+// --- Sophi-A Seat Families F0 (the Seat Families council plan §d.8) ---
 // A fresh, isolated families.config.json per test via SOPHIA_FAMILIES_CONFIG_PATH - never the
 // real shipped one, never shared state between these tests.
 function withFamiliesConfig(configObj, fn) {
@@ -303,7 +303,7 @@ test('F0(d) - a per-seat cap above the global one is clamped, and fanOut() honor
   });
 });
 
-// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+// --- Security review fixes (Fable 5.1 + a peer review session's independent review of b31f95f) ---
 
 test('security fix - flag on, seat enabled, but claude-code not in its runtimes allowlist: refused, zero spawns', async () => {
   await withFamiliesConfig({

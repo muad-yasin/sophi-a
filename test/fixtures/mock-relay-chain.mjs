@@ -1,4 +1,4 @@
-// Sophi-A "family" MVP, build item 1 (relay/runs/2026-09-15T18-55-34-601Z/build.md §5.1):
+// Sophi-A "family" MVP, build item 1 (the family MVP build plan §5.1):
 // three canned relay-chain outcome scenarios for offline tests of anything that reads a chain
 // run's report.json-shaped signoff data (the compassion-state classifier, the family receipts
 // panel) - no network call, no real model, no real relay process ever involved.

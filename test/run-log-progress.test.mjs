@@ -1,7 +1,7 @@
 // test/run-log-progress.test.mjs
 //
 // The plan-seat progress subtitle ("Round 2 of 3 · 1 objection open") is read out of relay's own
-// run.log lines. These lines are copied from a real run.log (THCMCP runs/2026-09-16T08-43-50-872Z,
+// run.log lines. These lines are copied from a real run.log (a real THCMCP run,
 // the offline `mock` chain) and from chain.js's own log() calls - if relay ever changes a line
 // shape, the field must go silent (null), never read a wrong number.
 import test from 'node:test';

@@ -1,7 +1,7 @@
 // test/family-receipts.test.mjs
 //
-// Sophi-A seat-owned families, F3 (relay/Docs/SophiA-Seat-Families-Plan.md §2.5; council review
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §c). Rewritten for familyLedger.js's F3
+// Sophi-A seat-owned families, F3 (the private Seat Families plan §2.5; council review
+// the Seat Families council plan §c). Rewritten for familyLedger.js's F3
 // rewrite: rows now derive from familyMemory.js's on-disk turn receipts (F1's own contract),
 // never from peer-pool's in-memory events - the MVP-polish version of this file tested the old
 // peer-pool-derived familyLedger.js, which no longer exists after F3's rewrite. Real fixtures

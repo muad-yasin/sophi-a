@@ -1,5 +1,5 @@
-// Sophi-A Seat Families F1 (relay/Docs/SophiA-Seat-Families-Plan.md §2.3, §2.4; council revisions
-// in relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §b "Memory-drift risk" and §d.6-7): the
+// Sophi-A Seat Families F1 (the private Seat Families plan §2.3, §2.4; council revisions
+// in the Seat Families council plan §b "Memory-drift risk" and §d.6-7): the
 // durable, file-based memory store for a seat-owned family. "Files are truth; memory is a loaded
 // copy" (§2.3) - every function here either writes one atomic JSON/text file or reads one back;
 // nothing is cached across calls except what `loadFamilies()`'s caller explicitly passes back in
@@ -40,10 +40,10 @@ export function defaultFamiliesRoot() {
   return join(orchestratorRoot, '.families');
 }
 
-// Security review fix (Fable 5.1 + sophi-a-ed's independent review of b31f95f, MEDIUM: path
+// Security review fix (Fable 5.1 + a peer review session's independent review of b31f95f, MEDIUM: path
 // traversal): every id this module accepts (ownerSeat, familyId, sessionId) ends up in a
 // join() call. Neither caller-side validation existed before this fix - a familyId like
-// "../../../home/user/.claude" would have escaped .families/ entirely. Applied at every public
+// "../../../home/<user>/.claude" would have escaped .families/ entirely. Applied at every public
 // entry point that accepts a raw id, not just createFamily.
 //
 // Exported (F3+F5's own Fable-5.1 review, HIGH, 2026-09-16): familyRuntimes.js built its own
@@ -77,7 +77,7 @@ function atomicWriteJson(filePath, data) {
 
 // Same rename-only publish step as atomicWriteJson, for the two plain-text files createFamily
 // writes - fixes the file header's "every write here is atomic" claim, which previously covered
-// only the JSON writer (sophi-a-ed's review, LOW item 7).
+// only the JSON writer (a peer review session's review, LOW item 7).
 function atomicWriteText(filePath, text) {
   const tmpPath = `${filePath}.tmp-${process.pid}-${randomBytes(4).toString('hex')}`;
   writeFileSync(tmpPath, text, 'utf8');

@@ -4,4 +4,4 @@
 - [ ] Wire `familyManagerRestartRecovery()` into `index.js`'s actual startup path - it's built and tested but not called anywhere real yet.
 - [ ] A live Chrome dev-build check of F8's Family panel (all five states) - not verified this overnight pass, the plan's own accepted offline gap.
 - [ ] Source the real `families.config.json` per-seat `enabled`/`runtimes` rows into the frontend, so a flag-off seat's panel can show "off for this seat, here's why" proactively instead of only after a refused create/dispatch attempt.
-- [ ] Resolve the `src/orchestrator/family/` (Session C's subdirectory) vs. flat `src/orchestrator/` (Session D's `securityGate.js`) directory-convention split - Muad's call, see `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` item 7.
+- [ ] Resolve the `src/orchestrator/family/` (build lane C's subdirectory) vs. flat `src/orchestrator/` (build lane D's `securityGate.js`) directory-convention split - owner's call, see the private Seat Families build log item 7.

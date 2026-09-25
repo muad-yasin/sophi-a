@@ -44,7 +44,7 @@ const KILL_ESCALATION_MS = 5_000;
 // copies of this security-relevant allowlist). Import only, no local definition here anymore -
 // enforced by test/env-restrictions.test.mjs's source-grep.
 
-// Muad's explicit call (2026-09-15): a public/released Sophi-A build must never let cnc/build-N
+// Owner decision (2026-09-15): a public/released Sophi-A build must never let cnc/build-N
 // ride the operator's own claude.ai subscription login - the same way every other provider needs
 // a real key, this must too. src-tauri/src/lib.rs sets SOPHIA_REQUIRE_API_KEY only on a release
 // build (cfg!(debug_assertions)), never a dev one, so a contributor running `npm run tauri dev`

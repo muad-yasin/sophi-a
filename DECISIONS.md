@@ -3,22 +3,22 @@
 - 2026-09-09 - Built this slice with the orchestrating session staying present throughout, rather
   than handing the whole HANDOFF.md cold to a single fresh top-level agent. Two prior attempts at a
   fully fresh hand-off refused to start: a fresh agent has no way to verify conversational
-  authorization (only file evidence), and this project's own board (FOCUS.md) explicitly warns
+  authorization (only file evidence), and the owner's private priority board explicitly warns
   about trusting self-referential authorization claims. The orchestrating session directly
   witnessed the real authorization (two explicit user confirmations, one via a plan-mode approval)
   and is better positioned to judge that than a cold read of the repo's files. Subagents are still
   used for parallelizable chunks of the mechanical work itself (capped at 6 concurrent, Sonnet 5),
-  per the author's explicit instruction.
+  per the owner's explicit instruction.
 - 2026-09-09 - Tauri scaffolded via `npm create tauri-app@latest -- . --manager npm --template
   vanilla-ts --tauri-version 2 --identifier com.sower.cncharness --yes --force`, in place inside the
   existing repo (which already held PLAN.md/BOARD.md/HANDOFF.md) rather than a nested subdirectory.
 - 2026-09-09 - `cargo`/`rustc` require `. "$HOME/.cargo/env"` to be on PATH; added to `~/.bashrc` and
   `~/.bash_profile` so every future shell (including subagents') picks it up without re-sourcing.
-- 2026-09-09 - Multiple fresh subagents refused to build adapters/UI, quoting FOCUS.md wording
+- 2026-09-09 - Multiple fresh subagents refused to build adapters/UI, quoting priority-board wording
   ("say so and stop", "No new projects. No new repos.") that no longer exists in the live file -
-  a stale-cache issue (their system-prompt-level import of FOCUS.md predates the same-day
+  a stale-cache issue (their system-prompt-level import of that board predates the same-day
   rewrite), confirmed by `tool_uses: 0` in every such refusal (they never actually re-read the
-  file). One subagent's retry did independently re-verify FOCUS.md live and proceed, successfully
+  file). One subagent's retry did independently re-verify the board live and proceed, successfully
   building and testing `relayChainSubprocess.js`. For the remaining two adapters, after a further
   refusal round, the orchestrating session built them directly instead of continuing to relaunch
   fresh agents against an unreliable authorization check.
@@ -32,7 +32,7 @@
 - 2026-09-09 - The remaining two adapters (claude-code-subprocess, UI) also refused twice more from
   subagents even after being told plainly that authorization was already resolved by direct
   conversation (not asked to re-derive it from files) - one refusal explicitly (and fairly) flagged
-  that phrasing as itself leading/manipulative, and separately noted FOCUS.md's own documented
+  that phrasing as itself leading/manipulative, and separately noted the priority board's own documented
   history of a fabricated-authorization incident as reason for continued caution. Built both
   directly rather than keep spending agent calls on an unreliable check; see PROGRESS.md.
 - 2026-09-09 - The orchestrator is spawned as a plain child process from Rust (`Command::new
@@ -65,50 +65,47 @@
   seller subscription) already matches the sanctioned pattern for PLAN.md's commercial-terms risk
   item 1/2 - that specific fear is resolved, not just deferred. Items 3 (trademark/naming in
   marketing) and 5 (each other provider's own terms, now wider per the addendum above) remain open.
-- 2026-09-09 - Monetization channel: Stripe direct (reusing sower-industries.de's existing
-  payment-link + EU consent-at-checkout + Impressum pattern), not Gumroad/LemonSqueezy, per the
-  author's explicit cost call (their ~5-10% cut vs. Stripe's ~1.5-2.9%+fixed fee). Trade-off named,
-  not hidden: Gumroad/LemonSqueezy act as merchant of record and handle VAT/OSS automatically;
-  Stripe direct does not, so cnc-harness inherits the exact same open VAT/OSS-registration gap
-  already blocking cross-border sales on the live plan-shop product
-  (`sower-industries/Docs/PlanShop_Legal.md` §4). Until OSS registration happens, sell to Germany
-  only (that doc's own stopgap) or hold cross-border sales - a business decision for the author to
-  make explicitly before the Stripe payment link goes live, not one to default silently.
+- 2026-09-09 - Monetization channel (since retired - there is no purchase flow now): a direct
+  payment processor reusing the company website's existing checkout pattern, not a
+  merchant-of-record reseller, as an owner cost decision. Trade-off named, not hidden: a merchant
+  of record handles VAT/OSS automatically; a direct processor does not, so the paid build would
+  have inherited an open VAT/OSS-registration gap - a business decision for the owner to make
+  explicitly before any purchase link went live, not one to default silently.
 - 2026-09-09 - `cnc` and `advisor` provider-selection is built on relay's existing
   `src/providers.js` `call(provider, opts)` (already supports openai, google, mistral, deepseek,
   groq, cohere, openrouter, together, zai, plus anthropic) - no new provider-calling code. `xai`
-  (Grok) is deliberately never added to cnc-harness's own seat-settings allow-list, per the
-  author's explicit, unelaborated instruction ("anything goes, but Grok... for reasons") - a
+  (Grok) is deliberately never added to cnc-harness's own seat-settings allow-list, per an
+  explicit owner decision - a
   standing product rule, not a technical gap, and not something a future session should "fix" by
   adding Grok back in without asking first. See PLAN.md's second 2026-09-09 addendum for the full
   design, including why `cnc` on a non-Anthropic provider is honestly a chat-only seat (no
   tool-use/file-editing), not a fake-equivalent coding agent.
-- 2026-09-09 - Product named **Sophi-A**, visual identity sourced from SMO (both Muad's explicit
-  call). Investigated before applying anything: `~/Projects/SMO/SMO/Docs/Sophi-A.md` is a real,
-  fully-shipped in-game narrative arc ("Project Sophi-A" - Sophia-but-Artificial, an AGI-endgame
-  Data Center storyline in SMO, the mobile idle game). This is a deliberate cross-property naming
+- 2026-09-09 - Product named **Sophi-A**, visual identity sourced from a sibling Sower Industries
+  game project (both owner decisions). Investigated before applying anything: that game's own
+  design docs describe a real, fully-shipped in-game narrative arc ("Project Sophi-A" -
+  Sophia-but-Artificial, an AGI-endgame storyline). This is a deliberate cross-property naming
   choice, not a mix-up (unlike the earlier relay/cnc-harness naming confusion this same session -
-  confirmed directly with Muad rather than assumed). Applied: `tauri.conf.json` productName ->
+  confirmed directly with the owner rather than assumed). Applied: `tauri.conf.json` productName ->
   "Sophi-A", window title -> "Sophi-A", `identifier` -> `com.sower.sophia` (changed now, before
   anything ships, rather than after users have an installed app under the old id), `package.json`
   name -> `sophi-a`, `index.html` title, `README.md` rewritten from the stock Tauri template.
   Repo/folder name and all internal path references (`RELAY_PATH`, `.workdirs/`, PLAN.md's own
   historical text) deliberately kept as `cnc-harness` - only user-facing surfaces changed; see
   PLAN.md's new naming note.
-- 2026-09-09 - Visual identity ported from SMO's actual, real design system (not invented fresh):
-  `~/Projects/SMO/SMO/Assets/Scripts/Editor/Shared/ScreenBuilderUtils.cs` is the source of truth
+- 2026-09-09 - Visual identity ported from that game's actual, real design system (not invented
+  fresh): its `ScreenBuilderUtils.cs` is the source of truth
   for the near-black `Bg`/`Surface`/`SurfaceElevated`/`SurfaceModal`/`Sunken` ladder, `TextPrimary/
   Secondary/Muted/Disabled`, the `Gain`/`Warning`/`Breaking` semantic colors, `Gold` (buttons/
-  overlines), and `AiAccent` (already SMO's own "AI/algorithm" thematic color - reused here as
+  overlines), and `AiAccent` (already the game's own "AI/algorithm" thematic color - reused here as
   Sophi-A's brand accent since it's genuinely an AI-orchestration tool). Mapped, not copied
-  verbatim, since SMO has no "agent seat status" concept of its own: idle -> Gain, working ->
+  verbatim, since the game has no "agent seat status" concept of its own: idle -> Gain, working ->
   Warning, problem -> Breaking (previously plain green/amber/red hex values with no source of
-  truth). Fonts (Space Grotesk for chrome/numerals, IBM Plex Sans for body) copied from SMO's own
+  truth). Fonts (Space Grotesk for chrome/numerals, IBM Plex Sans for body) copied from the game's own
   `Assets/Fonts/` (both Google Fonts under OFL, safe to reuse - OFL.txt copied alongside each into
-  `src/fonts/`) and wired via `@font-face`. Deliberately did NOT adopt SMO's third face, Hanken
-  Grotesk (a named hero-title tier used at exactly 2 call sites in SMO, by SMO's own "never an
+  `src/fonts/`) and wired via `@font-face`. Deliberately did NOT adopt the game's third face, Hanken
+  Grotesk (a named hero-title tier used at exactly 2 call sites in the game, by its own "never an
   inheritance" rule) - this app has no equivalent single hero-headline surface to justify one.
-  `src/styles.css`'s header comment names `ScreenBuilderUtils.cs` as the resync source if SMO's
+  `src/styles.css`'s header comment names `ScreenBuilderUtils.cs` as the resync source if the game's
   palette changes again.
 - 2026-09-09 - The author wants cnc-harness open source. No LICENSE file exists yet in this repo -
   named here as an open item, not resolved: license choice (MIT/Apache-2.0 are the likely
@@ -147,41 +144,38 @@
   retaliation clause (§3: sue over patents, lose the license) gives real protection here that MIT
   is silent on, and it's the standard choice for the "free source, paid packaged/hosted build"
   commercial pattern this project follows. Note for the record, not a reversal: relay
-  (`~/Projects/relay`, this project's own dependency) is MIT per its `package.json` - that's fine,
+  (the private upstream engine, this project's own dependency) is MIT per its `package.json` - that's fine,
   it's a separate repo consumed via `RELAY_PATH`/CLI spawn, not code merged into this one, so the
   two projects are free to pick different licenses. Quick embarrassing-secrets pass done alongside
-  this (grepped for API keys/tokens/passwords, hardcoded emails, and `/home/user` paths across
+  this (grepped for API keys/tokens/passwords, hardcoded emails, and home-directory paths across
   tracked source): clean. No secrets or personal paths beyond the one already-known, already-
   documented dev-machine-only absolute path in `src-tauri/src/lib.rs` (`CARGO_MANIFEST_DIR`,
   build-time, accepted limitation - see the "spawned as a plain child process" entry above). Minor,
   non-blocking: `README.md` is still the stock `npm create tauri-app` template text, not
   project-specific - worth a pass before the repo goes public, not a security issue (resolved same
   day - see the naming-rename entry above, `README.md` now has real content).
-- 2026-09-09 - Ran the packaging/installer question through the actual relay harness, per Muad's
-  explicit instruction ("run it through the harness"), mirroring exactly how the original
+- 2026-09-09 - Ran the packaging/installer question through the actual relay harness, per the owner's
+  explicit instruction, mirroring exactly how the original
   `PLAN.md` was produced - not a shortcut, the real thing. Task written to
-  `~/Projects/relay/tasks/sophi-a-packaging-plan.md` (deliberately front-loaded the mobile
+  the engine's `tasks/sophi-a-packaging-plan.md` (deliberately front-loaded the mobile
   subprocess-sandboxing wall and the BYOK/unmodified-CLI legal constraint into the task itself, so
   the panel would be forced to confront them rather than produce a naively-uniform four-platform
   plan). Chain: `plan-debate` (5 real labs debate, blind panel, up to 3 revision rounds) - picked
   over the cheaper `plan-cheap`/`verify` chains because this is genuine new architecture (mobile
   subprocess constraints, signing trade-offs) worth real cross-lab debate, and over the heavier
   `idea-open-c2`/`plan-debate-open-c2` (open-scope, 6-lab) chains because this is a bounded slice
-  of an existing product, not a genuinely new idea. Dry-run priced worst-case at $2.01; actual run
-  (`2026-09-09T02-29-54-628Z`) converged in round 1 - every lab signed off on the first draft, no
-  revision needed - for $0.34. Result: `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/
+  of an existing product, not a genuinely new idea. The run
+  converged in round 1 - every lab signed off on the first draft, no
+  revision needed. Result: `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`/
   `BOARD_PACKAGING.md`, same shape as the original plan triplet. Headline decisions: Windows first
   (NSIS, unsigned v1, no auto-update), Linux second (AppImage only, not deb - a real debate-round
   reversal after four of five labs objected to an initial deb proposal), Android and iOS both
   explicitly out of scope for v1 with independent reasoning per platform (not a combined "mobile is
   hard" hand-wave) - see PLAN_PACKAGING.md §3/§3.1. Not yet built; HANDOFF_PACKAGING.md is the next
   session's starting point.
-- 2026-09-09 - Stripe payment link created (Muad's own dashboard click, per the standing rule).
-  Real settled price: **€20**, not `SHOP.md`'s $29 recommendation - a real, deliberate call, not
-  drift; matches `sower-industries.de/plan`'s own €20 price and this same conversation's earlier
-  "we cannot afford" pushback on higher numbers. `SHOP.md` updated to record €20 as settled while
-  keeping the original $29 pricing-math reasoning intact (not rewritten to retrofit €20 - the math
-  was real reasoning at the time, just anchored to a number the author didn't ultimately pick).
+- 2026-09-09 - A purchase link for the then-planned paid build was created by the owner by hand
+  (per the standing rule that sessions never touch payment dashboards), at a price the owner set.
+  That paid offer was retired later; there is no purchase flow now.
 - 2026-09-09 - Built `HANDOFF_PACKAGING.md` item 1 (PLAN_PACKAGING.md §2.1, the runtime
   path-resolution chain), same session, no gap - see PROGRESS.md's "why not now" note.
   `src-tauri/src/lib.rs` rewritten: `resolve()` implements the four-step chain (env var ->
@@ -201,7 +195,7 @@
   including a plain "nothing else set" baseline before and after. Step 4 (the picker) was not
   interactively exercised - `blocking_pick_folder()` needs a real display, this sandbox is
   headless, and the only way to force the picker to fire here would be making the dev-fallback
-  relay checkout at `~/Projects/relay` temporarily unavailable, which risks disrupting other
+  sibling relay checkout temporarily unavailable, which risks disrupting other
   concurrent work in this workspace. Code-complete and compiles; named as unverified rather than
   claimed.
   **A real finding from the persisted-path test**: pointing the resolver at a bare copy of
@@ -218,9 +212,9 @@
 - 2026-09-09 - Noticed mid-session, unprompted: another concurrent process/session is actively
   using this exact repo right now - `brand/BRAND.md` and a full icon regeneration landed on disk
   without this session writing them (real, high-quality visual-identity work, consistent with the
-  naming/SMO-palette decisions already recorded here; not reverted, per this workspace's own "take
+  naming/palette decisions already recorded here; not reverted, per this workspace's own "take
   it as current state" convention), and `ps` shows a live `node .../relay/src/cli.js --resume
-  runs/2026-09-09T02-53-53-017Z` process plus a live `vite`/orchestrator pair that this session did
+  runs/<run-id>` process plus a live `vite`/orchestrator pair that this session did
   not start. Read as: Sophi-A (or another session) is being genuinely dogfooded concurrently while
   this session builds the packaging pipeline - exactly the multi-seat premise the product is built
   on. Consequence: stopped killing `cnc-harness`-related processes indiscriminately partway through
@@ -268,8 +262,8 @@
   or cross-compilation toolchain in this sandbox; the CI workflow is the first place it will
   actually run, and that hasn't happened yet either (no tag has been pushed). Named as unverified,
   not claimed working.
-- 2026-09-09 - Pushed for real: created `github.com/muad-yasin/sophi-a` (private, per Muad's
-  explicit correction from an initial public suggestion), pushed two commits, tagged `v0.1.0`.
+- 2026-09-09 - Pushed for real: created `github.com/muad-yasin/sophi-a` (private at the time, per an
+  explicit owner correction from an initial public suggestion), pushed two commits, tagged `v0.1.0`.
   CI ran for real: both `build-windows` and `build-linux` **succeeded** on GitHub's actual
   runners - the first time either installer has ever built anywhere. `publish-release` then
   failed with a 403 (default `GITHUB_TOKEN` only grants `contents: read`) - fixed by adding an
@@ -388,7 +382,7 @@
   Frontend: build-1's task-form is special-cased (every other seat's form is untouched) - a
   checkbox row (`also run on build-2/3`), non-sticky (reset on both confirm and cancel, per §3),
   a custom cost-confirm modal (not a native `confirm()`, to stay visually consistent with the
-  rest of the app - `#cost-confirm-modal`, styled with the same SMO-sourced tokens, a new `--scrim`
+  rest of the app - `#cost-confirm-modal`, styled with the same game-sourced tokens, a new `--scrim`
   variable added from `ScreenBuilderUtils.cs`'s real value rather than an ad-hoc rgba). No
   boxes ticked -> the exact original single-seat `{cmd:'start'}` path, byte-for-byte unchanged.
   **Tested for real** against a standalone orchestrator with real WebSocket messages (not a
@@ -420,17 +414,16 @@
 
 ## 2026-09-10: Phase 3 Steps 1-2 - run recorder + replay, in worktree `phase3-run-recorder-replay`
 
-Built in a dedicated git worktree (`~/Projects/cnc-harness-worktrees/phase3-steps1-2`, branch
+Built in a dedicated git worktree (a sibling `cnc-harness-worktrees/phase3-steps1-2`, branch
 `phase3-run-recorder-replay`), per the dispatching session's explicit instruction, so as not to
 disturb another concurrent worktree's in-progress uncommitted edits to `index.js`/`index.html` in
 the main checkout. This entry only covers this worktree's own two steps.
 
 - **Real-codebase correction, found before writing any code, not assumed from the plan text**:
   `revise-1.md`'s Phase 3 Step 1 spec says the recorder "copies `events.jsonl` and `report.json`".
-  Grepped relay's actual source (`~/Projects/relay/src/*.js`) for any code that writes a file named
+  Grepped relay's actual source (`src/*.js` in the private upstream engine) for any code that writes a file named
   `events.jsonl` - none exists anywhere. Inspected several real run directories under
-  `~/Projects/relay/runs/` (including the very run this plan itself came from,
-  `2026-09-10T20-03-03-692Z`) - the only per-run files relay ever writes are `report.json` and
+  the engine's `runs/` (including the very run this plan itself came from) - the only per-run files relay ever writes are `report.json` and
   `run.log` (a plain-text CLI log, not JSON Lines - `relayChainSubprocess.js` already tails this
   same file for live progress). This is the same class of mismatch Phase 0's own script caught for
   `start<Name>Seat`/`report.totals` (plan text vs. real codebase), just for a file this plan
@@ -494,7 +487,7 @@ the main checkout. This entry only covers this worktree's own two steps.
   MCP server's existing tools needed a real reply payload before this - `list_seats`/`start_seat`/
   etc. all read from the MCP server's own live cache or fire-and-forget.
 - **Verified for real, not just typechecked**: (1) `run-recorder.js` unit-level against a real
-  relay report.json shape copied from `~/Projects/relay/runs/2026-09-10T20-03-03-692Z/report.json`
+  relay report.json shape copied from a real engine run's `report.json`
   - 51 synthetic runs recorded, exactly 50 remain, oldest evicted; a corrupted report replays as
   `unreadable report`; (2) a full real path through `startRelayChainSeat` against a fake `relay`
   CLI (writes a real-shaped `report.json`/`run.log` after a short delay, so the adapter's own
@@ -519,7 +512,7 @@ the main checkout. This entry only covers this worktree's own two steps.
   Confirmed via `git log --all -- .workdirs` that nothing from it was ever actually committed
   historically, then added it to `.gitignore` so it can't happen going forward.
 - 2026-09-09 - Critical read of `docs/market-positioning.md` (written earlier today from a
-  sower-industries session) against this repo's actual code, documentation-only pass. Four
+  peer session) against this repo's actual code, documentation-only pass. Four
   findings, three corrected in place, one deliberately left open:
   (1) **The differentiator claim is real but was overstated.** The mechanism exists and is not
   aspirational - `src/orchestrator/adapters/relayChainSubprocess.js` spawns `node <relay>/src/
@@ -547,22 +540,22 @@ the main checkout. This entry only covers this worktree's own two steps.
   corrected in the doc, original wording kept visible.
   (3) **Feature idea 4 (inline diff review) checked: genuinely missing.** `src/main.ts` contains
   no diff view; `compareSnapshot.js` is a mtime/sha256 manifest, not a renderer. Noted in the doc.
-  (4) **macOS: an unreconciled scope claim, left for Muad, not resolved here.** The doc's
+  (4) **macOS: an unreconciled scope claim, left for the owner, not resolved here.** The doc's
   "Standing direction" says the macOS gap should be closed before marketing and cites "the
   harness-prompt draft for a macOS packaging/notarization plan, discussed the same session." No
-  such draft exists anywhere findable: searched this repo, `~/Projects/sower-industries`,
-  `~/Projects/relay` (incl. `tasks/`), `~/Projects/Ideas.md`, `~/Projects/FOCUS.md`, by filename
+  such draft exists anywhere findable: searched this repo, the company website repo, the upstream
+  engine (incl. `tasks/`) and the owner's local notes, by filename
   (`*harness-prompt*`, `*macos*`, `*prompt*`) and content (`harness-prompt`, `notariz`). The only
-  macOS-notarization text in the whole workspace belongs to `~/Projects/parztream` (a separate
-  product with its own `packaging/macos/` and CI) - plausibly what the positioning session had
+  macOS-notarization text in the whole workspace belongs to a separate, unrelated product with
+  its own `packaging/macos/` and CI - plausibly what the positioning session had
   in mind, but it is not a Sophi-A plan. Meanwhile every concrete artifact says the opposite:
   PLAN_PACKAGING.md scopes Windows+Linux only and never names macOS (the "no dmg" entry above
-  records that explicitly), and both the live shop page (`sower-industries/Docs/
-  SophiAShop_Page.md`) and this repo's `docs/fulfillment-mails.md` tell buyers "no macOS build
-  exists yet." So either the draft lives somewhere outside `~/Projects` (a chat transcript, an
+  records that explicitly), and both the then-live shop page and this repo's
+  `docs/fulfillment-mails.md` said "no macOS build
+  exists yet." So either the draft lives somewhere outside the workspace (a chat transcript, an
   unsaved session), or the positioning doc asserted a commitment nothing else records. Either
   way, whether macOS is a precondition for marketing Sophi-A is a real product decision with a
-  cost (Apple Developer Program, notarization CI, a Mac runner) that only Muad can make -
+  cost (Apple Developer Program, notarization CI, a Mac runner) that only the owner can make -
   annotated in market-positioning.md and named here; PLAN_PACKAGING.md's scope deliberately not
   touched.
 - 2026-09-09 - Built `HANDOFF_PARALLEL_BUILD.md` item 3 (PLAN_PARALLEL_BUILD.md §4): the
@@ -623,7 +616,7 @@ the main checkout. This entry only covers this worktree's own two steps.
   workdir, and only on an explicit human click - nothing in `select_winner`, `startMany`, or
   anywhere else moves, renames, or auto-deletes a builder's output, ever.
   Frontend: a "Winner"/"Retained" badge per tile (gold border for Winner, matching Gold's
-  reserved "primary action" role in the SMO palette), a "Pick this one"/"Delete workdir" row
+  reserved "primary action" role in the source palette), a "Pick this one"/"Delete workdir" row
   inside each tile's inspect panel (hidden until there's an actual comparison to act on), and a
   compact global "Run history" panel (reusing `.setup-panel`'s box, its own toggle button) - a
   native `window.confirm()` guards the delete click specifically, the one place this pass used a
@@ -768,11 +761,11 @@ the main checkout. This entry only covers this worktree's own two steps.
   version bump and check whether the ceiling has moved.
 
 - 2026-09-10 - Real mistake, found and fixed live: ran `cargo check` manually against
-  `src-tauri/target/debug` while the live `npm run tauri dev` process (the one Muad was actively
+  `src-tauri/target/debug` while the live `npm run tauri dev` process (the one the owner was actively
   using) was mid-rebuild against the same target directory. Both processes tried to write the
   same binary; Linux refused with `Text file busy` and the live dev process's own rebuild failed
-  and exited, killing Muad's window. Not a code bug - a process-hygiene mistake. Relaunched
-  `npm run tauri dev` cleanly and confirmed with Muad the window was back before continuing.
+  and exited, killing the owner's window. Not a code bug - a process-hygiene mistake. Relaunched
+  `npm run tauri dev` cleanly and confirmed with the owner the window was back before continuing.
   **Rule for future sessions**: never run a manual `cargo build`/`cargo check`/`cargo run`
   against `src-tauri/target` while a `npm run tauri dev` process might be running (check `ps aux`
   first) - use `CARGO_TARGET_DIR=/tmp/<something>` for a manual verification build, or just trust
@@ -930,7 +923,7 @@ Real findings from live verification (not assumed):
 - "EUR" in the plan's own acceptance-test wording is read as "a money figure," not a literal
   currency requirement - `costEstimate.js`'s pre-existing `formatCostPanel`/`formatUsd` already
   render `$` (USD, matching relay's own pricing.json currency) everywhere else in this app;
-  SHOP.md's EUR is a separate Stripe storefront currency, unrelated to relay/pricing.json's token
+  SHOP.md's EUR was a separate storefront currency, unrelated to relay/pricing.json's token
   pricing. The cost meter's `formatUsage` follows the existing `$` convention for consistency.
 - The header ticker's formatting logic (`formatUsageTotal` in `src/main.ts`) duplicates
   `cost-tracker.js`'s `formatUsage` rather than importing it - `cost-tracker.js` is a Node-only
@@ -1016,11 +1009,11 @@ once" behavior for real, not just per-seat in isolation.
 
 ## 2026-09-11: Read-only bug audit of Phases 0-3 (correctness pass, no new scope) - two real bugs found, not yet fixed
 
-Requested by Muad/cnc-harness-88 as a third parallel lane ("bug-hunting existing, already-approved
+Requested by the owner, via the coordinating session, as a third parallel lane ("bug-hunting existing, already-approved
 code - no new scope"), run via `sower-review:bug-audit` against everything shipped in Phases 0-3.
 Recording findings here per the repo's own bookkeeping convention rather than leaving them only in
 the audit's own output - neither fix applied yet, both need an owner decision on approach before
-code changes, and this session did not want to edit shared files unilaterally while cnc-harness-88
+code changes, and this session did not want to edit shared files unilaterally while a peer session
 is concurrently mid-build on Phase 3 Steps 3-4 + the restart-reconnect fix.
 
 **Confirmed, High severity - `messagesApi.js`'s 300s timeout is decorative, not enforced.**
@@ -1068,7 +1061,7 @@ Phase 3 Steps 3-4 are landing concurrently.
 ## 2026-09-10/11: Phase 3 Steps 3-4 - chain presets + seat keyboard shortcuts
 
 Built directly in the main checkout (not a worktree, unlike Steps 1-2) since no other session had
-in-progress uncommitted edits to the same files at the time of starting. Confirmed with gp-09
+in-progress uncommitted edits to the same files at the time of starting. Confirmed with a peer session
 before landing: its read-only bug audit (above) found two real, unrelated bugs and deliberately
 left them unfixed pending a design call; nothing in that audit touches the files this step edits.
 
@@ -1143,9 +1136,9 @@ behavior depends on a live WebSocket), the grid's own `hidden` attribute was cle
 (`document.getElementById('grid').hidden = false`) to reach the real, already-parsed DOM and the
 real event listeners `setupSeatKeyboardShortcuts`/`setupTaskForms` had already registered at
 `DOMContentLoaded` regardless of connection state. Confirmed live, for real, in a real Chrome tab
-against the actual running dev server (not the packaged app, and not Muad's own live session -
-this test ran entirely against local DOM state, never touched his real orchestrator or sent a
-real command over his real WebSocket): Ctrl+1 focuses `cnc`'s task-input; Ctrl+8 focuses
+against the actual running dev server (not the packaged app, and not the owner's own live session -
+this test ran entirely against local DOM state, never touched the owner's real orchestrator or sent a
+real command over its real WebSocket): Ctrl+1 focuses `cnc`'s task-input; Ctrl+8 focuses
 `build-3`'s (confirming the full 8-item order, not just the first); Enter on a seat's own
 task-input triggers that seat's real submit handler (confirmed via the input clearing, the real
 side effect `setupTaskForms`'s listener produces); Shift+Enter inserts a newline and does *not*
@@ -1207,16 +1200,16 @@ its own now-stale comment describing the old, wrong assumption) all clean.
 
 ## 2026-09-11: Real Council run - "what's next" ranked backlog (lane 2 of the overnight plan)
 
-Dispatched per Muad's explicit "Yes please!" to the 3-lane overnight plan, since all 9 items of
+Dispatched per the owner's explicit approval of the 3-lane overnight plan, since all 9 items of
 the original ranked backlog are now built and the standing discipline this session applies
 everywhere else (never invent unreviewed scope, per tonight's earlier spy-game correction) rules
 out just picking the next feature ourselves. Chain `idea-open-c2` (6-lab, open scope, questions ->
-proposals -> debate -> replies -> build -> panel review -> revise -> handoff), run
-`2026-09-10T23-20-49-005Z`, task `relay/tasks/sophi-a-whats-next-2026-09-11.md`.
+proposals -> debate -> replies -> build -> panel review -> revise -> handoff), task
+`sophi-a-whats-next-2026-09-11.md` in the private upstream engine.
 
-**Real cost: $0.3041** (paid API panel rounds only; the Sonnet-role stages - questions, criteria,
-skeleton, build, revise, handoff - ran as `external/claude-code-session`, i.e. this session
-answering them directly, unpriced/subscription-based, not a second cost line).
+The Sonnet-role stages (questions, criteria,
+skeleton, build, revise, handoff) ran as `external/claude-code-session`, i.e. this session
+answering them directly, unpriced, not a second cost line; only the panel rounds were paid API calls.
 
 **Verdict: unanimous, round 2.** Round 1 found one real, shared gap - 3 of 6 labs
 (deepseek/qwen/kimi) independently flagged that the draft's "Scope additions" section claimed "no
@@ -1231,7 +1224,7 @@ them elsewhere in the same file was a real inconsistency, not a stylistic quibbl
 directly in "Scope additions," rather than treating "already in the ledger" as sufficient. Round 2:
 all six labs signed off outright.
 
-**The result** (full text: `relay/runs/2026-09-10T23-20-49-005Z/{deliverable,HANDOFF,BOARD}.md`) -
+**The result** (full text in the private upstream engine's run folder: `deliverable.md`, `HANDOFF.md`, `BOARD.md`) -
 an 8-item ranked backlog, scored 1-5 on usefulness and build speed each, in order: (1) automated
 post-purchase fulfillment email (webhook-confirmed, sale/refund stay human-only), (2) a first-run
 Council discoverability explainer, (3) deploy-ready `marketing/index.html` config (stops at
@@ -1243,13 +1236,13 @@ independent), (8) a build-seat artifact inspector + context forwarder. A "Do not
 names 8 rejected candidates with concrete reasons (macOS/analytics/multi-device-sync/mobile scope,
 a cost-multiplication risk in unguarded batch seat execution, redundant already-shipped scope, a
 hosted-infra-drifting thank-you page, an undemonstrated keyboard-shortcut conflict). Items 1 and 3
-are the only ones needing a human action before being scoped further (a Stripe webhook endpoint +
-email provider choice; the deploy/DNS action itself) - stated explicitly, not left implicit.
+are the only ones needing a human action before being scoped further (a payment webhook endpoint +
+email provider choice - moot now the paid offer is retired; the deploy/DNS action itself) - stated explicitly, not left implicit.
 
 **Standing per this run's own request text, honored, not just stated:** "Whatever this run ranks
 will be reviewed by the human before any of it gets built." This Council sign-off is not itself
 authorization to start building item 1 - it's a reviewed, costed, ranked candidate list waiting
-for Muad's own go/no-go/reorder, exactly like every other Council output this project produces.
+for the owner's own go/no-go/reorder, exactly like every other Council output this project produces.
 `HANDOFF.md` (written for whichever session eventually builds from this) says the same thing in
 its own first paragraph, so a future session reading it cold doesn't miss that distinction either.
 
@@ -1267,11 +1260,10 @@ the page is now genuinely self-contained, not merely self-contained-looking in d
 
 **Real judgment call: no invented URL.** OG/Twitter tags need `og:url`/`og:image` values, and this
 item's own acceptance boundary is "stops at ready to deploy" - no real domain has been decided.
-Rather than guess `sower-industries.de/...` (SHOP.md names a *success-page* URL,
-`sower-industries.de/en/sophi-a/next/`, but never states where the marketing page itself will
-live), every OG/canonical field uses a literal `PLACEHOLDER-deploy-url` string, named in an HTML
+Rather than guess a URL on the company domain (SHOP.md named only a purchase success-page URL,
+never where the marketing page itself would live), every OG/canonical field uses a literal `PLACEHOLDER-deploy-url` string, named in an HTML
 comment as needing the real domain filled in at actual deploy time - the same honest-placeholder
-pattern this file already used for the GitHub-source and Stripe-payment links before either was
+pattern this file already used for the GitHub-source and purchase links before either was
 real (2026-09-09/2026-09-10 entries).
 
 **Also fixed:** the footer's `../brand/HIGH_COUNCIL.md` link (a repo-relative markdown path, dead
@@ -1333,7 +1325,7 @@ workdir to test against. `.workdirs/build-N` is a fixed, repo-relative path
 overridable by `HOME` or any other env var the way this session's other standalone-orchestrator
 tests isolated `~/.sophia`) - so a standalone test orchestrator against this real checkout always
 points at the *same* `.workdirs/build-N` any other running instance uses, including whichever real
-app-spawned orchestrator Muad's own session has open.
+app-spawned orchestrator the owner's own session has open.
 
 This session wrote two real test files directly into the real `.workdirs/build-1/` to test against
 - a mistake caught immediately (before any WS traffic was ever sent to that orchestrator instance,
@@ -1345,11 +1337,11 @@ invocations - PIDs from Sep-10 session start, 01:46, and 02:26), plus one of thi
 leftover standalone test orchestrators from an earlier item's testing that hadn't been killed
 cleanly. The stray test process was killed; **the three app-spawned orchestrators were left
 alone** - this session has no way to know which one Rust's own `OrchestratorState` currently
-considers "the" child process, and killing the wrong one risks disrupting Muad's real session
-rather than fixing anything. **Flagging for Muad, not resolved here**: either multiple app windows
+considers "the" child process, and killing the wrong one risks disrupting the owner's real session
+rather than fixing anything. **Flagging for the owner, not resolved here**: either multiple app windows
 are genuinely open, or `restart_orchestrator` (or a crash) is leaving old children un-reaped -
 worth checking `ps aux | grep orchestrator/index.js` for real next time the app is in front of
-him.
+the owner.
 
 **Consequence for this item's own verification scope**: rather than risk a second live test
 against the same shared directory right after that near-miss, the artifact-inspection logic
@@ -1370,7 +1362,7 @@ follows the exact same DOM patterns already live-verified for items 4 and 6 in t
 
 ## 2026-09-13: Engine switch - the product now runs on the public MCP, private relay is the fallback
 
-Muad's direction today: the really useful thing is the free MCP, and Sophi-A is the connection
+Owner direction, 2026-09-13: the really useful thing is the free MCP, and Sophi-A is the connection
 between the council and a vibecoder. Until now `plan-1..3` were hardwired to `../relay`, the
 private source repo, while the public repo (`THCMCP`) was a curated copy nobody ran in anger.
 That is backwards for a product whose pitch is "the code you can read is the code that runs".
@@ -1385,20 +1377,20 @@ ran it. Keys: the public engine is BYOK and ships no `.env`, so `engineEnvFiles(
 a private checkout simply relies on the environment, as the MCP's own README says.
 
 Verified with a real `mock` chain on THCMCP (free) through the exact spawn args the seat uses;
-not verified with a priced chain, because there is no API budget today. Checked that the public
+not verified with a priced chain, because no API spend was approved for it. Checked that the public
 repo stays clean after a seat run: THCMCP's `.gitignore` covers `runs/`, `tasks/` and `*.log`,
 which is where the adapter writes its task file, run folder and side log.
 
 Not done on purpose: no change to which chains the presets name (`plan-fast`, `plan-thorough`
 exist in THCMCP), no change to `seats.json`, and the private relay is still where today's v2
-work landed first - thcmcp-cb re-curates it into THCMCP, so for a few hours the two engines
+work landed first - a peer session re-curates it into THCMCP, so for a few hours the two engines
 differ (THCMCP lacks v2 until that lands). The resolver does not try to pick the "newer" one;
 that would be guessing.
 
 ## 2026-09-15: "Family" MVP polish - hub-and-spoke stays, "family" is UI framing, not fan-out capability
 
-Council-planned (`relay/runs/2026-09-15T18-55-34-601Z/build.md`, unanimous sign-off, $0.031),
-Muad's ask relayed by thcmcp-66/sophi-a-ed. Decision, stated plainly:
+Council-planned (a build plan in the private upstream engine, unanimous sign-off), the owner's
+ask relayed by the coordinating session. Decision, stated plainly:
 
 (a) **`src/orchestrator/peer-pool.js`'s `fanOut()` guard is kept, unchanged** - only the `cnc` seat
 may call `fanOut()`, enforced by the existing test pinning the exact throw `'Fan-out only allowed
@@ -1412,20 +1404,20 @@ not fan-out capability.** `plan-1..3` and any future Advisor/Emissary seat get a
 worker agents that exist because `cnc` fanned them out, never a fan-out path of their own. This
 MVP is a cnc-only coordinator: `cnc` stays the only coordinator, full stop.
 
-(c) **Reopening hub-and-spoke (per-seat fan-out) is explicitly deferred to Muad, post-playtest -
+(c) **Reopening hub-and-spoke (per-seat fan-out) is explicitly deferred to the owner, post-playtest -
 not decided here.** Reasoning on record from the planning council: reopening it in a polish pass
 would multiply the stop-mechanism/spend-cap surface across 8 seats with no offline-testable
 payoff, and would silently break peer-pool-v1's already-tested invariant (6 green tests as of this
 entry, including `fanOut()`'s exact-message guard).
 
 No code change to `peer-pool.js` itself in this entry - this is a decision record only. Built as
-part of Session A (this session) of the family-MVP's 3-session split; Session B (receipts panel +
-compassion states) and Session C (TODO pill) build on top of this decision without reopening it.
-## 2026-09-15: "Family" MVP polish, Session B - items 3+4 (family receipts + compassion states)
+part of build lane A (this session) of the family-MVP's 3-lane split; build lane B (receipts panel +
+compassion states) and build lane C (TODO pill) build on top of this decision without reopening it.
+## 2026-09-15: "Family" MVP polish, build lane B - items 3+4 (family receipts + compassion states)
 
-Built in worktree `sophi-a-family-mvp-b` off `peer-pool-v1` @ c566d2a, per thcmcp-66/sophi-a-ed's
-C&C dispatch after the real planning council (`relay/runs/2026-09-15T18-55-34-601Z`, unanimous
-3-lab sign-off, $0.031). Not merged/pushed - Muad's permission not granted yet.
+Built in worktree `sophi-a-family-mvp-b` off `peer-pool-v1` @ c566d2a, per the coordinating session's
+dispatch after the real planning council (unanimous
+3-lab sign-off). Not merged/pushed - the owner's permission not granted yet.
 
 **Real gap found before building, not assumed away: this app has no React/JSX toolchain.** The
 plan's own build.md asks for `src/ui/FamilyReceipts.jsx` and `src/ui/CompassionBadge.jsx`.
@@ -1459,7 +1451,7 @@ self-report, never a second thing written to disk (source-grep test in
 `ANTHROPIC_API_KEY` via its own separate conditional (`peer-pool.js:29`, not part of
 `SAFE_ENV_KEYS` itself - a real key genuinely is forwarded, since a peer's whole job is running
 `claude` for real) to the spawned child - a deliberate security boundary either way, from
-`docs/security-prompt-injection.md`. Session A's `FAKE_CLAUDE_*` env knobs are on neither path, so
+`docs/security-prompt-injection.md`. Build lane A's `FAKE_CLAUDE_*` env knobs are on neither path, so
 a real `fanOut()` call can never
 actually drive `fake-claude.sh`'s scripted success/failure output - only its own default output
 (a fixed placeholder line, not valid stream-json) is reachable through a real fan-out. Widening
@@ -1484,20 +1476,20 @@ injectable per backend-developer's own clock-injection rule - tested at 299s/300
 
 Both items' full test suites pass: `test/family-receipts.test.mjs` (8 tests), 
 `test/compassion-states.test.mjs` (11 tests). Full `npm test` (`test/**/*.test.mjs`): 30/30 green,
-including Session A's own 6 peer-pool tests and the pre-existing 5 seat-card tests.
+including build lane A's own 6 peer-pool tests and the pre-existing 5 seat-card tests.
 
 Not built (explicitly out of scope for this item): wiring either panel into `index.html`/`main.ts`
 seat-card markup (a `main.ts` DOM-wiring pass, not part of items 3/4's own file list in build.md
 §2/§4 - both render modules are ready to be called from that wiring, but doing the wiring itself
 risked touching the same shared surface another session's work might also touch mid-flight,
-without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (Muad's call, not made
-here); anything from items 1/2/5/6 (Session A's and Session C's own scope).
+without an explicit go-ahead to do so); merging/pushing `peer-pool-v1` (the owner's call, not made
+here); anything from items 1/2/5/6 (build lane A's and build lane C's own scope).
 
-## 2026-09-15: Sophi-A Seat Families, Session A - F1 (family memory) + F0 (flag/caps/fanOut generalization)
+## 2026-09-15: Sophi-A Seat Families, build lane A - F1 (family memory) + F0 (flag/caps/fanOut generalization)
 
-Council-planned (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`, revising
-`relay/Docs/SophiA-Seat-Families-Plan.md`), Muad's reversal of the 2026-09-15 peer-pool-only
-decision, dispatched overnight by thcmcp-66. Session A is the only session allowed to touch
+Council-planned (a council revision of the seat-families plan doc in the private upstream
+engine), the owner's reversal of the 2026-09-15 peer-pool-only
+decision, dispatched overnight by the coordinating session. Build lane A is the only lane allowed to touch
 `peer-pool.js`; F2-F10 are other sessions' scope, built against this session's §2 contracts only.
 
 **F1 - `src/orchestrator/family/familyMemory.js`.** Implements the plan's exact contract
@@ -1518,7 +1510,7 @@ be fixed by the change that found it): `deriveLedgerView()` silently skips an in
 corrupt `state.json` surfaces as `unreadable`. This is narrower and quieter than the plan's own
 "nothing is ever discarded, only marked" receipts invariant (§2.5) technically wants. Not fixed
 here because it's a one-line gap with no test coverage of its own yet, not because it's
-unimportant - named as a real reopen candidate for F3 (`familyLedger.js`, Session C), which
+unimportant - named as a real reopen candidate for F3 (`familyLedger.js`, build lane C), which
 already owns the richer receipts rendering this would feed into.
 
 **F0 - `families.config.json`, `src/orchestrator/family/familyConfig.js`,
@@ -1584,9 +1576,9 @@ worktree `../families-a`, branch `families-a` off `master` @ `7bbffcb`. No merge
 ## 2026-09-15: F1+F0 security-review fixes (two independent reviews converged on the same core gaps)
 
 This session's own dispatched Fable 5.1 agent reviewed the diff, plus a second review arrived via
-a cross-session message routed through sophi-a-ed's channel (agent `a0059ea35cfb2c2d9`) -
-**attribution correction, per sophi-a-ed's own follow-up**: that second review was not authored by
-sophi-a-ed itself, only relayed through its channel; sophi-a-ed flagged this explicitly rather than
+a cross-session message routed through a peer session's channel -
+**attribution correction, per that peer session's own follow-up**: that second review was not authored by
+the peer session itself, only relayed through its channel; it flagged this explicitly rather than
 let the earlier "your review" phrasing stand uncorrected. Recorded here so credit stays accurate.
 Both reviews confirmed the `envRestrictions.js` extraction itself (G6) is clean - byte-identical
 to both prior copies, no loosening. Both also independently found the same two real gaps in new
@@ -1611,7 +1603,7 @@ row) could still fan out real claude-code peers once its own `enabled` flag was 
 refuses with a clear error unless `seatRow.runtimes.includes('claude-code')`. Proving test added.
 
 **MEDIUM - path traversal in `familyMemory.js`.** `ownerSeat`/`familyId`/`sessionId` went straight
-into `join()` calls with only a truthiness check; a `familyId` of `"../../../home/user/.claude"`
+into `join()` calls with only a truthiness check; a `familyId` of `"../../../home/<user>/.claude"`
 would have escaped `.families/` entirely. Not reachable today (only tests call these functions),
 but the exact contract F7 will wire real ids into. Fixed: a shared `assertSafeSegment()` (alnum
 plus `._-` only, no `..`) applied at every public entry point (`createFamily`, `writeSessionState`,
@@ -1654,11 +1646,11 @@ seat-key shapes directly); not changed.
 
 85/85 tests green (73 prior + 12 new security-fix tests), run in chunks. Same commit range
 (worktree `../families-a`, branch `families-a`), still no merge/push.
-## 2026-09-15: Sophi-A seat-owned families, Session B - F2 (compassion policy) + F4 (caps hierarchy)
+## 2026-09-15: Sophi-A seat-owned families, build lane B - F2 (compassion policy) + F4 (caps hierarchy)
 
-Built in worktree `families-b` off `origin/master` @ 7bbffcb, per thcmcp-66's C&C overnight
-dispatch after the real planning council (`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`,
-building from `relay/Docs/SophiA-Seat-Families-Plan.md`). Not merged/pushed - Session E merges
+Built in worktree `families-b` off `origin/master` @ 7bbffcb, per the coordinating session's overnight
+dispatch after the real planning council (building from the seat-families plan doc in the
+private upstream engine). Not merged/pushed - build lane E merges
 last per the plan's own worktree split. `compassionStates.js` and `peer-pool.js` are both
 untouched (`git diff origin/master` on each is empty) - F2/F4 build only against their public
 contracts, per this session's own file ownership (`src/orchestrator/family/compassionPolicy.js`,
@@ -1732,8 +1724,8 @@ tests), plus 2 tests added to the existing `test/compassion-states.test.mjs`. Fu
 73/73 green.
 
 Not built (explicitly out of this item's own file ownership per the council's worktree split):
-`familyMemory.js`/`familyConfig.js` (Session A), `familyLedger.js` v2/`familyRuntimes.js`
-(Session C), the security gate (Session D), `familyManager.js`/WS commands/UI wiring (Session E,
+`familyMemory.js`/`familyConfig.js` (build lane A), `familyLedger.js` v2/`familyRuntimes.js`
+(build lane C), the security gate (build lane D), `familyManager.js`/WS commands/UI wiring (build lane E,
 merges last). No Fable/paid call anywhere in this build - fully offline per the dispatch.
 
 ## 2026-09-15: F2+F4, Fable-5.1 security review result
@@ -1769,11 +1761,11 @@ Also fixed in the same pass, found while re-reading `admit()` for the review res
 Full `npm test` after fixes: 78/78 green (5 new validation tests added, everything else
 unchanged). No re-review requested since nothing beyond the review's own findings changed.
 
-## 2026-09-15: Sophi-A Seat Families, Session E - F7 (familyManager.js + WS lifecycle commands)
+## 2026-09-15: Sophi-A Seat Families, build lane E - F7 (familyManager.js + WS lifecycle commands)
 
 Built in worktree `../sophi-a-seat-families-e` off `master` @ `7bbffcb`, merging A (`families-a`
 @ `61311ac`/`fad7f00`) and B (`families-b` @ `aa1df71`) first. C (F3/F5) and D (F6/F9) did not
-land tonight - see `relay/Docs/SophiA-Seat-Families-OVERNIGHT.md` for the two distinct reasons.
+land tonight - the private overnight build log records the two distinct reasons.
 F7 is scoped accordingly: only the `claude-code` runtime is wired (via A's generalized
 `fanOut()`); a `family_dispatch` on `chat`/`council` and any Apply/gate path both return a clear
 "not built tonight" refusal rather than faking behavior.
@@ -1889,7 +1881,7 @@ gate a real dispatch yet - already documented in the code as a known, not-yet-wi
 (`familyManagerRestartRecovery` is exported but not yet called from `index.js` startup - real gap,
 named here for whoever wires process startup next, not silently left unstated).
 
-## 2026-09-16: Sophi-A Seat Families, Session E - F8 (UI wiring)
+## 2026-09-16: Sophi-A Seat Families, build lane E - F8 (UI wiring)
 
 Loaded `THCMCP/skills/frontend-developer/SKILL.md` first per the dispatch. Built
 `src/ui/familyPanel.js` (a per-seat "Family" toggle + panel, all five required states: flag-off,
@@ -1974,32 +1966,32 @@ matches this file's existing "ignore a malformed frame rather than crash the who
 
 2 new tests. Full `npm test`: 146/146 green. `npx vite build` still succeeds.
 
-## PLACEHOLDER - the seat-owned-families reversal, awaiting Muad's own words (G7)
+## PLACEHOLDER - the seat-owned-families reversal, awaiting the owner's own record (G7)
 
 **This entry is deliberately incomplete.** Per the plan's own §7 gate G7 ("the `DECISIONS.md`
-reversal entry - Muad's own words or a verbatim chat quote with attribution") and its §0 close
-("the reopening itself gets its own dated `DECISIONS.md` entry, written by Muad or quoting his
-chat line verbatim - a session must not author that entry as if it were its own call"), no session
+reversal entry - the owner's own decision record, not a session's") and its §0 close
+("the reopening itself gets its own dated `DECISIONS.md` entry, written or approved by the owner -
+a session must not author that entry as if it were its own call"), no session
 in this overnight build - including this one - has written the actual reversal record. What's
-known and verifiable, without inventing his words: `relay/Docs/SophiA-Seat-Families-Plan.md`'s own
-header states "Muad said yes to seat-owned families in chat on 2026-09-15" and that the 2026-09-15
+known and verifiable, without inventing the owner's decision: the seat-families plan doc's own
+header states the owner approved seat-owned families on 2026-09-15 and that the 2026-09-15
 `cnc`-only peer-pool decision (`DECISIONS.md`, same date, "hub-and-spoke stays... reopening is
-deferred to Muad") is what's being reopened - but that header is a paraphrase written by a planning
-session, not a verbatim quote, and this session has no direct access to the original chat line.
+deferred to the owner") is what's being reopened - but that header is a paraphrase written by a planning
+session, and this session has no direct access to the original decision.
 
-**Whoever reviews this in the morning (Muad, or a session relaying his own words back verbatim)
-should replace this placeholder with his actual sentence(s) reopening hub-and-spoke, dated and
-attributed** - not a session's summary of what he probably meant. Until that happens, this
+**Whoever reviews this in the morning (the owner, or a session relaying the owner's decision)
+should replace this placeholder with the owner's own dated decision record reopening
+hub-and-spoke** - not a session's summary of what was probably meant. Until that happens, this
 placeholder is the honest state: the reversal is real (the whole F0-F8 build proceeded on
-thcmcp-66's dispatch, itself downstream of Muad's chat approval per multiple sessions' own
-reports), but its canonical, quotable record does not exist yet.
-## 2026-09-16: Sophi-A seat-owned families, Session C - F3 (receipts v2) + F5 (chat/council runtimes)
+the coordinating session's dispatch, itself downstream of the owner's approval per multiple sessions' own
+reports), but its canonical record does not exist yet.
+## 2026-09-16: Sophi-A seat-owned families, build lane C - F3 (receipts v2) + F5 (chat/council runtimes)
 
 Built in worktree `cnc-harness-families-c` (branch `families-c`), rebased onto
 `seat-families-integration` @ `cfa9179` (F1+F0 from `families-a`, F2+F4 from `families-b`, both
 already Fable-reviewed). Not merged/pushed. This session was dispatched to pick up work an
 earlier attempt never actually started (it hit a permission block and closed before writing
-anything) - nothing here builds on or assumes any prior Session C code, because none existed.
+anything) - nothing here builds on or assumes any prior lane C code, because none existed.
 
 **F3: `familyLedger.js` fully rewritten**, not extended - the MVP-polish version derived rows from
 `peer-pool.js`'s in-memory `peer.*` events; F1's `familyMemory.js` now owns the real, durable,
@@ -2077,14 +2069,14 @@ Both test files: `test/family-receipts.test.mjs` (rewritten, 7 tests) + `test/fa
 the integration branch are still passing unmodified after this branch's changes).
 
 Not built (other sessions' own file ownership per the council's worktree split):
-`familyManager.js`/WS commands/UI wiring for the receipts panel and dispatch composition (Session
-E, merges last); the security gate (Session D). `checkContextGate()`'s actual wiring into a
+`familyManager.js`/WS commands/UI wiring for the receipts panel and dispatch composition (build lane
+E, merges last); the security gate (build lane D). `checkContextGate()`'s actual wiring into a
 claude-code dispatch path is that composition point's job, not built here.
 
-## 2026-09-16: F3+F5, two independent Fable-5.1 security reviews (gp-77's + sophi-a-ed's), all findings addressed
+## 2026-09-16: F3+F5, two independent Fable-5.1 security reviews (from two peer sessions), all findings addressed
 
 Two independent Fable 5.1 reviews of this branch's diff (`64f4212` vs `seat-families-integration`)
-came back **BLOCKED** (gp-77's) and with corroborating findings (sophi-a-ed's), agreeing closely
+came back **BLOCKED** (the first) and with corroborating findings (the second), agreeing closely
 on substance. All real findings addressed, none dismissed:
 
 - **HIGH - path traversal**: `familyRuntimes.js` built session-directory paths from a raw
@@ -2117,7 +2109,7 @@ on substance. All real findings addressed, none dismissed:
   a `sha256` field the checker verifies against the file's real, current content - a missing,
   mismatched, or stale hash blocks the same as a missing gate record entirely. **This changes
   `checkContextGate()`'s expected `.gate.json` shape to `{result, sha256}` - flagged explicitly
-  to Session D (F6/F9, the gate's actual writer), not silently assumed against a writer contract
+  to build lane D (F6/F9, the gate's actual writer), not silently assumed against a writer contract
   this session doesn't own.**
 - **LOW - `null`-JSON gate record crash**: `JSON.parse('null')` succeeds and returns the literal
   `null`, which would have thrown on `gate.result` rather than returning the documented
@@ -2154,36 +2146,34 @@ it are never individually examined. Whether nested `context/` content is a real 
 needs to support is F7's own composition-point decision (a different session), not resolved here.
 ## 2026-09-16 — Reversing "only `cnc` coordinates": seats can now own families
 
-Muad, directly, 0.2.0 release day:
+Owner decision, 2026-09-16 (0.2.0 release day): the 2026-09-15 decision that locked fan-out to
+the `cnc` seat only is reversed. The stated reason is responsibility for the
+agents a seat creates, not capability.
 
-I'm reversing the 2026-09-15 decision that locked fan-out to the `cnc` seat only, because of the
-quote I gave the team: **the wound is family, and the failure was a failure of compassion.**
+Every seat may own a family of agents it is responsible for, and has to show that the family
+actually did good work - a coordinator that only ever manages itself was never the point.
 
-That's why. Every seat gets to own a family of agents it's responsible for, and has to prove that
-family actually did good work - because a coordinator that only ever manages itself was never the
-point.
-
-`families.enabled` ships `false`. Nothing runs until I turn it on.
+`families.enabled` ships `false`. Nothing runs until the owner turns it on.
 
 ## 2026-09-25 - Licence: Apache-2.0 → MIT, and public again (owner's call)
 
-The owner, to the C&C session: *"make sophia's repo public again"*, then *"I want to make sophia and
-zofia MIT license too"*, matching The High Council (MIT). This reverses the 2026-09-09 Apache-2.0 choice
-above; its reason (the explicit patent grant for a paid build) no longer applies since the €20 build
+Owner decision, 2026-09-25: make the repo public again and move it to the MIT licence, matching
+The High Council (MIT). This reverses the 2026-09-09 Apache-2.0 choice
+above; its reason (the explicit patent grant for a paid build) no longer applies since the paid build
 offer was retired. `LICENSE` is now the MIT text with the same holder (Sower Industries); `package.json`,
 `package-lock.json`, `src-tauri/Cargo.toml` and the docs that named the licence follow. Copies taken
 under Apache-2.0 before this commit keep that licence. Bundled fonts keep their own (OFL).
 
-## 2026-09-25 - Brief 07 cleanup (zofia-research results/07-sophi-a-future), rebased onto MIT
+## 2026-09-25 - Brief 07 cleanup (an external research brief on Sophi-A's future), rebased onto MIT
 
-Dispatched by C&C from Muad's "you can dispatch work to them, for Zofia and Sophi-A" (FOCUS.md).
+Dispatched by the coordinating session, per an owner decision to have peer sessions work on Sophi-A.
 The brief's patch was written against 799d82a (Apache-2.0); applied onto 175f1be with every licence
 line switched to MIT. `the-high-council` is now a declared dependency (3 plan-seat tests failed on a
 fresh clone without it). Removed false wording: the landing page said "the draft only ships once
 the Council signs off", and the meta/brand taglines said the review happens "before a line of code
 exists" / "nothing builds until" - untrue, since a building seat takes tasks directly and only
 forwarding a deliverable is gated. The "what the run folder proves" verdict sample is now labelled
-illustrative. The €20 card and Stripe link are off the landing page (Stripe products archived by
-Muad; Stripe itself untouched). README lists the ~6 provider accounts the default chain needs.
-Not done: freezing/archiving Sophi-A (brief 07 option c) - Muad's decision, still open.
+illustrative. The old paid-build card and purchase link are off the landing page (the paid offer is
+retired; there is no purchase flow). README lists the ~6 provider accounts the default chain needs.
+Not done: freezing/archiving Sophi-A (brief 07 option c) - the owner's decision, still open.
 Verified: `npm test` 241 / 240 pass / 0 fail / 1 skipped, `npm run build` OK, `node marketing/lint.mjs` PASS.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Phase 0 of the long-horizon build plan
-// (~/Projects/relay/runs/2026-09-10T20-03-03-692Z/revise-1.md). Checks the codebase AS IT EXISTS
+// (the phase-2 council plan). Checks the codebase AS IT EXISTS
 // TODAY - never a field a later phase creates (requires/timeout_ms/chainConfig/usageHook). Two
 // checks below were corrected from the plan's original wording during this very script's
 // authoring, against real ground truth, not left to fail on day one - see DECISIONS.md's first

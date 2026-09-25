@@ -1,7 +1,7 @@
 // test/family-caps.test.mjs
 //
-// Sophi-A seat-owned families, F4 (relay/Docs/SophiA-Seat-Families-Plan.md §2.8, tightened by
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d item 5). Pure admit() - fully offline,
+// Sophi-A seat-owned families, F4 (the private Seat Families plan §2.8, tightened by
+// the Seat Families council plan §d item 5). Pure admit() - fully offline,
 // no subprocess, no network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -162,7 +162,7 @@ test('admit: requesting 0 always admits 0 with no binding level', () => {
   assert.deepEqual(result, { count: 0, level: null, notice: null });
 });
 
-// gp-77's real Fable-5.1 security review (2026-09-15) flagged that unvalidated requested/
+// a peer review session's real Fable-5.1 security review (2026-09-15) flagged that unvalidated requested/
 // perTurnUsd/cap/spend numbers reach peersWithinSpendCeiling()'s own while-loop, which is
 // bounded only by requestedCount - a huge, negative, or NaN input degrades to a long spin or a
 // silently wrong count rather than a clear error. Fixed by validating every numeric input up

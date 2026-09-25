@@ -1,5 +1,5 @@
-// Sophi-A seat-owned families, F2 (relay/Docs/SophiA-Seat-Families-Plan.md §2.6, revised by the
-// build-ready council review relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §a Q2 and §d
+// Sophi-A seat-owned families, F2 (the private Seat Families plan §2.6, revised by the
+// build-ready council review the Seat Families council plan §a Q2 and §d
 // item 1). Pure `decide()`: given a session's compassion state and its recent history, which
 // responses are permitted. No I/O, no clock read internally (a `taskHash` is supplied by the
 // caller, not computed from a live clock), no model call - the seed principle turned into a line

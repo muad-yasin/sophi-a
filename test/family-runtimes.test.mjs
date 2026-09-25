@@ -1,8 +1,8 @@
 // test/family-runtimes.test.mjs
 //
-// Sophi-A seat-owned families, F5 (relay/Docs/SophiA-Seat-Families-Plan.md §2.7; council review
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §b/§d item 4). Fully offline: `provider:
-// "mock"` for chat, `chains/mock.json` (through the real THCMCP CLI) for council, Session A's
+// Sophi-A seat-owned families, F5 (the private Seat Families plan §2.7; council review
+// the Seat Families council plan §b/§d item 4). Fully offline: `provider:
+// "mock"` for chat, `chains/mock.json` (through the real THCMCP CLI) for council, build lane A's
 // real fake-claude.sh fixture for the one claude-code delegation check.
 import test from 'node:test';
 import assert from 'node:assert/strict';

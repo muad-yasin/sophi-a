@@ -1,5 +1,5 @@
 // test/family-memory.test.mjs - Sophi-A Seat Families F1 acceptance tests
-// (relay/Docs/SophiA-Seat-Families-Plan.md §5 F1, council review §b "Memory-drift risk").
+// (the private Seat Families plan §5 F1, council review §b "Memory-drift risk").
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, symlinkSync } from 'node:fs';
@@ -172,7 +172,7 @@ test('loadFamilies on an empty/missing families root returns no families and doe
   assert.deepEqual(families, []);
 });
 
-// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+// --- Security review fixes (Fable 5.1 + a peer review session's independent review of b31f95f) ---
 
 test('security fix - path traversal: a familyId/ownerSeat/sessionId containing ".." is refused, never escapes familiesRoot', () => {
   const root = freshRoot();

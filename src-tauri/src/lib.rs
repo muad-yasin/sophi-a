@@ -296,7 +296,7 @@ fn spawn_orchestrator(app: &tauri::AppHandle, state: &OrchestratorState) {
 
     let mut command = Command::new(&node_command);
     command.arg(&entry).current_dir(&cwd).stdout(Stdio::piped()).stderr(Stdio::piped());
-    // Muad's explicit call (2026-09-15): a public/released build of Sophi-A must never let the
+    // Owner decision (2026-09-15): a public/released build of Sophi-A must never let the
     // cnc/build-N seats fall back to the operator's own claude.ai subscription login - it must
     // require a real ANTHROPIC_API_KEY, same as every other provider. cfg!(debug_assertions) is
     // this codebase's existing, already-trusted dev/release distinction (see resolve()'s own

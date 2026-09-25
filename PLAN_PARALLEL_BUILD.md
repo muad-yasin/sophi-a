@@ -1,8 +1,7 @@
 # PLAN_PARALLEL_BUILD.md — Parallel-build-and-compare design
 
-*Produced 2026-09-09 via a real relay `plan-debate` chain run (task
-`sophi-a-parallel-build-compare.md`, run id `2026-09-09T10-20-19-041Z`, $0.32, unanimous panel
-sign-off in round 1). Full debate: `BOARD_PARALLEL_BUILD.md`. Build-order handoff:
+*Produced 2026-09-09 via a real `plan-debate` council chain run (task
+`sophi-a-parallel-build-compare.md`, unanimous panel sign-off in round 1). Full debate: `BOARD_PARALLEL_BUILD.md`. Build-order handoff:
 `HANDOFF_PARALLEL_BUILD.md`. Same process that produced `PLAN.md` and `PLAN_PACKAGING.md`.*
 
 **Status:** proposed, v1 slice, ready for build

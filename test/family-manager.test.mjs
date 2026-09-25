@@ -1,5 +1,5 @@
 // test/family-manager.test.mjs - Sophi-A Seat Families F7 acceptance tests
-// (relay/Docs/SophiA-Seat-Families-Plan.md §5 F7). Real fake-claude subprocess spawns via
+// (the private Seat Families plan §5 F7). Real fake-claude subprocess spawns via
 // peer-pool.js's own fanOut(), same technique as test/peer-pool.test.mjs - a fake `claude`
 // binary on a temp PATH entry, no mocking of node:child_process.
 import test from 'node:test';

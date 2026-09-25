@@ -12,12 +12,12 @@ then "Run anyway." Some fraction of first-time downloaders will not get past thi
 a real, accepted cost of shipping unsigned, not a hidden one.
 
 **Why accepted for v1:** an OV code-signing certificate costs roughly $200-$400/year; EV costs
-roughly $100-$300/year plus a mandatory hardware token. Sophi-A is a solo-operator, ~€20-one-time
-product with no revenue yet - that annual cost doesn't clear the bar before there's a single sale
-to justify it against.
+roughly $100-$300/year plus a mandatory hardware token. Sophi-A is a solo-operator project with no
+revenue (it is source-only; an earlier paid-build offer was retired on 2026-09-16) - that annual
+cost doesn't clear the bar.
 
-**Revisit when:** there's enough real revenue that the SmartScreen drop-off is costing more in
-lost sales than a certificate would cost to remove it. Buying an EV certificate also gets
+**Revisit when:** the SmartScreen drop-off is costing more in lost users than a certificate would
+cost to remove it. Buying an EV certificate also gets
 SmartScreen reputation faster than OV (EV certs get an initial reputation boost); worth comparing
 both again at that point rather than defaulting to OV.
 

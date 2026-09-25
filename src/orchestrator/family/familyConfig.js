@@ -1,5 +1,5 @@
-// Sophi-A Seat Families F0 (relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d.8,
-// relay/Docs/SophiA-Seat-Families-Plan.md §2.2): loads and validates
+// Sophi-A Seat Families F0 (the Seat Families council plan §d.8,
+// the private Seat Families plan §2.2): loads and validates
 // `../families.config.json` - one file, read once, never mutated at runtime (backend-developer
 // rule 2: configuration is data, not code, with a built-in fallback for a missing file).
 //

@@ -7,7 +7,7 @@ Generated: 2026-09-10T20:33:15.402Z
 - VERIFIED - seats.json has 8 seats with command/args/cwd or provider-based config - seats: cnc, advisor, plan-1, plan-2, plan-3, build-1, build-2, build-3
 - VERIFIED - each adapter file exports a start*Seat function (corrected from "spawn") - claudeCodeSubprocess.js:startClaudeCodeSeat, messagesApi.js:startMessagesApiSeat, relayChainSubprocess.js:startRelayChainSeat
 - VERIFIED - relay/chains/plan-cheap.json exists with seats.critics (corrected from "stages array") - 5 critics
-- VERIFIED - report.json has signoff (top-level) and usage under totals/stages (corrected) - sampled 2026-09-10T20-09-44-541Z/report.json
+- VERIFIED - report.json has signoff (top-level) and usage under totals/stages (corrected) - sampled from a real run's report.json
 - VERIFIED - src/mcp/server.js exports the six required tools - list_seats, get_seat, start_seat, stop_seat, configure_seat, wait_for_idle
 
 ## Corrections made during this script's own authoring (not left to fail on day one)

@@ -1,4 +1,4 @@
-// Multi-session C&C delegation, v1 (relay/runs/2026-09-15T15-14-29-893Z/deliverable.md, unanimous
+// Multi-session C&C delegation, v1 (the multi-session delegation council plan, unanimous
 // 4-lab). A hub-and-spoke fan-out: the `cnc` seat (the only allowed coordinator - Decision 2)
 // spawns N ad-hoc `claude -p` subprocesses, the same real invocation the existing
 // claude-code-subprocess seats use, each in its own worktree. Peers are NOT seats: they are a
@@ -245,7 +245,7 @@ function spawnPeer(peerId, task, emit, timeoutMs = DEFAULT_TIMEOUT_MS, resumeSes
  * that exceeds either dispatches as many peers as fit and returns a notice naming the reduction,
  * never a silent partial fan-out and never a whole-request refusal unless zero peers fit.
  *
- * Sophi-A Seat Families F0 (relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d.8): with
+ * Sophi-A Seat Families F0 (the Seat Families council plan §d.8): with
  * `families.config.json`'s top-level `enabled` flag off (the shipped default) or the config file
  * absent, this function is byte-for-byte identical to the pre-F0 peer-pool plan - `cnc` only,
  * exact same throw string, `maxConcurrentPeers`/`spendCeilingUsd` default the same way. With the

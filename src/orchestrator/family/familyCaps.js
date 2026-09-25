@@ -1,5 +1,5 @@
-// Sophi-A seat-owned families, F4 (relay/Docs/SophiA-Seat-Families-Plan.md §2.8, tightened by
-// relay/runs/2026-09-15T19-57-10-287Z/deliverable.md §d item 5). Pure `admit()`: one enforcement
+// Sophi-A seat-owned families, F4 (the private Seat Families plan §2.8, tightened by
+// the Seat Families council plan §d item 5). Pure `admit()`: one enforcement
 // point, three levels (family, seat, global), reusing `peer-pool.js`'s already-pure and already-
 // tested `peersWithinSpendCeiling()` for the dollar arithmetic rather than re-deriving it. No
 // I/O, no clock, no process state - every number this function reads is supplied by the caller.
@@ -45,7 +45,7 @@ const LEVEL_LABELS = { family: 'Family cap reached', seat: 'Seat cap reached', g
  * @returns {{count: number, level: 'family'|'seat'|'global'|null, notice: string|null}}
  */
 export function admit({ requested, family, seat, global, spends, estimates }) {
-  // Real Fable-5.1 security review finding (2026-09-15, gp-77): `requested` and `perTurnUsd`
+  // Real Fable-5.1 security review finding (2026-09-15, a peer review session): `requested` and `perTurnUsd`
   // reach peersWithinSpendCeiling()'s own while-loop unvalidated, which is bounded only by
   // `requestedCount` - a huge/negative/NaN input degrades to either a long spin or a silently
   // wrong count rather than a clear error. Both trace only to this orchestrator's own internal

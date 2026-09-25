@@ -1,15 +1,11 @@
-/* Sophi-A control room - visual identity ported from SMO's real design system (2026-09-09,
-   Muad's explicit call: "Visual Identity: SMO"). Source of truth for every value below:
-   ~/Projects/SMO/SMO/Assets/Scripts/Editor/Shared/ScreenBuilderUtils.cs - kept in sync manually,
-   there is no shared-module setup between a Unity project and a Tauri web frontend. Do not
-   invent new colors here; if SMO's palette changes, resync from that file, don't drift locally.
+/* Sophi-A control room - visual identity originally ported from an earlier in-house game's
+   design system (owner decision, 2026-09-09); superseded by the v2 "Command Deck" tokens below.
+   Do not invent new colors here.
 
-   Status ring mapping (Sophi-A's own choice, not copied 1:1 from SMO's own UI - SMO has no
-   "agent working" concept): idle -> Gain (SMO's stock-gain green), working -> Warning (SMO's
-   caution orange), problem -> Breaking (SMO's breaking-news red). Brand/chrome accent is
-   AiAccent, deliberately reused from SMO's own "algorithm tier" AI-thematic color, since Sophi-A
-   literally is an AI-orchestration tool; Gold stays reserved for primary-action buttons (Send),
-   matching SMO's own "buttons, overlines" usage. */
+   Status ring mapping (Sophi-A's own choice): idle -> Gain (green), working -> Warning (caution
+   orange), problem -> Breaking (red). Brand/chrome accent is AiAccent, an AI-thematic color,
+   since Sophi-A literally is an AI-orchestration tool; Gold stays reserved for primary-action
+   buttons (Send), matching the source palette's "buttons, overlines" usage. */
 
 @font-face {
   font-family: "Space Grotesk";
@@ -73,9 +69,9 @@
   font-weight: 500;
 }
 
-/* v2 "Command Deck" repaint (2026-09-15, Claude Design handoff via
-   relay/Docs/SophiA-CC-GUI-v1-DesignBrief.md -> Sophi-A UI Interface Design.zip). Token values
-   below are the handoff's own Design Tokens table, ported 1:1 - this supersedes the SMO-sourced
+/* v2 "Command Deck" repaint (2026-09-15, Claude Design handoff from
+   a private design brief -> Sophi-A UI Interface Design.zip). Token values
+   below are the handoff's own Design Tokens table, ported 1:1 - this supersedes the game-sourced
    palette that used to live here. Old variable NAMES are kept so every existing component rule
    re-skins automatically; only the hex values changed. See docs/design-handoff-v2-notes.md for
    what came from the handoff verbatim vs. what's this repo's own adaptation. */
@@ -779,13 +775,11 @@ body {
   flex: 1 1 auto;
 }
 
-/* Send is the primary action - SMO's Gold is reserved for buttons/overlines, so it's the one
-   place in this app that departs from the status-color set. Values below are the real measured
-   values from SMO's own shop "BUY AD-PARDON" button (Assets/Scripts/Editor/Shop/
-   ShopScreenBuilder.cs, Review/ShopAdRow_2026-09-02/handoff/export/state-3a.html), not
-   approximated - see brand/HIGH_COUNCIL.md's neighbor doc, brand/BRAND.md, for the gold token
-   values this reuses verbatim. Shine sweep triggers on hover, not continuously: SMO's own button
-   loops it because it's a single rare purchase moment; a Send button here fires dozens of times
+/* Send is the primary action - Gold is reserved for buttons/overlines, so it's the one
+   place in this app that departs from the status-color set. Values below are measured from the
+   source palette's purchase button, not approximated - see brand/BRAND.md for the gold token
+   values this reuses verbatim. Shine sweep triggers on hover, not continuously: the original
+   button loops it because it's a single rare purchase moment; a Send button here fires dozens of times
    a session, and eight of them looping in one screen at once is the "inviting signal
    over-animated into a nag" failure ux-design's own skill names - hover-triggered keeps the
    "shining, alive" read without the noise.
@@ -810,7 +804,7 @@ body {
 }
 
 /* The sweep itself: a diagonal light band, off-screen at rest, that crosses the button once on
-   hover - matches SMO's own ShineSweepAnimator (a pre-skewed sprite here becomes a skewed
+   hover - matches the source palette's shine-sweep animation (a pre-skewed sprite here becomes a skewed
    ::after gradient since this is CSS, not a baked sprite). */
 .btn-send::after {
   content: "";
@@ -1845,8 +1839,7 @@ body {
 }
 
 /* ======================================================================================
-   v2 "Command Deck" layout (2026-09-15, Claude Design handoff -> relay/Docs/
-   SophiA-CC-GUI-v1-DesignBrief.md). Header (3-col) + fixed 300px rails + a fluid center home
+   v2 "Command Deck" layout (2026-09-15, Claude Design handoff -> a private GUI design brief). Header (3-col) + fixed 300px rails + a fluid center home
    seat + a focused-seat overlay. Deliberate deviation from the handoff's own fixed-canvas
    1920x1080 "fit, don't reflow" scaling: this app is a real resizable Tauri window today (no
    scale-to-fit transform exists anywhere in the codebase), which is exactly the case the
@@ -1860,7 +1853,7 @@ body {
    orchestrator-side merge added three more real header buttons (Stop All/Exports/Cost
    breakdown alongside History/Setup) - five buttons plus the usage/balance/cost readouts don't
    fit on one line in 300px at any reasonable button size, and were overflowing left into the
-   gauge in the center column (Muad flagged this directly, verified live before fixing). Kept the
+   gauge in the center column (flagged by the owner, verified live before fixing). Kept the
    body rail's own right column in sync at 340px too (see #grid.grid below) so the header cells
    still line up with the rail edges under them. */
 .app-header {
@@ -2283,7 +2276,7 @@ body {
    rules) --- explicitly overrides the old 3-tile-column `#grid.grid` rule near the top of this
    file, which no longer describes this layout (its named grid-areas target ids that are now
    nested inside the rails, not direct grid children, so it was only ever accidentally close). */
-/* Real bug, found live at fullscreen/maximized window size (Muad's own screenshots): #grid is a
+/* Real bug, found live at fullscreen/maximized window size (owner's screenshots): #grid is a
    flex child of body (body is display:flex/flex-direction:column) but never claimed the
    remaining vertical space - it only sized to its own content's natural height. At a small
    window that coincidentally looked full; maximized on a large display it left a large dead
@@ -2474,7 +2467,7 @@ body {
   align-self: flex-end;
 }
 
-/* Real bug Muad caught live: seat output now renders as real markdown (marked/highlight.js -
+/* Real bug caught live: seat output now renders as real markdown (marked/highlight.js -
    headings, paragraphs, code blocks), so a multi-paragraph reply is several block-level <p>/<pre>
    elements, not one text run - white-space:nowrap only clips inline overflow, it does nothing to
    stop each block child from stacking on its own line. A collapsed rail card showed the model's
@@ -2994,8 +2987,8 @@ body {
    not just until the handshake - and this rule would otherwise out-rank its own focused opacity,
    rendering its whole overlay at 0.6 (seen in a real dev build, not reasoned about). .is-focused
    is also excluded: a focused card leaves the rail and renders as its own full overlay, so it
-   must never dim regardless of which seat it is (found by gp-77 while wiring Emissary; also
-   applies to every real seat's own focused overlay - sophi-a-ed's fix, folded in here). */
+   must never dim regardless of which seat it is (found by a peer review session while wiring Emissary; also
+   applies to every real seat's own focused overlay - a peer review session's fix, folded in here). */
 .grid.is-cold .seat-card:not(.seat-card-static):not(.seat-card-unwired):not(.is-focused) {
   opacity: 0.6;
 }
@@ -3012,7 +3005,7 @@ body {
   }
 }
 
-/* Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §2.10). Reuses the existing
+/* Sophi-A Seat Families F8 (the private Seat Families plan §2.10). Reuses the existing
    .inspect-panel/.inspect-empty tokens rather than a new visual language - the toggle itself is
    already .inspect-toggle, unchanged. */
 .family-panel {

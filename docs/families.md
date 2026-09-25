@@ -1,12 +1,12 @@
 # Seat families
 
-Behind `families.enabled` (default off). Built overnight 2026-09-15/16; **F1/F0 (memory, config,
-`fanOut()` generalization), F2/F4 (compassion policy, caps), F7 (lifecycle integration + WS
-commands) and F8 (the per-seat Family panel UI) are done and Fable-security-reviewed.** F3
-(receipts v2), F5 (chat/council runtimes as family members), F6/F9 (the security gate) did not
-land this pass - two different real reasons, not glossed over, see `relay/Docs/
-SophiA-Seat-Families-OVERNIGHT.md` for the full per-item status this file summarizes. Not merged
-into `master` yet - G3 is a standing human-stop gate, this is Muad's call.
+Seat families are an experimental feature behind `families.enabled` (default off). Built
+2026-09-15/16. **Done and security-reviewed: F1/F0 (memory, config, `fanOut()` generalization),
+F2/F4 (compassion policy, caps), F7 (lifecycle integration + WS commands) and F8 (the per-seat
+Family panel UI).** Not built yet: F3 (receipts v2), F5 (chat/council runtimes as family members)
+and F6/F9 (the security gate). The per-item build notes live in the project's private design
+records; this file is the public summary. Merging any of it into `master` is a standing
+human-stop gate (G3 below) and the owner's decision.
 
 ## What a family is
 
@@ -50,8 +50,8 @@ a server-side `NNNN.gate.json` with `result:"pass"` - never a client-side disabl
 - **G4** - dispatching into a `needs-human` session.
 - **G5** - making any family artifact actionable (Apply/Forward).
 - **G6** - any change to `RESTRICTED_ARGS`/`SAFE_ENV_KEYS`/`safeEnv()`/the `runtimes` allowlist.
-- **G7** - the `DECISIONS.md` reversal entry - Muad's own words or a verbatim chat quote, never
-  written by a session on his behalf.
+- **G7** - the `DECISIONS.md` reversal entry - written by the owner, never by a session on the
+  owner's behalf.
 - **G8** - enabling a local Ollama reviewer as the real security-gate seat.
 
 ## What's actually usable right now
@@ -66,5 +66,5 @@ table F3 would have built doesn't exist yet; the panel instead shows a plain ses
 (id/status/turn count) sourced directly from `family_list`. No security-gate/Apply path exists
 (F6 never landed) - nothing in this build can be made "actionable" yet.
 
-Full source: `relay/Docs/SophiA-Seat-Families-Plan.md`, revised by council at
-`relay/runs/2026-09-15T19-57-10-287Z/deliverable.md`.
+The full design plan (and its council-revised version) lives in the private upstream engine's
+records; the section references above (§2.4, F0-F10, G1-G8) point into that plan.

@@ -16,10 +16,10 @@ parallel-build-compare (PLAN.md "Out of scope for slice 1").
 
 - Node 20+, Rust/cargo, gcc, and webkit2gtk-4.1 are all installed.
 - The Claude Code CLI (`claude`) installed and authenticated.
-- This repo is already cloned adjacent to `relay/` at `/home/user/Projects/cnc-harness`,
-  `/home/user/Projects/relay`. `RELAY_PATH` defaults to `../relay`, which resolves correctly here.
-- relay's own `.env` already has all provider keys `plan-1..3`'s default `plan-cheap` chain needs
-  (Anthropic, Together/DeepSeek, OpenRouter/Qwen-GLM-Mistral-Kimi, Google/Gemini).
+- This repo is already cloned as a sibling of the council engine checkout (`relay/`), so
+  `RELAY_PATH` defaults to `../relay`, which resolves correctly here.
+- The engine's own environment already has all provider keys `plan-1..3`'s default `plan-cheap`
+  chain needs (Anthropic, Together/DeepSeek, OpenRouter/Qwen-GLM-Mistral-Kimi, Google/Gemini).
 
 ## Order of work
 

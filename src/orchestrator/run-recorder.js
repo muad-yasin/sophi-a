@@ -1,12 +1,12 @@
-// Phase 3 Step 1 (relay run 2026-09-10T20-03-03-692Z's revise-1.md): the run recorder.
+// Phase 3 Step 1 (the phase-2 council plan's revise-1): the run recorder.
 // `recordRun(seatId, runDir)` persists a plan-N seat's finished relay run under this repo's own
 // `runs/<seatId>/<timestamp>/`, so past runs survive relay's own run folder being reused/cleaned
 // and can be replayed later (Phase 3 Step 2) without a second live source of truth.
 //
 // Real-codebase correction, verified before writing this file (not assumed from the plan text):
 // the plan's own wording says this copies "events.jsonl and report.json". Grepped relay's actual
-// source (`~/Projects/relay/src/*.js`) and inspected several real run directories under
-// `~/Projects/relay/runs/` - relay never writes a file named `events.jsonl` anywhere; the only
+// source (`<engine>/src/*.js`) and inspected several real run directories under
+// `<engine>/runs/` - relay never writes a file named `events.jsonl` anywhere; the only
 // per-run files are `report.json` and `run.log` (the same file relayChainSubprocess.js itself
 // already tails for live progress). Recorded here, not silently substituted: this module copies
 // `report.json` + `run.log` (kept under its real name, not renamed to a misleading `.jsonl`

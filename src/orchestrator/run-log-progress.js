@@ -3,7 +3,7 @@
 // only real source for "Round 2 of 3 · 1 objection open" / "Proposals in · 5 of 5 posted" style
 // subtitles: relay's chain.js writes one structured line per stage/round/verdict (grepped from
 // its `log(...)` calls, 2026-09-16, and checked against real run.log files under
-// ~/Projects/THCMCP/runs/), and report.json only exists once the run is over. Nothing here is
+// the engine's runs/ folder), and report.json only exists once the run is over. Nothing here is
 // estimated - a field stays `null` until the line that carries it has actually been seen.
 //
 // Pure: `foldProgress(state, line)` returns a new state, no I/O, no clock. The exact line shapes

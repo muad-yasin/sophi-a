@@ -5,10 +5,7 @@ HUMAN STOP at the end.**
 
 ## What this is
 
-A box on the marketing page (`sower-industries.de/sophi-a/`, and potentially the Golden Path
-leaderboard page, since this is also the only honest fix for GP's "loads as an interactive
-thing" criterion — see `~/Projects/relay/runs/2026-09-10T19-39-50-690Z/deliverable.md`'s scope
-additions) where any visitor types a real task and gets a real Council debate back, live, without
+A box on the project's marketing page where any visitor types a real task and gets a real Council debate back, live, without
 installing anything. This is the natural successor to Phase 4 Step 1's trial proxy — same
 mechanism, opened to the public instead of gated to one run per install.
 
@@ -25,8 +22,8 @@ before the proxy exists means building the proxy twice.
   gated by a different caller — a design choice for whoever picks this up, not fixed here).
 - **Abuse protection (required, not optional):**
   - Rate limit per IP/session: a small number of runs per hour (exact number is a placeholder —
-    pricing math against the real per-run cost from `ranked-features.md`'s #2 entry, roughly
-    $0.01-0.05/run on cheap-tier critics, sets the real ceiling).
+    pricing math against the real per-run cost of a cheap-tier critic chain sets the real
+    ceiling).
   - A global daily spend cap, separate from Step 1's monthly trial-key cap — a public endpoint
     with no install-id friction is a materially different abuse surface than one download-gated
     trial per machine.
@@ -37,7 +34,7 @@ before the proxy exists means building the proxy twice.
   the same critic models read. This is not a new class of risk — the product's own
   `docs/security-prompt-injection.md` already threat-models model-emitted text reaching the UI —
   but a public submission box is the first time *arbitrary public input* reaches that pipeline
-  directly, rather than a paying buyer's own task. The design must state, before implementation:
+  directly, rather than a user's own task. The design must state, before implementation:
   what the submitted text is allowed to contain (length caps at minimum), and that critic output
   rendered back to the public visitor goes through the same DOMPurify allowlist Phase 1's
   visualizer already established — no new rendering path that bypasses it.

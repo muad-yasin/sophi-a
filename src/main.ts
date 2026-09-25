@@ -2216,7 +2216,7 @@ function setupForwardControls() {
   }
 }
 
-// Sophi-A Seat Families F8 (relay/Docs/SophiA-Seat-Families-Plan.md §2.10). Seats that can own
+// Sophi-A Seat Families F8 (the private Seat Families plan §2.10). Seats that can own
 // a family tonight: `cnc` (the only seat families.config.json ships enabled) plus the six
 // claude-code-capable rail seats, so a human can see the toggle everywhere the plan says to put
 // it, even on a seat whose row is off - `advisor` is excluded (chat-only runtime, no

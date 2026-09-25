@@ -1,5 +1,5 @@
 // test/family-config.test.mjs - Sophi-A Seat Families F0's config loader
-// (relay/Docs/SophiA-Seat-Families-Plan.md §2.2, council review §d.8).
+// (the private Seat Families plan §2.2, council review §d.8).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
@@ -109,7 +109,7 @@ test('seatFanOutAllowed: flag on requires the seat\'s own row to say enabled:tru
   assert.match(unlisted.reason, /Fan-out not enabled for seat build-2/);
 });
 
-// --- Security review fixes (Fable 5.1 + sophi-a-ed's independent review of b31f95f) ---
+// --- Security review fixes (Fable 5.1 + a peer review session's independent review of b31f95f) ---
 
 test('security fix - a null top-level value returns ok:false, never throws', () => {
   const { path, dir } = tmpConfig({});

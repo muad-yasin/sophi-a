@@ -1,7 +1,6 @@
 # HANDOFF_PARALLEL_BUILD.md — Parallel-build-and-compare build session
 
-*Produced by the same 2026-09-09 relay run as `PLAN_PARALLEL_BUILD.md` (run id
-`2026-09-09T10-20-19-041Z`). Read `PLAN_PARALLEL_BUILD.md` in full before starting - this handoff
+*Produced by the same 2026-09-09 council run as `PLAN_PARALLEL_BUILD.md`. Read `PLAN_PARALLEL_BUILD.md` in full before starting - this handoff
 does not restate its content, only its section numbers are referenced below.*
 
 ## What you're building

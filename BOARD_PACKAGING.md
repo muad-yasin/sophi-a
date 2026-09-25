@@ -1,10 +1,10 @@
 # BOARD_PACKAGING.md — Sophi-A packaging plan debate board
 
-*Copied verbatim from relay run `2026-09-09T02-29-54-628Z`'s `BOARD.md` (chain: plan-debate,
-task: sophi-a-packaging-plan.md, $0.34, unanimous panel sign-off round 1). Companion to
+*Copied from the 2026-09-09 council run's `BOARD.md` (chain: plan-debate, task:
+sophi-a-packaging-plan.md, unanimous panel sign-off round 1; lightly edited for privacy only). Companion to
 `PLAN_PACKAGING.md`/`HANDOFF_PACKAGING.md`.*
 
-# Debate board - run 2026-09-09T02-29-54-628Z
+# Debate board - 2026-09-09 packaging run
 
 Every proposal, what the other labs posted on it, and the author's reply.
 
@@ -46,7 +46,7 @@ Every proposal, what the other labs posted on it, and the author's reply.
 **Acceptance test:** Build the AppImage on machine A, copy it to a clean Ubuntu 22.04 VM with no Node.js or source checkout, chmod +x, run it, and verify the orchestrator starts (log line appears) without any manual path entry. Also verify that the AppImage runs on a second distro (e.g., Fedora 40) to confirm portability.
 
 **Board:**
-- glm - object with GLM-3: Conflicts with C-3: this picks AppImage while C-3 picks deb with an argued reason (Germany-only launch ⇒ Debian/Ubuntu-dominant, dependency handling, single artifact). One format must win at integration; I think C-3's reasoning is the stronger fit for a Germany-only $29 launch, but AppImage remains the fallback if the 'clean dpkg -i on a non-Ubuntu distro' test fails. These two cannot both ship.
+- glm - object with GLM-3: Conflicts with C-3: this picks AppImage while C-3 picks deb with an argued reason (Germany-only launch ⇒ Debian/Ubuntu-dominant, dependency handling, single artifact). One format must win at integration; I think C-3's reasoning is the stronger fit for a Germany-only launch, but AppImage remains the fallback if the 'clean dpkg -i on a non-Ubuntu distro' test fails. These two cannot both ship.
 - mistral - object: AppImage bundling does not address Node.js runtime dependency handling. Quote: "No code signing is performed; the plan documents that AppImage is not signed". This omits how the orchestrator's Node.js requirement is satisfied.
 - deepseek (author) - withdraw: Lab C's deb argument is stronger for a Germany-only launch, and Lab D correctly notes the Node.js dependency handling gap. Replaced by C-3's deb proposal with the Node bundling fix.
 

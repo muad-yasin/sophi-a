@@ -1,4 +1,4 @@
-// F6 (relay/Docs/SophiA-Seat-Families-Plan.md §2.9, §5) - Sophi-A's own half of the security
+// F6 (the private Seat Families plan §2.9, §5) - Sophi-A's own half of the security
 // gate call, paired with THCMCP's F9 (`chains/security-review-only.json`, built separately in
 // that repo). This module starts THCMCP's `security-review-only` chain (or an equivalent test
 // double engine) against one artifact, drives it through the existing ExternalPause/resume
@@ -211,7 +211,7 @@ export function runSecurityGate({
 }
 
 /**
- * The Apply/Forward server-side double-check (relay/Docs/SophiA-Seat-Families-Plan.md §7 G5,
+ * The Apply/Forward server-side double-check (the private Seat Families plan §7 G5,
  * §2.9): a UI click alone is a client-side signal a rendering bug could get wrong even with a
  * disabled-looking button. Three conditions are required, checked independently here rather than
  * trusting any one signal alone: a real click, a real `gate: "pass"` result, and - the artifact
@@ -230,8 +230,8 @@ export function canApplyArtifact({ humanClick, gateResult, artifactText }) {
   return true;
 }
 
-// Integration note (2026-09-16, thcmcp-66 flagging Session C -> Session D at pre-merge review):
-// Session C's context-gate checker (src/orchestrator/family/familyRuntimes.js's
+// Integration note (2026-09-16, a peer review session flagging build lane C -> build lane D at pre-merge review):
+// build lane C's context-gate checker (src/orchestrator/family/familyRuntimes.js's
 // checkContextGate(), families-c @ 64cc0e1) now requires a `.gate.json` record shaped
 // `{ result: "pass"|<anything else>, sha256: "<hex>" }`, where sha256 is verified against
 // `createHash('sha256').update(readFileSync(<the actual context/ file>)).digest('hex')` - a
@@ -249,7 +249,7 @@ export function canApplyArtifact({ humanClick, gateResult, artifactText }) {
 // re-encode or normalize it in between.
 /**
  * @param {{ gate: string, artifactSha256: string }} gateResult - a runSecurityGate() result
- * @returns {{ result: string, sha256: string }} - Session C's checkContextGate() record shape
+ * @returns {{ result: string, sha256: string }} - build lane C's checkContextGate() record shape
  */
 export function toContextGateRecord(gateResult) {
   return { result: gateResult.gate, sha256: gateResult.artifactSha256 };
