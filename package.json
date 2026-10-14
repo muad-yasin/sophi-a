@@ -14,7 +14,7 @@
     "prepublishOnly": "echo 'REFUSING: this package is not for npm publish.' >&2 && exit 1"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-notification": "^2.4.0",
     "@tauri-apps/plugin-opener": "^2",
