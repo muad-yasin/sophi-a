@@ -24,7 +24,7 @@
     "marked": "^18.0.12",
     "the-high-council": "^0.7.6",
     "ws": "^8.21.3",
-    "zod": "^4.5.4"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
